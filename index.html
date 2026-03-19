@@ -948,7 +948,11 @@ async function enrichirConvoisAvecMaps(convois) {
             destinations: [{ lat: pts[j+1].lat, lng: pts[j+1].lng }],
             travelMode: google.maps.TravelMode.DRIVING,
             unitSystem: google.maps.UnitSystem.METRIC,
-          }, (response, status) => {
+            drivingOptions: {
+                departureTime: new Date(),
+                trafficModel: google.maps.TrafficModel.BEST_GUESS
+            }
+          }, ..., (response, status) => {
             if (status === 'OK') resolve(response);
             else reject(status);
           });
@@ -957,7 +961,7 @@ async function enrichirConvoisAvecMaps(convois) {
         const el = result.rows[0].elements[0];
         if (el && el.status === 'OK') {
           const km = el.distance.value / 1000;
-          const min = el.duration.value / 60;
+          const min = (el.duration_in_traffic || el.duration).value / 60;
           totalKm += km;
           totalMin += min;
           legDurations.push({
