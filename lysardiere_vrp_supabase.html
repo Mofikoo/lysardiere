@@ -1,0 +1,822 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.nb{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:none;padding:7px 14px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.15s}
+.nb:hover{background:rgba(255,255,255,0.2);color:white}
+.nb.active{background:#e8a020;color:#0f1f3d;font-weight:700}
+.card{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);padding:1.25rem;margin-bottom:1rem}
+.stitle{font-size:15px;font-weight:500;margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:2px solid #e8a020}
+label{font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;margin-bottom:3px;display:block}
+input,select{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:13px;color:var(--color-text-primary);background:var(--color-background-primary);outline:none}
+input:focus,select:focus{border-color:#1a3a6b}
+.btn{padding:7px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;background:var(--color-background-primary);color:var(--color-text-primary)}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-dark{background:#0f1f3d;color:white;border-color:#0f1f3d}
+.btn-accent{background:#e8a020;color:#0f1f3d;border-color:#e8a020;font-weight:700}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.btn-info{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.btn-edit{background:var(--color-background-secondary);color:var(--color-text-secondary);border-color:var(--color-border-tertiary)}
+.tab-pane{display:none;padding:1.25rem;max-width:980px;margin:0 auto}
+.tab-pane.active{display:block}
+.pcheck{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:6px;cursor:pointer;border:0.5px solid transparent;font-size:12px;transition:all 0.12s}
+.pcheck:hover{background:var(--color-background-secondary)}
+.pcheck.sel{background:var(--color-background-info);border-color:var(--color-border-info)}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.vcard{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--color-background-primary)}
+.vcard.sel{border-color:#e8a020;background:var(--color-background-warning)}
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:6px;gap:8px;flex-wrap:wrap}
+.item-row.editing{background:var(--color-background-secondary);border-color:var(--color-border-primary);flex-direction:column;align-items:stretch}
+.empty{text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:13px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.cols4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:0.75rem 1rem}
+.stat-n{font-size:22px;font-weight:500}
+.stat-l{font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px}
+.psel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;max-height:220px;overflow-y:auto;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px;background:var(--color-background-secondary)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.convoi-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;margin-bottom:12px;background:var(--color-background-primary)}
+.stop-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.stop-row:last-child{border-bottom:none}
+.dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.time-bar{display:flex;align-items:center;gap:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;margin-top:8px;border:0.5px solid var(--color-border-tertiary);flex-wrap:wrap}
+.progress-bar{height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden;margin:6px 0}
+.progress-fill{height:100%;border-radius:2px}
+.info-box{padding:8px 12px;background:var(--color-background-info);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-info);margin-bottom:10px}
+.warn-box{padding:10px 14px;background:var(--color-background-warning);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-warning);margin-bottom:10px;border:1px solid var(--color-border-warning)}
+.err-box{padding:10px 14px;background:var(--color-background-danger);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-danger);margin-bottom:12px;font-weight:500;border:1px solid var(--color-border-danger)}
+.phase-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:3px}
+.seats-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-secondary);margin-left:6px}
+.retour-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fff3e0;color:#854f0b;margin-left:4px}
+.sort-btn{padding:4px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);cursor:pointer;font-size:11px;font-weight:600;background:var(--color-background-primary);color:var(--color-text-secondary);transition:all 0.12s}
+.sort-btn.active{background:#0f1f3d;color:white;border-color:#0f1f3d}
+.foyer-badge{font-size:10px;background:#e8f0fb;color:#1a3a6b;padding:2px 7px;border-radius:10px;font-weight:600}
+.persist-badge{font-size:10px;padding:3px 9px;border-radius:10px;font-weight:600;cursor:default}
+</style>
+
+<div style="background:#0f1f3d;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:50%;background:#e8a020;display:flex;align-items:center;justify-content:center">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f1f3d" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
+    <div>
+      <div style="color:white;font-size:14px;font-weight:600">La Lysardiere</div>
+      <div style="color:rgba(255,255,255,0.45);font-size:10px;letter-spacing:1px;text-transform:uppercase">Gestionnaire de transport · Supabase</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+    <button class="nb active" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
+    <button class="nb" id="btn-personnes" onclick="show('personnes')">Personnes</button>
+    <button class="nb" id="btn-saisie" onclick="show('saisie')">Lundi</button>
+    <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
+    <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
+    <span class="persist-badge" id="persist-status" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">⏳ Connexion...</span>
+  </div>
+</div>
+
+<div class="tab-pane active" id="pane-lieux">
+  <div class="card">
+    <div class="stitle">Ajouter un lieu de rendez-vous</div>
+    <div class="cols2" style="margin-bottom:10px">
+      <div><label>Nom du lieu</label><input id="ln" placeholder="Ex : Gare de Souillac"></div>
+      <div><label>Ville</label><input id="lv" placeholder="Ex : Souillac (46200)"></div>
+    </div>
+    <div class="cols2" style="margin-bottom:10px">
+      <div><label>Adresse complete</label><input id="la" placeholder="Place de la Gare, 46200 Souillac"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>Latitude</label><input id="llat" type="number" step="0.0001" placeholder="44.891"></div>
+        <div><label>Longitude</label><input id="llng" type="number" step="0.0001" placeholder="1.481"></div>
+      </div>
+    </div>
+    <div style="text-align:right"><button class="btn btn-dark" onclick="addLieu()">+ Ajouter</button></div>
+  </div>
+  <div class="card"><div class="stitle">Lieux enregistres (<span id="lc">0</span>)</div><div id="ll"></div></div>
+</div>
+
+<div class="tab-pane" id="pane-personnes">
+  <div class="card">
+    <div class="stitle">Ajouter une personne</div>
+    <div class="cols4" style="margin-bottom:10px">
+      <div><label>Prenom</label><input id="pp" placeholder="Prenom"></div>
+      <div><label>Nom</label><input id="pn" placeholder="Nom"></div>
+      <div><label>Nom du foyer</label><input id="pfoyer" placeholder="Ex : IME Brive"></div>
+      <div><label>Lieu de RDV</label><select id="pf"><option value="">-- Lieu de RDV --</option></select></div>
+    </div>
+    <div class="cols2" style="margin-bottom:10px">
+      <div><label>Besoins particuliers</label>
+        <select id="pb"><option value="">Aucun</option><option value="fauteuil">Fauteuil roulant</option><option value="deambulateur">Deambulateur</option></select>
+      </div>
+      <div><label>Notes</label><input id="pnotes" placeholder=""></div>
+    </div>
+    <div style="text-align:right"><button class="btn btn-dark" onclick="addPersonne()">+ Ajouter</button></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:2px solid #e8a020;flex-wrap:wrap;gap:8px">
+      <span style="font-size:15px;font-weight:500">Personnes (<span id="pcount">0</span>)</span>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-secondary)">Trier :</span>
+        <button class="sort-btn active" id="sort-prenom" onclick="setSort('prenom')">Prenom</button>
+        <button class="sort-btn" id="sort-nom" onclick="setSort('nom')">Nom</button>
+        <button class="sort-btn" id="sort-foyer" onclick="setSort('foyer')">Foyer</button>
+        <button class="sort-btn" id="sort-lieu" onclick="setSort('lieu')">Lieu RDV</button>
+      </div>
+    </div>
+    <div id="pl"></div>
+  </div>
+</div>
+
+<div class="tab-pane" id="pane-saisie">
+  <div class="card">
+    <div class="stitle">Parametres du lundi</div>
+    <div class="cols3">
+      <div><label>Date</label><input type="date" id="ldate"></div>
+      <div><label>Type de journee</label>
+        <select id="ltype" onchange="updateType()">
+          <option value="rotation">Rotation (depart + arrivee)</option>
+          <option value="entree">Arrivee uniquement</option>
+          <option value="sortie">Depart uniquement</option>
+        </select>
+      </div>
+      <div><label>Ecart de cap max (deg)</label><input type="number" id="capmax" value="55" min="10" max="150" step="5"></div>
+    </div>
+    <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;margin-top:10px">
+      <div style="font-size:12px;font-weight:500;margin-bottom:10px">Contraintes conducteur & passager</div>
+      <div class="cols4">
+        <div><label>Duree max (h)</label><input type="number" id="maxhours" value="7" min="1" max="14" step="0.5"></div>
+        <div><label>Detour max / arret (km)</label><input type="number" id="maxdetour" value="60" min="10" max="300" step="10"></div>
+        <div><label>Vitesse moy. (km/h)</label><input type="number" id="vitesse" value="75" min="50" max="120" step="5"></div>
+        <div><label>Detour retour max (km)</label><input type="number" id="maxretourdetour" value="30" min="5" max="150" step="5"></div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--color-border-tertiary)">
+        <div class="cols2">
+          <div><label>Meme foyer : surplus max passager (h)</label><input type="number" id="maxpassengersurplus" value="2" min="0.5" max="6" step="0.5"></div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:4px"><span style="font-size:11px;color:var(--color-text-secondary)">Si recuperation a l'aller fait attendre le passager plus de X heures de plus qu'au retour → recuperation au retour.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="sec-dep" style="border-left:3px solid var(--color-border-danger);border-radius:var(--border-radius-lg)">
+    <div class="stitle" style="color:var(--color-text-danger)">Personnes qui partent</div>
+    <input style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:7px 12px;font-size:12px;margin-bottom:8px" id="search-dep" placeholder="Rechercher par prenom, nom ou foyer..." oninput="renderPS('dep-sel',selDep,'dep')">
+    <div id="dep-sel" class="psel-grid"></div>
+    <div id="dep-res" style="margin-top:8px"></div>
+  </div>
+  <div class="card" id="sec-arr" style="border-left:3px solid var(--color-border-success);border-radius:var(--border-radius-lg)">
+    <div class="stitle" style="color:var(--color-text-success)">Personnes qui arrivent</div>
+    <input style="width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:7px 12px;font-size:12px;margin-bottom:8px" id="search-arr" placeholder="Rechercher par prenom, nom ou foyer..." oninput="renderPS('arr-sel',selArr,'arr')">
+    <div id="arr-sel" class="psel-grid"></div>
+    <div id="arr-res" style="margin-top:8px"></div>
+  </div>
+  <div id="gps-warning" style="display:none"></div>
+  <div class="card">
+    <div class="stitle">Flotte disponible</div>
+    <div class="vgrid" id="vg"></div>
+    <div style="margin-top:10px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary)">
+      <span id="vcap">0</span> places · <span id="vcount">0</span> vehicules
+    </div>
+  </div>
+  <div style="text-align:center;padding:0.5rem 0 1.5rem">
+    <button class="btn btn-accent" style="font-size:14px;padding:11px 28px" onclick="lancerOptimisation()">Lancer l'optimisation →</button>
+  </div>
+</div>
+
+<div class="tab-pane" id="pane-optim"><div id="optim-content"><div class="empty">Lancez l'optimisation depuis l'onglet "Lundi".</div></div></div>
+<div class="tab-pane" id="pane-fiches"><div id="fiches-content"><div class="empty">Les fiches apparaitront apres validation.</div></div></div>
+
+<script>
+// ── SUPABASE CONFIG ───────────────────────────────────────
+var SUPA_URL='https://lkqzifqeniblltniaabai.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+
+async function supaFetch(table,method,body,id){
+  var url=SUPA_URL+'/rest/v1/'+table+(id?'/'+id:'');
+  var opts={method:method||'GET',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'}};
+  if(body) opts.body=JSON.stringify(body);
+  var r=await fetch(url,opts);
+  if(method==='GET'||method===undefined){
+    var j=await r.json();return j;
+  }
+  return r.ok;
+}
+
+async function dbLoadAll(table){
+  try{var rows=await supaFetch(table+'?select=*');return rows.map(function(r){return r.data})}
+  catch(e){return null}
+}
+
+async function dbUpsert(table,id,data){
+  try{
+    await supaFetch(table,'POST',{id:id,data:data,updated_at:new Date().toISOString()});
+  }catch(e){}
+}
+
+async function dbDelete(table,id){
+  try{await supaFetch(table+'?id=eq.'+id,'DELETE')}catch(e){}
+}
+
+// ── DATA ─────────────────────────────────────────────────
+var LYS={lat:44.855,lng:1.358,nom:'La Lysardiere',adresse:'41 route de la Riviere, 24370 Saint-Julien-de-Lampon'};
+var COLORS=['#1a3a6b','#2d7a4a','#b86000','#7b3fc4','#0077a8','#c0392b','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
+var lieux=[], personnes=[], vehicles=[];
+var selDep={}, selArr={}, selV={};
+var convoisOptimises=[];
+var currentSort='prenom';
+var editingLieuId=null, editingPersonneId=null;
+
+function setPersist(txt,type){
+  var el=document.getElementById('persist-status');
+  el.textContent=txt;
+  var styles={ok:['var(--color-background-success)','var(--color-text-success)'],warn:['var(--color-background-warning)','var(--color-text-warning)'],err:['var(--color-background-danger)','var(--color-text-danger)'],neutral:['var(--color-background-secondary)','var(--color-text-secondary)']};
+  var s=styles[type]||styles.neutral;
+  el.style.background=s[0];el.style.color=s[1];
+}
+
+async function loadData(){
+  setPersist('⏳ Chargement...','neutral');
+  try{
+    var [l,p]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes')]);
+    if(l) lieux=l; else lieux=[];
+    if(p) personnes=p; else personnes=[];
+    if(!lieux.length) await loadDemoData();
+    else setPersist('☁️ Connecte · '+lieux.length+' lieux · '+personnes.length+' personnes','ok');
+  }catch(e){
+    setPersist('❌ Erreur connexion Supabase','err');
+  }
+  renderLieux();renderPersonnes();refreshLieuSelect();
+}
+
+async function loadDemoData(){
+  lieux=[
+    {id:'f1',nom:'Foyer de Feytiat — parking',ville:'Feytiat (Limoges)',adresse:'Feytiat, 87220',lat:45.821,lng:1.247},
+    {id:'f2',nom:'Gare de Chateauroux',ville:'Chateauroux',adresse:'Chateauroux, 36000',lat:46.813,lng:1.691},
+    {id:'f3',nom:'Gare de Souillac',ville:'Souillac',adresse:'Gare de Souillac, 46200',lat:44.891,lng:1.481},
+    {id:'f4',nom:'Foyer de Brive — entree',ville:'Brive-la-Gaillarde',adresse:'Brive, 19100',lat:45.158,lng:1.532},
+    {id:'f5',nom:'Foyer de Tulle — RDV',ville:'Tulle',adresse:'Tulle, 19000',lat:45.268,lng:1.773},
+    {id:'f6',nom:'Parking Perigueux Nord',ville:'Perigueux',adresse:'Perigueux, 24000',lat:45.184,lng:0.722},
+    {id:'f7',nom:'Foyer Massiac — parking',ville:'Massiac (Cantal)',adresse:'Massiac, 15500',lat:45.5126,lng:2.2589},
+    {id:'f8',nom:'Gare de Thiers',ville:'Thiers',adresse:'Thiers, 63300',lat:45.7837,lng:3.012},
+    {id:'f9',nom:'Foyer Argentat — acces',ville:'Argentat',adresse:'Argentat, 19400',lat:45.0233,lng:1.5206},
+    {id:'f10',nom:'Parking Ambert centre',ville:'Ambert',adresse:'Ambert, 63600',lat:45.6412,lng:3.1078},
+    {id:'f11',nom:'Gare Bordeaux Saint-Jean',ville:'Bordeaux',adresse:'Bordeaux, 33800',lat:44.8548,lng:-0.5179},
+    {id:'f12',nom:'Gare de Marmande',ville:'Marmande',adresse:'Marmande, 47200',lat:44.8292,lng:0.4707},
+    {id:'f13',nom:'Gare Sainte-Foy-la-Grande',ville:'Sainte-Foy-la-Grande',adresse:'Sainte-Foy-la-Grande, 33220',lat:44.8285,lng:0.2198}
+  ];
+  personnes=[
+    {id:'p1',prenom:'Roger',nom:'Martin',foyer:'Les Fougeres',lieu:'f1',besoins:'',notes:''},
+    {id:'p2',prenom:'Annique',nom:'Bernard',foyer:'Les Fougeres',lieu:'f1',besoins:'',notes:''},
+    {id:'p3',prenom:'Sylvie',nom:'Perrin',foyer:'Les Fougeres',lieu:'f1',besoins:'fauteuil',notes:''},
+    {id:'p4',prenom:'Leo',nom:'Durand',foyer:'Foyer Arc-en-Ciel',lieu:'f2',besoins:'',notes:''},
+    {id:'p5',prenom:'Paul',nom:'Petit',foyer:'Foyer Arc-en-Ciel',lieu:'f2',besoins:'',notes:''},
+    {id:'p6',prenom:'Emma',nom:'Rousseau',foyer:'Foyer Arc-en-Ciel',lieu:'f2',besoins:'',notes:''},
+    {id:'p7',prenom:'Timothee',nom:'Laurent',foyer:'MAS Souillac',lieu:'f3',besoins:'',notes:''},
+    {id:'p8',prenom:'Robert',nom:'Simon',foyer:'MAS Souillac',lieu:'f3',besoins:'',notes:''},
+    {id:'p9',prenom:'Alfred',nom:'Morel',foyer:'IME Brive',lieu:'f4',besoins:'',notes:''},
+    {id:'p10',prenom:'Izel',nom:'Kaya',foyer:'IME Brive',lieu:'f4',besoins:'fauteuil',notes:''},
+    {id:'p11',prenom:'Martine',nom:'Faure',foyer:'IME Brive',lieu:'f4',besoins:'',notes:''},
+    {id:'p12',prenom:'Kim',nom:'Nguyen',foyer:'FAM Tulle',lieu:'f5',besoins:'',notes:''},
+    {id:'p13',prenom:'Celine',nom:'Roux',foyer:'FAM Tulle',lieu:'f5',besoins:'',notes:''},
+    {id:'p14',prenom:'Lila',nom:'Arnaud',foyer:'Foyer Perigord',lieu:'f6',besoins:'',notes:''},
+    {id:'p15',prenom:'Nina',nom:'Blanc',foyer:'Foyer Perigord',lieu:'f6',besoins:'',notes:''},
+    {id:'p16',prenom:'Marc',nom:'Chevalier',foyer:'Foyer Perigord',lieu:'f6',besoins:'deambulateur',notes:''},
+    {id:'p17',prenom:'Patrick',nom:'Garnier',foyer:'MAS Massiac',lieu:'f7',besoins:'',notes:''},
+    {id:'p18',prenom:'Helene',nom:'Bonnet',foyer:'MAS Massiac',lieu:'f7',besoins:'',notes:''},
+    {id:'p19',prenom:'Jerome',nom:'Lemaire',foyer:'MAS Massiac',lieu:'f7',besoins:'fauteuil',notes:''},
+    {id:'p20',prenom:'Sophie',nom:'Dupont',foyer:'Foyer Auvergne',lieu:'f8',besoins:'',notes:''},
+    {id:'p21',prenom:'Yann',nom:'Girard',foyer:'Foyer Auvergne',lieu:'f8',besoins:'',notes:''},
+    {id:'p22',prenom:'Lucie',nom:'Fontaine',foyer:'Foyer Auvergne',lieu:'f8',besoins:'',notes:''},
+    {id:'p23',prenom:'Theo',nom:'Mercier',foyer:'Foyer Auvergne',lieu:'f8',besoins:'',notes:''},
+    {id:'p24',prenom:'Beatrice',nom:'Colin',foyer:'FAO Argentat',lieu:'f9',besoins:'',notes:''},
+    {id:'p25',prenom:'Denis',nom:'Leblanc',foyer:'FAO Argentat',lieu:'f9',besoins:'',notes:''},
+    {id:'p26',prenom:'Veronique',nom:'Giraud',foyer:'FAO Argentat',lieu:'f9',besoins:'',notes:''},
+    {id:'p27',prenom:'Antoine',nom:'Renard',foyer:'MAS Ambert',lieu:'f10',besoins:'',notes:''},
+    {id:'p28',prenom:'Julie',nom:'Marchand',foyer:'MAS Ambert',lieu:'f10',besoins:'',notes:''},
+    {id:'p29',prenom:'Laurent',nom:'Chevalier',foyer:'MAS Ambert',lieu:'f10',besoins:'',notes:''},
+    {id:'p30',prenom:'Claire',nom:'Benoit',foyer:'Foyer Gironde',lieu:'f11',besoins:'',notes:''},
+    {id:'p31',prenom:'Bruno',nom:'Leroy',foyer:'Foyer Gironde',lieu:'f11',besoins:'',notes:''},
+    {id:'p32',prenom:'Isabelle',nom:'Moreau',foyer:'Foyer Gironde',lieu:'f11',besoins:'fauteuil',notes:''},
+    {id:'p33',prenom:'Thomas',nom:'Simon',foyer:'Foyer Gironde',lieu:'f11',besoins:'',notes:''},
+    {id:'p34',prenom:'Nathalie',nom:'Laurent',foyer:'FAM Marmande',lieu:'f12',besoins:'',notes:''},
+    {id:'p35',prenom:'Francois',nom:'Dubois',foyer:'FAM Marmande',lieu:'f12',besoins:'',notes:''},
+    {id:'p36',prenom:'Amelie',nom:'Hubert',foyer:'FAM Marmande',lieu:'f12',besoins:'',notes:''},
+    {id:'p37',prenom:'Michel',nom:'Petit',foyer:'Foyer Sainte-Foy',lieu:'f13',besoins:'',notes:''},
+    {id:'p38',prenom:'Valerie',nom:'Rousseau',foyer:'Foyer Sainte-Foy',lieu:'f13',besoins:'',notes:''},
+    {id:'p39',prenom:'Eric',nom:'Legrand',foyer:'Foyer Sainte-Foy',lieu:'f13',besoins:'',notes:''},
+    {id:'p40',prenom:'Sandrine',nom:'Perrot',foyer:'Foyer Sainte-Foy',lieu:'f13',besoins:'',notes:''},
+    {id:'p41',prenom:'Bernard',nom:'Lacombe',foyer:'Les Fougeres',lieu:'f1',besoins:'',notes:''},
+    {id:'p42',prenom:'Aurelie',nom:'Thibault',foyer:'Foyer Arc-en-Ciel',lieu:'f2',besoins:'',notes:''}
+  ];
+  // Envoyer tout en base
+  setPersist('⏳ Premier lancement — envoi des donnees...','neutral');
+  await Promise.all(lieux.map(function(f){return dbUpsert('lieux',f.id,f)}));
+  await Promise.all(personnes.map(function(p){return dbUpsert('personnes',p.id,p)}));
+  setPersist('☁️ Connecte · demo chargee','ok');
+}
+
+// ── HELPERS ──────────────────────────────────────────────
+function col(i){return COLORS[i%COLORS.length]}
+function initials(p){return(p.prenom[0]+(p.nom?p.nom[0]:'')).toUpperCase()}
+function getLieu(id){return lieux.find(function(f){return f.id===id})||null}
+function hasGPS(f){return f&&f.lat!=null&&f.lng!=null&&!isNaN(parseFloat(f.lat))&&!isNaN(parseFloat(f.lng))}
+function hav(la1,lo1,la2,lo2){var R=6371,r=Math.PI/180,a=Math.sin((la2-la1)*r/2)*Math.sin((la2-la1)*r/2)+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)*Math.sin((lo2-lo1)*r/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
+function dp(a,b){return hav(parseFloat(a.lat),parseFloat(a.lng),parseFloat(b.lat),parseFloat(b.lng))}
+function dLys(f){return hav(LYS.lat,LYS.lng,parseFloat(f.lat),parseFloat(f.lng))}
+function routeLen(pts){var d=0;for(var i=1;i<pts.length;i++) d+=dp(pts[i-1],pts[i]);return d}
+function bearing(from,to){var r=Math.PI/180,dL=(parseFloat(to.lng)-parseFloat(from.lng))*r,y=Math.sin(dL)*Math.cos(parseFloat(to.lat)*r),x=Math.cos(parseFloat(from.lat)*r)*Math.sin(parseFloat(to.lat)*r)-Math.sin(parseFloat(from.lat)*r)*Math.cos(parseFloat(to.lat)*r)*Math.cos(dL);return(Math.atan2(y,x)*180/Math.PI+360)%360}
+function angleDiff(a,b){var d=Math.abs(a-b)%360;return d>180?360-d:d}
+function fmtDur(min){return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0')}
+function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function updatePersistBadge(){setPersist('☁️ Connecte · '+lieux.length+' lieux · '+personnes.length+' personnes','ok')}
+
+function initVehicles(){
+  vehicles=[];
+  for(var i=1;i<=7;i++) vehicles.push({id:'t'+i,label:'Trafic '+i,type:'trafic',cap:8,ico:'🚐'});
+  for(var i=1;i<=6;i++) vehicles.push({id:'v'+i,label:'Voiture '+i,type:'voiture',cap:4,ico:'🚗'});
+  vehicles.forEach(function(v){selV[v.id]=true});
+}
+initVehicles();
+
+function show(t){
+  document.querySelectorAll('.tab-pane').forEach(function(e){e.classList.remove('active')});
+  document.querySelectorAll('.nb').forEach(function(e){e.classList.remove('active')});
+  document.getElementById('pane-'+t).classList.add('active');
+  document.getElementById('btn-'+t).classList.add('active');
+  if(t==='personnes'){refreshLieuSelect();renderPersonnes()}
+  if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
+}
+
+// ── LIEUX ────────────────────────────────────────────────
+function renderLieux(){
+  document.getElementById('lc').textContent=lieux.length;
+  var el=document.getElementById('ll');
+  if(!lieux.length){el.innerHTML='<div class="empty">Aucun lieu enregistre.</div>';return}
+  el.innerHTML=lieux.map(function(f){
+    var ok=hasGPS(f),d=ok?Math.round(dLys(f)):null,b=ok?Math.round(bearing(LYS,f)):null;
+    if(editingLieuId===f.id){
+      return '<div class="item-row editing">'
+        +'<div style="font-size:11px;color:var(--color-text-secondary);font-weight:600;margin-bottom:8px">Modifier : '+f.nom+'</div>'
+        +'<div class="cols2" style="margin-bottom:8px"><div><label>Nom</label><input id="el-n-'+f.id+'" value="'+esc(f.nom)+'"></div>'
+        +'<div><label>Ville</label><input id="el-v-'+f.id+'" value="'+esc(f.ville||'')+'"></div></div>'
+        +'<div class="cols2" style="margin-bottom:8px"><div><label>Adresse</label><input id="el-a-'+f.id+'" value="'+esc(f.adresse)+'"></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        +'<div><label>Lat</label><input type="number" step="0.0001" id="el-lat-'+f.id+'" value="'+(f.lat||'')+'"></div>'
+        +'<div><label>Lng</label><input type="number" step="0.0001" id="el-lng-'+f.id+'" value="'+(f.lng||'')+'"></div>'
+        +'</div></div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        +'<button class="btn btn-sm" onclick="editingLieuId=null;renderLieux()">Annuler</button>'
+        +'<button class="btn btn-dark btn-sm" onclick="saveLieu(\''+f.id+'\')">Enregistrer</button>'
+        +'</div></div>';
+    }
+    return '<div class="item-row"><div style="flex:1;min-width:0">'
+      +'<div style="font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div>'
+      +'<div style="font-size:11px;color:var(--color-text-secondary)">'+f.adresse+(f.ville?' · '+f.ville:'')+'</div>'
+      +'</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+      +(ok?'<span class="badge" style="background:var(--color-background-success);color:var(--color-text-success)">'+d+'km · '+b+'°</span>'
+          :'<span class="badge" style="background:var(--color-background-danger);color:var(--color-text-danger)">GPS manquant</span>')
+      +'<button class="btn btn-edit btn-sm" onclick="editingLieuId=\''+f.id+'\';renderLieux()">Modifier</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="delLieu(\''+f.id+'\')">X</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+async function addLieu(){
+  var nom=document.getElementById('ln').value.trim(),adresse=document.getElementById('la').value.trim();
+  if(!nom||!adresse){alert('Nom et adresse requis.');return}
+  var lat=parseFloat(document.getElementById('llat').value),lng=parseFloat(document.getElementById('llng').value);
+  var f={id:'f'+Date.now(),nom:nom,ville:document.getElementById('lv').value.trim(),adresse:adresse,lat:isNaN(lat)?null:lat,lng:isNaN(lng)?null:lng};
+  setPersist('⏳ Sauvegarde...','neutral');
+  await dbUpsert('lieux',f.id,f);
+  lieux.push(f);
+  ['ln','lv','la','llat','llng'].forEach(function(id){document.getElementById(id).value=''});
+  updatePersistBadge();renderLieux();
+}
+
+async function saveLieu(id){
+  var f=getLieu(id);if(!f) return;
+  f.nom=document.getElementById('el-n-'+id).value.trim()||f.nom;
+  f.ville=document.getElementById('el-v-'+id).value.trim();
+  f.adresse=document.getElementById('el-a-'+id).value.trim()||f.adresse;
+  var lat=parseFloat(document.getElementById('el-lat-'+id).value),lng=parseFloat(document.getElementById('el-lng-'+id).value);
+  if(!isNaN(lat)) f.lat=lat;if(!isNaN(lng)) f.lng=lng;
+  setPersist('⏳ Sauvegarde...','neutral');
+  await dbUpsert('lieux',id,f);
+  editingLieuId=null;updatePersistBadge();renderLieux();
+}
+
+async function delLieu(id){
+  if(personnes.some(function(p){return p.lieu===id})){alert('Ce lieu est utilise par des personnes.');return}
+  setPersist('⏳ Suppression...','neutral');
+  await dbDelete('lieux',id);
+  lieux=lieux.filter(function(f){return f.id!==id});
+  updatePersistBadge();renderLieux();
+}
+
+// ── PERSONNES ────────────────────────────────────────────
+function refreshLieuSelect(){
+  document.getElementById('pf').innerHTML='<option value="">-- Lieu de RDV --</option>'+lieux.map(function(f){
+    return '<option value="'+f.id+'">'+(hasGPS(f)?'':'⚠️ ')+f.nom+'</option>';
+  }).join('');
+}
+function setSort(s){
+  currentSort=s;
+  document.querySelectorAll('.sort-btn').forEach(function(b){b.classList.remove('active')});
+  document.getElementById('sort-'+s).classList.add('active');
+  renderPersonnes();
+}
+function getSorted(){
+  var s=personnes.slice();
+  if(currentSort==='prenom') s.sort(function(a,b){return a.prenom.localeCompare(b.prenom)});
+  else if(currentSort==='nom') s.sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'')});
+  else if(currentSort==='foyer') s.sort(function(a,b){return (a.foyer||'').localeCompare(b.foyer||'')});
+  else if(currentSort==='lieu'){s.sort(function(a,b){var la=getLieu(a.lieu),lb=getLieu(b.lieu);return (la?la.nom:'').localeCompare(lb?lb.nom:'')})}
+  return s;
+}
+function renderPersonnes(){
+  document.getElementById('pcount').textContent=personnes.length;
+  var el=document.getElementById('pl');
+  if(!personnes.length){el.innerHTML='<div class="empty">Aucune personne.</div>';return}
+  el.innerHTML=getSorted().map(function(p){
+    var f=getLieu(p.lieu)||{nom:'?'},gi=personnes.indexOf(p);
+    if(editingPersonneId===p.id){
+      return '<div class="item-row editing">'
+        +'<div style="font-size:11px;color:var(--color-text-secondary);font-weight:600;margin-bottom:8px">Modifier : '+p.prenom+' '+p.nom+'</div>'
+        +'<div class="cols4" style="margin-bottom:8px">'
+        +'<div><label>Prenom</label><input id="ep-pp-'+p.id+'" value="'+esc(p.prenom)+'"></div>'
+        +'<div><label>Nom</label><input id="ep-pn-'+p.id+'" value="'+esc(p.nom||'')+'"></div>'
+        +'<div><label>Nom du foyer</label><input id="ep-pfoyer-'+p.id+'" value="'+esc(p.foyer||'')+'"></div>'
+        +'<div><label>Lieu de RDV</label><select id="ep-pf-'+p.id+'">'
+        +'<option value="">-- Lieu --</option>'
+        +lieux.map(function(l){return '<option value="'+l.id+'"'+(l.id===p.lieu?' selected':'')+'>'+l.nom+'</option>'}).join('')
+        +'</select></div></div>'
+        +'<div class="cols2" style="margin-bottom:8px">'
+        +'<div><label>Besoins</label><select id="ep-pb-'+p.id+'">'
+        +'<option value=""'+(p.besoins===''?' selected':'')+'>Aucun</option>'
+        +'<option value="fauteuil"'+(p.besoins==='fauteuil'?' selected':'')+'>Fauteuil roulant</option>'
+        +'<option value="deambulateur"'+(p.besoins==='deambulateur'?' selected':'')+'>Deambulateur</option>'
+        +'</select></div>'
+        +'<div><label>Notes</label><input id="ep-pnotes-'+p.id+'" value="'+esc(p.notes||'')+'"></div></div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        +'<button class="btn btn-sm" onclick="editingPersonneId=null;renderPersonnes()">Annuler</button>'
+        +'<button class="btn btn-dark btn-sm" onclick="savePersonne(\''+p.id+'\')">Enregistrer</button>'
+        +'</div></div>';
+    }
+    return '<div class="item-row"><div class="av" style="background:'+col(gi)+'20;color:'+col(gi)+'">'+initials(p)+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-weight:500;font-size:13px">'+p.prenom+' '+p.nom+'</div>'
+      +'<div style="font-size:11px;color:var(--color-text-secondary);display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +(p.foyer?'<span class="foyer-badge">'+p.foyer+'</span>':'')
+      +'<span>'+f.nom+'</span></div></div>'
+      +(p.besoins?'<span class="badge" style="background:var(--color-background-warning);color:var(--color-text-warning);flex-shrink:0">'+p.besoins+'</span>':'')
+      +'<button class="btn btn-edit btn-sm" onclick="editingPersonneId=\''+p.id+'\';renderPersonnes()">Modifier</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="delP(\''+p.id+'\')">X</button>'
+      +'</div>';
+  }).join('');
+}
+
+async function addPersonne(){
+  var prenom=document.getElementById('pp').value.trim(),lieu=document.getElementById('pf').value;
+  if(!prenom||!lieu){alert('Prenom et lieu de RDV requis.');return}
+  var p={id:'p'+Date.now(),prenom:prenom,nom:document.getElementById('pn').value.trim(),foyer:document.getElementById('pfoyer').value.trim(),lieu:lieu,besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};
+  setPersist('⏳ Sauvegarde...','neutral');
+  await dbUpsert('personnes',p.id,p);
+  personnes.push(p);
+  ['pp','pn','pfoyer','pnotes'].forEach(function(id){document.getElementById(id).value=''});
+  document.getElementById('pf').value='';document.getElementById('pb').value='';
+  updatePersistBadge();renderPersonnes();
+}
+
+async function savePersonne(id){
+  var p=personnes.find(function(x){return x.id===id});if(!p) return;
+  p.prenom=document.getElementById('ep-pp-'+id).value.trim()||p.prenom;
+  p.nom=document.getElementById('ep-pn-'+id).value.trim();
+  p.foyer=document.getElementById('ep-pfoyer-'+id).value.trim();
+  p.lieu=document.getElementById('ep-pf-'+id).value||p.lieu;
+  p.besoins=document.getElementById('ep-pb-'+id).value;
+  p.notes=document.getElementById('ep-pnotes-'+id).value.trim();
+  setPersist('⏳ Sauvegarde...','neutral');
+  await dbUpsert('personnes',id,p);
+  editingPersonneId=null;updatePersistBadge();renderPersonnes();
+}
+
+async function delP(id){
+  setPersist('⏳ Suppression...','neutral');
+  await dbDelete('personnes',id);
+  personnes=personnes.filter(function(p){return p.id!==id});
+  updatePersistBadge();renderPersonnes();
+}
+
+// ── PAGE LUNDI ─────────────────────────────────────────────
+function checkGPSWarnings(){
+  var fidsVus={};personnes.filter(function(p){return selDep[p.id]||selArr[p.id]}).forEach(function(p){fidsVus[p.lieu]=true});
+  var sg=Object.keys(fidsVus).filter(function(fid){var f=getLieu(fid);return f&&!hasGPS(f)});
+  var el=document.getElementById('gps-warning');
+  if(sg.length){el.style.display='block';el.innerHTML='<div class="warn-box"><strong>⚠️ Lieux sans GPS ignores :</strong> '+sg.map(function(fid){var f=getLieu(fid);return f?f.nom:'?'}).join(', ')+'</div>';}
+  else el.style.display='none';
+}
+function renderSelectors(){renderPS('dep-sel',selDep,'dep');renderPS('arr-sel',selArr,'arr')}
+function renderPS(cid,obj,type){
+  var el=document.getElementById(cid);
+  var q=(document.getElementById('search-'+type)||{value:''}).value.toLowerCase().trim();
+  var filtered=personnes.filter(function(p){return !q||(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0});
+  if(!filtered.length){el.innerHTML='<div class="empty" style="padding:1rem">Aucun resultat.</div>';renderResume(type);return}
+  el.innerHTML=filtered.map(function(p){
+    var f=getLieu(p.lieu)||{nom:'?'},gi=personnes.indexOf(p);
+    return '<div class="pcheck '+(obj[p.id]?'sel':'')+'" onclick="toggleP(\''+p.id+'\',\''+type+'\')">'
+      +'<div class="av" style="background:'+col(gi)+'20;color:'+col(gi)+'">'+initials(p)+'</div>'
+      +'<div style="min-width:0"><div style="font-weight:500;font-size:12px">'+p.prenom+' '+p.nom+'</div>'
+      +(p.foyer?'<div style="font-size:10px;color:#1a3a6b;font-weight:600">'+p.foyer+'</div>':'')
+      +'<div style="font-size:10px;color:var(--color-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div>'
+      +'</div></div>';
+  }).join('');renderResume(type);
+}
+function toggleP(pid,type){var obj=type==='dep'?selDep:selArr;obj[pid]=!obj[pid];renderSelectors();checkGPSWarnings()}
+function renderResume(type){
+  var obj=type==='dep'?selDep:selArr;
+  var sel=personnes.filter(function(p){return obj[p.id]});
+  var el=document.getElementById(type+'-res');
+  if(!sel.length){el.innerHTML='';return}
+  var grouped={};sel.forEach(function(p){if(!grouped[p.lieu])grouped[p.lieu]=[];grouped[p.lieu].push(p)});
+  el.innerHTML='<div style="font-size:11px;color:var(--color-text-secondary);font-weight:600;margin-bottom:5px">'+sel.length+' selectionne(s)</div>'
+    +Object.keys(grouped).map(function(lid){
+      var f=getLieu(lid)||{nom:'?'},ps=grouped[lid];
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px">'
+        +'<span>'+(type==='dep'?'🔴':'🟢')+'</span><strong>'+f.nom+'</strong>'
+        +'<span style="color:var(--color-text-secondary)">'+ps.map(function(p){return p.prenom}).join(', ')+'</span></div>';
+    }).join('');
+}
+function renderVGrid(){
+  document.getElementById('vg').innerHTML=vehicles.map(function(v){
+    return '<div class="vcard '+(selV[v.id]?'sel':'')+'" onclick="toggleV(\''+v.id+'\')">'
+      +'<div style="font-size:18px;margin-bottom:2px">'+v.ico+'</div>'
+      +'<div style="font-size:10px;font-weight:600">'+v.label+'</div>'
+      +'<div style="font-size:10px;color:var(--color-text-secondary)">'+v.cap+' p.</div>'
+      +'<div style="width:6px;height:6px;border-radius:50%;margin:3px auto 0;background:'+(selV[v.id]?'#2d7a4a':'var(--color-border-tertiary)')+'"></div>'
+      +'</div>';
+  }).join('');updateCap();
+}
+function toggleV(id){selV[id]=!selV[id];renderVGrid()}
+function updateCap(){
+  var vs=vehicles.filter(function(v){return selV[v.id]});
+  document.getElementById('vcap').textContent=vs.reduce(function(s,v){return s+v.cap},0);
+  document.getElementById('vcount').textContent=vs.length;
+}
+function updateType(){
+  var t=document.getElementById('ltype').value;
+  document.getElementById('sec-dep').style.display=(t==='entree')?'none':'block';
+  document.getElementById('sec-arr').style.display=(t==='sortie')?'none':'block';
+}
+
+// ── MOTEUR VRP ────────────────────────────────────────────
+function buildNodes(deps,arrs){
+  var map={};
+  function add(p,side){
+    var f=getLieu(p.lieu);if(!f||!hasGPS(f)) return;
+    if(!map[p.lieu]) map[p.lieu]={fid:p.lieu,lat:parseFloat(f.lat),lng:parseFloat(f.lng),nom:f.nom,adresse:f.adresse,depPers:[],arrPers:[],distLys:dLys(f),cap:bearing(LYS,f)};
+    if(side==='dep') map[p.lieu].depPers.push(p);else map[p.lieu].arrPers.push(p);
+  }
+  deps.forEach(function(p){add(p,'dep')});arrs.forEach(function(p){add(p,'arr')});
+  return Object.values(map);
+}
+function nnSort(nodes,startPt){
+  if(!nodes.length) return [];
+  var rem=nodes.slice(),route=[],cur=startPt;
+  while(rem.length){var bi=0,bd=Infinity;for(var i=0;i<rem.length;i++){var d=dp(cur,rem[i]);if(d<bd){bd=d;bi=i}}route.push(rem.splice(bi,1)[0]);cur=route[route.length-1];}
+  return route;
+}
+function shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin){
+  if(!n.arrPers.length) return false;
+  var allPers=n.depPers.concat(n.arrPers);
+  var foyerRef=allPers[0].foyer||'';
+  if(!foyerRef) return false;
+  if(!allPers.every(function(p){return (p.foyer||'')===foyerRef})) return false;
+  var idxInDep=depNodes.indexOf(n);
+  var restPts=depNodes.slice(idxInDep+1);
+  var kmAller=0,prev=n;
+  for(var i=0;i<restPts.length;i++){kmAller+=dp(prev,restPts[i]);prev=restPts[i]}
+  kmAller+=dp(prev,LYS);
+  var lastPt=restPts.length?restPts[restPts.length-1]:n;
+  var kmRetour=dp(lastPt,n)+dp(n,LYS);
+  return (kmAller-kmRetour)/vitesse*60<=maxPassengerSurplusMin;
+}
+function buildStops(cluster,maxRetourDetour,vitesse,maxPassengerSurplusMin){
+  var depNodes=cluster.filter(function(n){return n.depPers.length>0}).slice().sort(function(a,b){return a.distLys-b.distLys});
+  var arrOnlyNodes=cluster.filter(function(n){return n.arrPers.length>0&&n.depPers.length===0});
+  var lastDepPt=depNodes.length?depNodes[depNodes.length-1]:LYS;
+  var distSansRef=dp(lastDepPt,LYS);
+  var rotAllerNodes=[],rotRetourNodes=[];
+  depNodes.forEach(function(n){
+    if(!n.arrPers.length) return;
+    if(shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin)){rotAllerNodes.push(n);}
+    else{var detour=dp(lastDepPt,n)+dp(n,LYS)-distSansRef;if(detour<=maxRetourDetour) rotRetourNodes.push(n);else rotAllerNodes.push(n);}
+  });
+  var retourRoute=nnSort(arrOnlyNodes.concat(rotRetourNodes),lastDepPt);
+  var seats=depNodes.reduce(function(s,n){return s+n.depPers.length},0);
+  var stops=[{action:'depart',pt:LYS,seats:seats}];
+  depNodes.forEach(function(n){
+    seats-=n.depPers.length;
+    var recupAller=rotAllerNodes.indexOf(n)>=0;
+    if(recupAller) seats+=n.arrPers.length;
+    stops.push({action:recupAller?'rotation':'depot',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:n.depPers,arrPers:recupAller?n.arrPers:[],seats:seats,retourPrevu:rotRetourNodes.indexOf(n)>=0?n.arrPers:null,sameFoyer:recupAller});
+  });
+  retourRoute.forEach(function(n){seats+=n.arrPers.length;stops.push({action:'pickup',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:[],arrPers:n.arrPers,seats:seats,isRetourRotation:rotRetourNodes.indexOf(n)>=0});});
+  stops.push({action:'retour',pt:LYS,seats:seats});
+  return stops;
+}
+function peakSeatsStops(stops){var pk=0;stops.forEach(function(s){if(s.seats>pk)pk=s.seats});return pk}
+function getParams(){return{capMax:parseFloat(document.getElementById('capmax').value)||55,maxDetour:parseFloat(document.getElementById('maxdetour').value)||60,maxDurMin:Math.round((parseFloat(document.getElementById('maxhours').value)||7)*60),vitesse:parseFloat(document.getElementById('vitesse').value)||75,maxRetourDetour:parseFloat(document.getElementById('maxretourdetour').value)||30,maxPassengerSurplusMin:Math.round((parseFloat(document.getElementById('maxpassengersurplus').value)||2)*60)}}
+function clusterKm(cl,p){return routeLen(buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin).map(function(s){return s.pt}))}
+function detourSiAjout(cl,n,p){return clusterKm(cl.concat([n]),p)-clusterKm(cl,p)}
+function clusterFits(cl,cap,p){return peakSeatsStops(buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))<=cap}
+function pickVehicle(cluster,p,vehQueue){
+  var peak=peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin));
+  if(peak<=4){for(var i=0;i<vehQueue.length;i++){if(vehQueue[i].type==='voiture'){return vehQueue.splice(i,1)[0]}}}
+  for(var i=0;i<vehQueue.length;i++){if(vehQueue[i].type==='trafic'){return vehQueue.splice(i,1)[0]}}
+  return vehQueue.shift()||null;
+}
+function vrpSolve(deps,arrs,vehs,p){
+  var sansGPS=[];deps.concat(arrs).forEach(function(x){var f=getLieu(x.lieu);if(f&&!hasGPS(f)&&sansGPS.indexOf(f.nom)<0) sansGPS.push(f.nom)});
+  var nodes=buildNodes(deps,arrs);
+  if(!nodes.length) return{convois:[],errors:['Aucun lieu avec GPS.']};
+  nodes.sort(function(a,b){return b.distLys-a.distLys});
+  var unassigned=nodes.slice(),vehQueue=vehs.slice(),convois=[],errors=[];
+  if(sansGPS.length) errors.push('Lieux sans GPS ignores : '+sansGPS.join(', '));
+  while(unassigned.length>0){
+    if(!vehQueue.length){errors.push('Vehicules epuises : '+unassigned.map(function(n){return n.nom}).join(', '));break}
+    var seedIdx=-1;for(var i=0;i<unassigned.length;i++){if(clusterFits([unassigned[i]],8,p)){seedIdx=i;break}}
+    if(seedIdx<0){errors.push('Lieu impossible a assigner seul.');break}
+    var seed=unassigned.splice(seedIdx,1)[0],cluster=[seed],changed=true;
+    while(changed&&unassigned.length>0){
+      changed=false;var bestIdx=-1,bestScore=Infinity;
+      for(var j=0;j<unassigned.length;j++){
+        var n=unassigned[j];
+        if(angleDiff(seed.cap,n.cap)>p.capMax) continue;
+        if(!clusterFits(cluster.concat([n]),8,p)) continue;
+        if(detourSiAjout(cluster,n,p)>p.maxDetour) continue;
+        if(clusterKm(cluster.concat([n]),p)/p.vitesse*60>p.maxDurMin) continue;
+        var score=angleDiff(seed.cap,n.cap)-(n.distLys*0.3);
+        if(score<bestScore){bestScore=score;bestIdx=j}
+      }
+      if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}
+    }
+    var veh=pickVehicle(cluster,p,vehQueue);
+    if(!veh){errors.push('Plus de vehicules disponibles.');break}
+    if(!clusterFits(cluster,veh.cap,p)){
+      vehQueue.unshift(veh);var ti=-1;
+      for(var k=0;k<vehQueue.length;k++){if(vehQueue[k].type==='trafic'){ti=k;break}}
+      if(ti>=0) veh=vehQueue.splice(ti,1)[0];else{errors.push('Aucun vehicule adequat.');break}
+    }
+    var stops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var km=Math.round(routeLen(stops.map(function(s){return s.pt})));
+    var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});
+    var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
+    var pk=peakSeatsStops(stops);
+    convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)});
+  }
+  return{convois:convois,errors:errors};
+}
+function lancerOptimisation(){
+  var date=document.getElementById('ldate').value;
+  if(!date){alert('Selectionnez une date.');return}
+  var deps=personnes.filter(function(p){return selDep[p.id]});
+  var arrs=personnes.filter(function(p){return selArr[p.id]});
+  var vehs=vehicles.filter(function(v){return selV[v.id]});
+  if(!deps.length&&!arrs.length){alert('Selectionnez au moins une personne.');return}
+  if(!vehs.length){alert('Selectionnez au moins un vehicule.');return}
+  var result=vrpSolve(deps,arrs,vehs,getParams());
+  convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');
+}
+
+// ── RENDU ─────────────────────────────────────────────────
+function renderOptim(dateStr,errors){
+  var d=dateStr||'';var dateLabel='';
+  if(d){try{dateLabel=new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}catch(e){dateLabel=d}}
+  var el=document.getElementById('optim-content');
+  var tDep=convoisOptimises.reduce(function(s,c){return s+c.depart.length},0);
+  var tArr=convoisOptimises.reduce(function(s,c){return s+c.arrivee.length},0);
+  var tKm=convoisOptimises.reduce(function(s,c){return s+c.km},0);
+  var nbRot=convoisOptimises.filter(function(c){return c.type==='rotation'}).length;
+  var html='<div class="card"><div class="stitle">Resultat — '+dateLabel+'</div>';
+  if(errors&&errors.length) errors.forEach(function(e){html+='<div class="err-box">⚠️ '+e+'</div>'});
+  else html+='<div class="info-box">✅ Toutes les personnes assignees.</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">'
+    +'<div class="stat"><div class="stat-n">'+convoisOptimises.length+'</div><div class="stat-l">Convois</div></div>'
+    +'<div class="stat"><div class="stat-n">'+tDep+'</div><div class="stat-l" style="color:var(--color-text-danger)">Departs</div></div>'
+    +'<div class="stat"><div class="stat-n">'+tArr+'</div><div class="stat-l" style="color:var(--color-text-success)">Arrivees</div></div>'
+    +'<div class="stat"><div class="stat-n">'+nbRot+'</div><div class="stat-l" style="color:#b86000">Rotations</div></div>'
+    +'<div class="stat"><div class="stat-n">'+tKm+'</div><div class="stat-l">km totaux</div></div>'
+    +'</div>'+renderMapSVG(convoisOptimises)+'</div>';
+  convoisOptimises.forEach(function(c,i){
+    var bord=c.type==='rotation'?'3px solid #e8a020':c.type==='depart_only'?'3px solid var(--color-border-danger)':'3px solid var(--color-border-success)';
+    var tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Depart':'Arrivee';
+    var rmpC=c.remplissage>=75?'#2d7a4a':c.remplissage>=40?'#b86000':'#c0392b';
+    var durPct=Math.min(100,Math.round(c.dureeMin/c.maxDurMin*100));
+    var durC=c.dureeMin>c.maxDurMin?'var(--color-text-danger)':c.dureeMin>c.maxDurMin*0.85?'var(--color-text-warning)':'var(--color-text-success)';
+    var mapsUrl=buildMapsUrl(c);
+    html+='<div class="convoi-card" style="border-left:'+bord+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:'+col(i)+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px">'+(i+1)+'</div>'
+      +'<div><div style="font-weight:500;font-size:13px">'+c.vehicule.ico+' '+c.vehicule.label+'</div>'
+      +'<div style="font-size:11px;color:var(--color-text-secondary)">'+c.km+'km · pic '+c.peakSeats+'/'+c.vehicule.cap+'</div></div></div>'
+      +'<div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:600;color:'+durC+'">⏱ '+fmtDur(c.dureeMin)+'</span>'
+      +(c.dureeMin>c.maxDurMin?'<span class="badge" style="background:var(--color-background-danger);color:var(--color-text-danger)">Depasse limite</span>':'')
+      +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span></div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);margin-bottom:2px"><span>Remplissage</span><span style="font-weight:600;color:'+rmpC+'">'+c.remplissage+'%</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+c.remplissage+'%;background:'+rmpC+'"></div></div></div>'
+      +'<div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);margin-bottom:2px"><span>Duree conducteur</span><span style="font-weight:600;color:'+durC+'">'+durPct+'%</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+Math.min(durPct,100)+'%;background:'+(durC==='var(--color-text-danger)'?'#e24b4a':durC==='var(--color-text-warning)'?'#e8a020':'#2d7a4a')+'"></div></div></div>'
+      +'</div>'+renderStops(c.stops,c.vehicule.cap)
+      +'<div class="time-bar">'
+      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+      +'<label style="margin:0;font-size:11px;white-space:nowrap">Depart :</label>'
+      +'<input type="time" style="width:100px;flex-shrink:0" value="'+c.heureDepart+'" onchange="setH(\''+c.id+'\',this.value)">'
+      +'<input type="text" placeholder="Notes..." style="flex:1;min-width:80px" value="'+c.notes+'" onchange="setN(\''+c.id+'\',this.value)">'
+      +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none"><button class="btn btn-info btn-sm">Maps →</button></a>'
+      +'</div></div>';
+  });
+  if(convoisOptimises.length) html+='<div style="text-align:center;padding:0.5rem 0 1.5rem"><button class="btn btn-accent" style="font-size:14px;padding:11px 28px" onclick="genFiches()">Valider et generer les fiches →</button></div>';
+  el.innerHTML=html;
+}
+function renderStops(stops,cap){
+  var html='<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;margin:8px 0">';
+  stops.forEach(function(s){
+    var dotC,pLine='',phaseHtml='';var sn=s.seats;
+    if(s.action==='depart'){dotC='#0f1f3d';phaseHtml='<span class="phase-pill" style="background:#e8f0fb;color:#1a3a6b">Phase aller</span>';pLine='<span style="font-size:11px;color:var(--color-text-secondary)">'+sn+' a bord</span>';}
+    else if(s.action==='depot'){dotC='#e24b4a';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:#a32d2d;font-weight:600">Dep. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'');}
+    else if(s.action==='rotation'){dotC=s.sameFoyer?'#2d7a4a':'#e8a020';pLine='<span style="color:#a32d2d;font-weight:600">Dep. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'&nbsp;<span style="color:#3b6d11;font-weight:600">Arr. : </span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(s.sameFoyer?'<span class="badge" style="background:#eaf3de;color:#3b6d11;margin-left:4px">Meme foyer</span>':'');}
+    else if(s.action==='pickup'){dotC='#2d7a4a';phaseHtml='<span class="phase-pill" style="background:#eaf3de;color:#3b6d11">Phase retour</span>';pLine='<span style="color:#3b6d11;font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>';}
+    else if(s.action==='retour'){dotC='#0f1f3d';pLine='<span style="font-size:11px;color:var(--color-text-secondary)">'+sn+' a l\'arrivee</span>';}
+    html+='<div class="stop-row"><div class="dot" style="background:'+dotC+'"></div>'
+      +'<div style="flex:1;min-width:0">'+(phaseHtml?'<div style="margin-bottom:2px">'+phaseHtml+'</div>':'')
+      +'<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.pt.nom+'</div>'
+      +(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:10px;color:var(--color-text-secondary)">'+s.pt.adresse+'</div>':'')
+      +(pLine?'<div style="font-size:12px;margin-top:2px;display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')
+      +'</div></div>';
+  });
+  return html+'</div>';
+}
+function renderMapSVG(convois){
+  if(!convois.length) return '';
+  var W=700,H=280,P=28;
+  var allPts=[LYS];convois.forEach(function(c){c.stops.forEach(function(s){if(s.pt&&s.pt.lat&&s.action!=='depart'&&s.action!=='retour') allPts.push(s.pt)})});
+  var lats=allPts.map(function(p){return parseFloat(p.lat)}),lngs=allPts.map(function(p){return parseFloat(p.lng)});
+  var minLat=Math.min.apply(null,lats)-0.3,maxLat=Math.max.apply(null,lats)+0.3;
+  var minLng=Math.min.apply(null,lngs)-0.5,maxLng=Math.max.apply(null,lngs)+0.5;
+  var sLat=maxLat-minLat||1,sLng=maxLng-minLng||1;
+  function px(lng){return Math.round(P+(parseFloat(lng)-minLng)/sLng*(W-P*2))}
+  function py(lat){return Math.round(P+(maxLat-parseFloat(lat))/sLat*(H-P*2))}
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);display:block;margin-bottom:10px">';
+  convois.forEach(function(c,ci){var pts=c.stops.map(function(s){return s.pt}).filter(function(p){return p&&p.lat&&p.lng});if(pts.length>1){var pd='M'+px(pts[0].lng)+' '+py(pts[0].lat);for(var i=1;i<pts.length;i++) pd+=' L'+px(pts[i].lng)+' '+py(pts[i].lat);svg+='<path d="'+pd+'" stroke="'+col(ci)+'" stroke-width="1.5" fill="none" opacity="0.7"/>';}});
+  var drawn={};convois.forEach(function(c,ci){c.stops.forEach(function(s){if(s.action==='depart'||s.action==='retour'||!s.pt||!s.pt.lat) return;if(drawn[s.fid]) return;drawn[s.fid]=true;var x=px(s.pt.lng),y=py(s.pt.lat);svg+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="'+col(ci)+'" stroke="white" stroke-width="1.5"/>';if(s.action==='rotation') svg+='<circle cx="'+x+'" cy="'+y+'" r="3" fill="white"/>';svg+='<text x="'+x+'" y="'+(y+17)+'" text-anchor="middle" font-size="8" font-family="sans-serif" fill="'+col(ci)+'">'+s.pt.nom.substring(0,8)+'</text>';})});
+  var lx=px(LYS.lng),ly=py(LYS.lat);svg+='<rect x="'+(lx-7)+'" y="'+(ly-7)+'" width="14" height="14" rx="2" fill="#0f1f3d" stroke="white" stroke-width="2"/>';svg+='<text x="'+lx+'" y="'+(ly+20)+'" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#0f1f3d" font-weight="bold">Lysardiere</text></svg>';
+  var legend='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">';convois.forEach(function(c,i){var tl=c.type==='rotation'?'Rot.':c.type==='depart_only'?'Dep.':'Arr.';legend+='<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;background:var(--color-background-secondary);padding:2px 7px;border-radius:10px"><span style="width:7px;height:7px;border-radius:50%;background:'+col(i)+';display:inline-block"></span>'+(i+1)+' · '+c.vehicule.label+' · '+tl+' · '+fmtDur(c.dureeMin)+'</span>'});
+  return legend+'</div>'+svg;
+}
+function buildMapsUrl(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});wps.push(LYS.lat+','+LYS.lng);return 'https://www.google.com/maps/dir/'+wps.join('/')}
+function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
+function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
+function getBadgeSt(t){if(t==='rotation') return 'background:#fff3e0;color:#b86000';if(t==='depart_only') return 'background:var(--color-background-danger);color:var(--color-text-danger)';return 'background:var(--color-background-success);color:var(--color-text-success)'}
+function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches')}
+function renderFiches(){
+  var el=document.getElementById('fiches-content');var date=document.getElementById('ldate').value;var dateLabel='';
+  if(date){try{dateLabel=new Date(date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){dateLabel=date}}
+  var html='<div class="card" style="padding:0.75rem 1.25rem;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:13px;color:var(--color-text-secondary)">'+convoisOptimises.length+' fiche(s) · '+dateLabel+'</div></div>';
+  convoisOptimises.forEach(function(c,i){
+    var mapsUrl=buildMapsUrl(c),clr=col(i),tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Depart':'Arrivee';
+    var durC=c.dureeMin>c.maxDurMin?'var(--color-text-danger)':'var(--color-text-success)';
+    html+='<div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:12px;background:var(--color-background-primary)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--color-border-tertiary);flex-wrap:wrap;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px">'+(i+1)+'</div>'
+      +'<div><div style="font-size:14px;font-weight:500">Convoi '+(i+1)+' — '+c.vehicule.label+'</div>'
+      +'<div style="font-size:12px;color:var(--color-text-secondary)">'+dateLabel+(c.heureDepart?' · Depart '+c.heureDepart:'')+'</div></div></div>'
+      +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;font-weight:600;color:'+durC+'">⏱ '+fmtDur(c.dureeMin)+'</span>'
+      +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span>'
+      +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none"><button class="btn btn-dark btn-sm">Maps</button></a></div></div>'
+      +'<div class="cols2" style="margin-bottom:12px">'
+      +'<div><div style="font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Passagers</div>'
+      +'<div style="font-size:13px;line-height:1.9">'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:#1a3a6b"> ('+p.foyer+')</span>':'')+' <span style="color:var(--color-text-danger);font-size:11px">dep.</span>'}).join('<br>')+(c.depart.length&&c.arrivee.length?'<br>':'')+c.arrivee.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:#1a3a6b"> ('+p.foyer+')</span>':'')+' <span style="color:var(--color-text-success);font-size:11px">arr.</span>'}).join('<br>')+'</div></div>'
+      +'<div><div style="font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Trajet</div>'
+      +'<div style="font-size:13px;line-height:1.9">Distance : <strong>~'+c.km+' km</strong><br>Duree : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'+(c.notes?'<br>Notes : <em>'+c.notes+'</em>':'')+'</div></div></div>'
+      +'<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;margin-bottom:10px">'
+      +'<div style="font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Ordre des arrets</div>'
+      +c.stops.map(function(s,si){
+        var dotC=s.action==='depart'||s.action==='retour'?'#0f1f3d':s.action==='pickup'?'#2d7a4a':'#e24b4a';
+        var pLabel='';
+        if(s.action==='depot') pLabel=(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' (depart)'+(s.retourPrevu&&s.retourPrevu.length?' — '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+' a recuperer au retour':'');
+        else if(s.action==='pickup') pLabel=(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s.isRetourRotation?' (arrivee · rotation)':' (arrivee)');
+        else if(s.action==='rotation') pLabel='Dep: '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s.sameFoyer?' [meme foyer]':'');
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)'+(si===c.stops.length-1?';border-bottom:none':'')+'">'
+          +'<div style="min-width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700">'+(si+1)+'</div>'
+          +'<div style="min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.pt.nom+'</div>'
+          +(pLabel?'<div style="font-size:11px;color:var(--color-text-secondary)">'+pLabel+'</div>':'')
+          +(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:10px;color:var(--color-text-tertiary)">'+s.pt.adresse+'</div>':'')
+          +'</div></div>';
+      }).join('')+'</div>'
+      +'<div style="padding:8px 12px;background:var(--color-background-info);border-radius:var(--border-radius-md);font-size:11px;color:var(--color-text-info);word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:var(--color-text-info)">'+mapsUrl.substring(0,80)+'...</a></div></div>';
+  });
+  el.innerHTML=html;
+}
+
+loadData();
+</script>
