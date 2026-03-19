@@ -486,19 +486,34 @@ function renderSemaineCard(s,idx,isArchive){
         +(c.arrivee.length?'<span style="color:#2d7a4a;font-weight:600">Arr : </span>'+c.arrivee.map(function(p){return p.prenom+' '+p.nom+(p.foyer?' ('+p.foyer+')':'')}).join(', '):'')
         +'</div>'
         +'<div style="background:#f8f8f8;border-radius:6px;padding:8px 10px">'
-        +c.stops.map(function(s2,si){
-          var dotC=s2.action==='depart'||s2.action==='retour'?'#0f1f3d':s2.action==='pickup'?'#2d7a4a':'#e24b4a';
-          var label='';
-          if(s2.action==='depart') label='Depart La Lysardiere';
-          else if(s2.action==='retour') label='Retour La Lysardiere';
-          else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
-          else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
-          else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
-          return '<div class="stop-mini">'
-            +'<div style="width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;flex-shrink:0">'+(si+1)+'</div>'
-            +'<div><div style="font-weight:500">'+s2.pt.nom+'</div>'
-            +'<div style="color:#666;font-size:10px">'+label+'</div></div></div>';
-        }).join('')+'</div>'
+        +(function(){
+          var heuresSem=[];
+          if(c.heureDepart&&c.legDurations&&c.legDurations.length){
+            var partsSem=c.heureDepart.split(':');
+            var minsCurSem=parseInt(partsSem[0])*60+parseInt(partsSem[1]);
+            heuresSem[0]=minsCurSem;
+            for(var liSem=0;liSem<c.legDurations.length;liSem++){
+              minsCurSem+=c.legDurations[liSem].min;
+              if(liSem<c.legDurations.length-1) minsCurSem+=15;
+              heuresSem[liSem+1]=minsCurSem;
+            }
+          }
+          function fmtH(mins){if(mins===undefined) return '';var h=Math.floor(mins/60)%24,m=mins%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}
+          return c.stops.map(function(s2,si){
+            var dotC=s2.action==='depart'||s2.action==='retour'?'#0f1f3d':s2.action==='pickup'?'#2d7a4a':'#e24b4a';
+            var heureStr=heuresSem[si]!==undefined?' <span style="font-size:10px;font-weight:600;color:#0f1f3d;background:#e8f0fb;padding:1px 5px;border-radius:6px">'+fmtH(heuresSem[si])+'</span>':'';
+            var label='';
+            if(s2.action==='depart') label='Depart La Lysardiere';
+            else if(s2.action==='retour') label='Retour La Lysardiere';
+            else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
+            else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
+            else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
+            return '<div class="stop-mini">'
+              +'<div style="width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;flex-shrink:0">'+(si+1)+'</div>'
+              +'<div><div style="font-weight:500">'+s2.pt.nom+heureStr+'</div>'
+              +'<div style="color:#666;font-size:10px">'+label+'</div></div></div>';
+          }).join('');
+        })()+'</div>'
         +(c.notes?'<div style="font-size:11px;color:#666;margin-top:6px;font-style:italic">Notes : '+c.notes+'</div>':'')
         +'</div>';
     }).join('')
@@ -1117,40 +1132,7 @@ function renderFiches(){
       +'<div style="font-size:13px;line-height:1.9">Distance : <strong>~'+c.km+' km</strong><br>Duree : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'+(c.notes?'<br>Notes : <em>'+c.notes+'</em>':'')+'</div></div></div>'
       +'<div style="background:#f8f8f8;border-radius:8px;padding:10px 12px;margin-bottom:10px">'
       +'<div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Ordre des arrets</div>'
-      +c.stops.map(function(s,si){
-        // Calcul heures pour semaine card
-        var heuresSem=[];
-        if(c.heureDepart && c.legDurations && c.legDurations.length){
-          var partsSem=c.heureDepart.split(':');
-          var minsCurSem=parseInt(partsSem[0])*60+parseInt(partsSem[1]);
-          heuresSem[0]=minsCurSem;
-          for(var liSem=0;liSem<c.legDurations.length;liSem++){
-            var isLastSem=(liSem===c.legDurations.length-1);
-            minsCurSem+=c.legDurations[liSem].min;
-            if(!isLastSem) minsCurSem+=15;
-            heuresSem[liSem+1]=minsCurSem;
-          }
-        }
-        function fmtHeureSem(mins){
-          if(mins===undefined) return '';
-          var h=Math.floor(mins/60)%24;
-          var m=mins%60;
-          return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
-        }
-        +c.stops.map(function(s2,si){
-          var dotC=s2.action==='depart'||s2.action==='retour'?'#0f1f3d':s2.action==='pickup'?'#2d7a4a':'#e24b4a';
-          var heureStrSem=heuresSem[si]!==undefined?' <span style="font-size:10px;font-weight:600;color:#0f1f3d;background:#e8f0fb;padding:1px 5px;border-radius:6px">'+fmtHeureSem(heuresSem[si])+'</span>':'';
-          var label='';
-          if(s2.action==='depart') label='Depart La Lysardiere';
-          else if(s2.action==='retour') label='Retour La Lysardiere';
-          else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
-          else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
-          else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
-          return '<div class="stop-mini">'
-            +'<div style="width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;flex-shrink:0">'+(si+1)+'</div>'
-            +'<div><div style="font-weight:500">'+s2.pt.nom+heureStrSem+'</div>'
-            +'<div style="color:#666;font-size:10px">'+label+'</div></div></div>';
-          }).join('')+'</div>'
+      +renderStops(c.stops,c.vehicule.cap,c.heureDepart,c.legDurations)
       +'<div style="padding:8px 12px;background:#e8f4fb;border-radius:8px;font-size:11px;color:#0077a8;word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:#0077a8">'+mapsUrl.substring(0,80)+'...</a></div></div>';
   });
   el.innerHTML=html;
