@@ -1029,18 +1029,43 @@ function renderOptim(dateStr,errors){
     +'</div>';
   el.innerHTML=html;
 }
-function renderStops(stops,cap){
+function renderStops(stops,cap,heureDepart,legDurations){
   var html='<div style="background:#f8f8f8;border-radius:8px;padding:10px 12px;margin:8px 0">';
-  stops.forEach(function(s){
+  
+  // Calcul des heures à chaque stop
+  var heures=[];
+  if(heureDepart && legDurations && legDurations.length){
+    var parts=heureDepart.split(':');
+    var minsCur=parseInt(parts[0])*60+parseInt(parts[1]);
+    heures[0]=minsCur; // heure départ La Lysardière
+    for(var li=0;li<legDurations.length;li++){
+      var isLastLeg=(li===legDurations.length-1);
+      minsCur+=legDurations[li].min;
+      if(!isLastLeg) minsCur+=15; // +15 min tampon sauf dernier leg
+      heures[li+1]=minsCur;
+    }
+  }
+  
+  function fmtHeure(mins){
+    if(mins===undefined) return '';
+    var h=Math.floor(mins/60)%24;
+    var m=mins%60;
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  }
+
+  stops.forEach(function(s,si){
     var dotC,pLine='',phaseHtml='';var sn=s.seats;
+    var heureStr=heures[si]!==undefined?'<span style="font-size:11px;font-weight:600;color:#0f1f3d;background:#e8f0fb;padding:1px 6px;border-radius:8px;margin-left:6px">'+fmtHeure(heures[si])+'</span>':'';
+    
     if(s.action==='depart'){dotC='#0f1f3d';phaseHtml='<span class="phase-pill" style="background:#e8f0fb;color:#1a3a6b">Phase aller</span>';pLine='<span style="font-size:11px;color:#666">'+sn+' a bord</span>';}
     else if(s.action==='depot'){dotC='#e24b4a';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:#a32d2d;font-weight:600">Dep. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'');}
     else if(s.action==='rotation'){dotC=s.sameFoyer?'#2d7a4a':'#e8a020';pLine='<span style="color:#a32d2d;font-weight:600">Dep. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'&nbsp;<span style="color:#3b6d11;font-weight:600">Arr. : </span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(s.sameFoyer?'<span class="badge" style="background:#eaf3de;color:#3b6d11;margin-left:4px">Meme foyer</span>':'');}
     else if(s.action==='pickup'){dotC='#2d7a4a';phaseHtml='<span class="phase-pill" style="background:#eaf3de;color:#3b6d11">Phase retour</span>';pLine='<span style="color:#3b6d11;font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>';}
     else if(s.action==='retour'){dotC='#0f1f3d';pLine='<span style="font-size:11px;color:#666">'+sn+' a l\'arrivee</span>';}
+    
     html+='<div class="stop-row"><div class="dot" style="background:'+dotC+'"></div>'
       +'<div style="flex:1;min-width:0">'+(phaseHtml?'<div style="margin-bottom:2px">'+phaseHtml+'</div>':'')
-      +'<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.pt.nom+'</div>'
+      +'<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px">'+s.pt.nom+heureStr+'</div>'
       +(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:10px;color:#666">'+s.pt.adresse+'</div>':'')
       +(pLine?'<div style="font-size:12px;margin-top:2px;display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')
       +'</div></div>';
@@ -1093,18 +1118,39 @@ function renderFiches(){
       +'<div style="background:#f8f8f8;border-radius:8px;padding:10px 12px;margin-bottom:10px">'
       +'<div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Ordre des arrets</div>'
       +c.stops.map(function(s,si){
-        var dotC=s.action==='depart'||s.action==='retour'?'#0f1f3d':s.action==='pickup'?'#2d7a4a':'#e24b4a';
-        var pLabel='';
-        if(s.action==='depot') pLabel=(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' (depart)'+(s.retourPrevu&&s.retourPrevu.length?' — '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+' a recuperer au retour':'');
-        else if(s.action==='pickup') pLabel=(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s.isRetourRotation?' (arrivee · rotation)':' (arrivee)');
-        else if(s.action==='rotation') pLabel='Dep: '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s.sameFoyer?' [meme foyer]':'');
-        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:0.5px solid #eee'+(si===c.stops.length-1?';border-bottom:none':'')+'">'
-          +'<div style="min-width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700">'+(si+1)+'</div>'
-          +'<div style="min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.pt.nom+'</div>'
-          +(pLabel?'<div style="font-size:11px;color:#666">'+pLabel+'</div>':'')
-          +(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:10px;color:#999">'+s.pt.adresse+'</div>':'')
-          +'</div></div>';
-      }).join('')+'</div>'
+        // Calcul heures pour semaine card
+        var heuresSem=[];
+        if(c.heureDepart && c.legDurations && c.legDurations.length){
+          var partsSem=c.heureDepart.split(':');
+          var minsCurSem=parseInt(partsSem[0])*60+parseInt(partsSem[1]);
+          heuresSem[0]=minsCurSem;
+          for(var liSem=0;liSem<c.legDurations.length;liSem++){
+            var isLastSem=(liSem===c.legDurations.length-1);
+            minsCurSem+=c.legDurations[liSem].min;
+            if(!isLastSem) minsCurSem+=15;
+            heuresSem[liSem+1]=minsCurSem;
+          }
+        }
+        function fmtHeureSem(mins){
+          if(mins===undefined) return '';
+          var h=Math.floor(mins/60)%24;
+          var m=mins%60;
+          return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+        }
+        +c.stops.map(function(s2,si){
+          var dotC=s2.action==='depart'||s2.action==='retour'?'#0f1f3d':s2.action==='pickup'?'#2d7a4a':'#e24b4a';
+          var heureStrSem=heuresSem[si]!==undefined?' <span style="font-size:10px;font-weight:600;color:#0f1f3d;background:#e8f0fb;padding:1px 5px;border-radius:6px">'+fmtHeureSem(heuresSem[si])+'</span>':'';
+          var label='';
+          if(s2.action==='depart') label='Depart La Lysardiere';
+          else if(s2.action==='retour') label='Retour La Lysardiere';
+          else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
+          else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
+          else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
+          return '<div class="stop-mini">'
+            +'<div style="width:18px;height:18px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;flex-shrink:0">'+(si+1)+'</div>'
+            +'<div><div style="font-weight:500">'+s2.pt.nom+heureStrSem+'</div>'
+            +'<div style="color:#666;font-size:10px">'+label+'</div></div></div>';
+          }).join('')+'</div>'
       +'<div style="padding:8px 12px;background:#e8f4fb;border-radius:8px;font-size:11px;color:#0077a8;word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:#0077a8">'+mapsUrl.substring(0,80)+'...</a></div></div>';
   });
   el.innerHTML=html;
