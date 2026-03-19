@@ -883,32 +883,37 @@ function lancerOptimisation(){
 var GMAPS_KEY='AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c';
 
 async function enrichirConvoisAvecMaps(convois){
-  if(!GMAPS_KEY) return; // Pas de clé = on garde les estimations
+  if(!GMAPS_KEY) return;
   for(var i=0;i<convois.length;i++){
     var c=convois[i];
-    var waypoints=c.stops
-      .filter(function(s){return s.action!=='depart'&&s.action!=='retour'})
-      .map(function(s){return s.pt.lat+','+s.pt.lng});
-    if(!waypoints.length) continue;
-    var origin=LYS.lat+','+LYS.lng;
-    var destination=LYS.lat+','+LYS.lng;
-    var wps=waypoints.slice(0,-1).join('|');
-    var dest_wp=waypoints[waypoints.length-1];
-    var url='https://maps.googleapis.com/maps/api/directions/json'
-      +'?origin='+origin+'&destination='+destination
-      +'&waypoints='+encodeURIComponent(wps+'|'+dest_wp)
-      +'&key='+GMAPS_KEY;
+    var pts=[LYS].concat(
+      c.stops.filter(function(s){return s.action!=='depart'&&s.action!=='retour'}).map(function(s){return s.pt})
+    ).concat([LYS]);
+    if(pts.length<3) continue;
+    // Construire origins/destinations pour Distance Matrix (segments consécutifs)
+    var origins=pts.slice(0,-1).map(function(p){return p.lat+','+p.lng}).join('|');
+    var destinations=pts.slice(1).map(function(p){return p.lat+','+p.lng}).join('|');
     try{
-      var r=await fetch(url);var data=await r.json();
-      if(data.status==='OK'&&data.routes.length){
-        var legs=data.routes[0].legs;
-        var totalKm=Math.round(legs.reduce(function(s,l){return s+l.distance.value},0)/1000);
-        var totalMin=Math.round(legs.reduce(function(s,l){return s+l.duration.value},0)/60);
-        c.km=totalKm;c.dureeMin=totalMin;c.mapsEnrichi=true;
-        // Stocker les durées par étape pour affichage
-        c.legDurations=legs.map(function(l){return{km:Math.round(l.distance.value/1000),min:Math.round(l.duration.value/60),label:l.end_address}});
+      var url='https://maps.googleapis.com/maps/api/distancematrix/json'
+        +'?origins='+encodeURIComponent(origins)
+        +'&destinations='+encodeURIComponent(destinations)
+        +'&mode=driving&key='+GMAPS_KEY;
+      var r=await fetch(url);
+      var data=await r.json();
+      if(data.status==='OK'){
+        var totalKm=0,totalMin=0;
+        for(var j=0;j<data.rows.length;j++){
+          var el=data.rows[j].elements[j];
+          if(el&&el.status==='OK'){
+            totalKm+=el.distance.value/1000;
+            totalMin+=el.duration.value/60;
+          }
+        }
+        c.km=Math.round(totalKm);
+        c.dureeMin=Math.round(totalMin);
+        c.mapsEnrichi=true;
       }
-    }catch(e){}
+    }catch(e){console.log('Maps API erreur:',e)}
   }
 }
   
