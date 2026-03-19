@@ -899,6 +899,7 @@ async function lancerOptimisation(){
   setPersist('✅ Distances Maps intégrées','ok');
   
   // Ré-afficher avec les valeurs Maps
+  console.log('AVANT renderOptim - convoi 0 dureeMin:', convoisOptimises[0]?.dureeMin, 'km:', convoisOptimises[0]?.km);
   renderOptim(date,result.errors);
 }
 
@@ -985,6 +986,7 @@ async function enrichirConvoisAvecMaps(convois) {
 // ── RENDU ─────────────────────────────────────────────────
 function getBadgeSt(t){if(t==='rotation') return 'background:#fff3e0;color:#b86000';if(t==='depart_only') return 'background:#fdecea;color:#c0392b';return 'background:#eaf3de;color:#2d7a4a'}
 function renderOptim(dateStr,errors){
+  console.log('DANS renderOptim - convoi 0 dureeMin:', convoisOptimises[0]?.dureeMin);
   var d=dateStr||'';var dateLabel=fmtDate(d);
   var el=document.getElementById('optim-content');
   var tDep=convoisOptimises.reduce(function(s,c){return s+c.depart.length},0);
