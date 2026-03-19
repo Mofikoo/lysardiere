@@ -922,8 +922,6 @@ async function enrichirConvoisAvecMaps(convois) {
 
   for (let i = 0; i < convois.length; i++) {
     const c = convois[i];
-    
-    // Extraire tous les points dans l'ordre des stops
     const pts = [];
     for (const s of c.stops) {
       const p = s.pt;
@@ -934,12 +932,9 @@ async function enrichirConvoisAvecMaps(convois) {
         pts.push({ lat, lng, nom: p.nom || '' });
       }
     }
-    
     if (pts.length < 2) continue;
-
     let totalKm = 0, totalMin = 0;
     const legDurations = [];
-
     for (let j = 0; j < pts.length - 1; j++) {
       try {
         const result = await new Promise((resolve, reject) => {
@@ -948,12 +943,11 @@ async function enrichirConvoisAvecMaps(convois) {
             destinations: [{ lat: pts[j+1].lat, lng: pts[j+1].lng }],
             travelMode: google.maps.TravelMode.DRIVING,
             unitSystem: google.maps.UnitSystem.METRIC,
-          }, (response, status) => {, ..., (response, status) => {
+          }, (response, status) => {
             if (status === 'OK') resolve(response);
             else reject(status);
           });
         });
-
         const el = result.rows[0].elements[0];
         if (el && el.status === 'OK') {
           const km = el.distance.value / 1000;
@@ -972,13 +966,11 @@ async function enrichirConvoisAvecMaps(convois) {
         console.warn('Leg', j, 'erreur:', e);
       }
     }
-
     if (legDurations.length > 0) {
       c.km = Math.round(totalKm);
       c.dureeMin = Math.round(totalMin);
       c.legDurations = legDurations;
       c.mapsEnrichi = true;
-      console.log('Convoi', i, '- legs:', legDurations.map(l => l.from + '→' + l.to + ' : ' + l.text));
     }
   }
 }
