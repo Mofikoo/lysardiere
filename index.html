@@ -238,10 +238,9 @@ async function loadData(){
   setPersist('⏳ Chargement...','neutral');
   try{
     var [l,p]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes')]);
-    if(l) lieux=l; else lieux=[];
-    if(p) personnes=p; else personnes=[];
-    if(!lieux.length) await loadDemoData();
-    else setPersist('☁️ Connecte · '+lieux.length+' lieux · '+personnes.length+' personnes','ok');
+    lieux=l||[];
+    personnes=p||[];
+    setPersist('☁️ Connecte · '+lieux.length+' lieux · '+personnes.length+' personnes','ok');
   }catch(e){
     setPersist('❌ Erreur connexion Supabase','err');
   }
