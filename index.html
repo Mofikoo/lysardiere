@@ -907,19 +907,30 @@ async function enrichirConvoisAvecMaps(convois) {
 
   for (let i = 0; i < convois.length; i++) {
     const c = convois[i];
-    const pts = c.stops.map(s => s.pt).filter(p => p && p.lat && p.lng);
+    
+    // Extraire tous les points dans l'ordre des stops
+    const pts = [];
+    for (const s of c.stops) {
+      const p = s.pt;
+      if (!p) continue;
+      const lat = parseFloat(p.lat);
+      const lng = parseFloat(p.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        pts.push({ lat, lng, nom: p.nom || '' });
+      }
+    }
+    
     if (pts.length < 2) continue;
 
     let totalKm = 0, totalMin = 0;
     const legDurations = [];
 
-    // Un appel par leg consécutif
     for (let j = 0; j < pts.length - 1; j++) {
       try {
         const result = await new Promise((resolve, reject) => {
           service.getDistanceMatrix({
-            origins: [{ lat: parseFloat(pts[j].lat), lng: parseFloat(pts[j].lng) }],
-            destinations: [{ lat: parseFloat(pts[j+1].lat), lng: parseFloat(pts[j+1].lng) }],
+            origins: [{ lat: pts[j].lat, lng: pts[j].lng }],
+            destinations: [{ lat: pts[j+1].lat, lng: pts[j+1].lng }],
             travelMode: google.maps.TravelMode.DRIVING,
             unitSystem: google.maps.UnitSystem.METRIC,
           }, (response, status) => {
@@ -947,10 +958,13 @@ async function enrichirConvoisAvecMaps(convois) {
       }
     }
 
-    c.km = Math.round(totalKm);
-    c.dureeMin = Math.round(totalMin);
-    c.legDurations = legDurations;
-    c.mapsEnrichi = true;
+    if (legDurations.length > 0) {
+      c.km = Math.round(totalKm);
+      c.dureeMin = Math.round(totalMin);
+      c.legDurations = legDurations;
+      c.mapsEnrichi = true;
+      console.log('Convoi', i, '- legs:', legDurations.map(l => l.from + '→' + l.to + ' : ' + l.text));
+    }
   }
 }
   
