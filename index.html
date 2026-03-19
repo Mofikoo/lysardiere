@@ -876,7 +876,7 @@ function lancerOptimisation(){
   if(!deps.length&&!arrs.length){alert('Selectionnez au moins une personne.');return}
   if(!vehs.length){alert('Selectionnez au moins un vehicule.');return}
   var result=vrpSolve(deps,arrs,vehs,getParams());
-  convoisOptimises=result.convois;await enrichirConvoisAvecMaps(convoisOptimises);renderOptim(date,result.errors);show('optim');
+  convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');
 }
 
 // ── GOOGLE MAPS API ───────────────────────────────────────
