@@ -888,14 +888,28 @@ async function lancerOptimisation(){
   var result=vrpSolve(deps,arrs,vehs,getParams());
   convoisOptimises=result.convois;
   
-  if(window.googleMapsReady){
-    setPersist('⏳ Calcul distances réelles...','neutral');
-    await enrichirConvoisAvecMaps(convoisOptimises);
-    setPersist('✅ Distances Maps intégrées','ok');
-  }
-  
+  // Afficher d'abord avec valeurs Haversine
   renderOptim(date,result.errors);
   show('optim');
+  
+  // Puis enrichir avec Maps (attendre si pas encore prêt)
+  setPersist('⏳ Calcul distances réelles...','neutral');
+  await attendreMaps();
+  await enrichirConvoisAvecMaps(convoisOptimises);
+  setPersist('✅ Distances Maps intégrées','ok');
+  
+  // Ré-afficher avec les valeurs Maps
+  renderOptim(date,result.errors);
+}
+
+function attendreMaps(){
+  return new Promise(function(resolve){
+    if(window.googleMapsReady){resolve();return}
+    var interval=setInterval(function(){
+      if(window.googleMapsReady){clearInterval(interval);resolve()}
+    },200);
+    setTimeout(function(){clearInterval(interval);resolve()},10000);
+  });
 }
 
 // ── GOOGLE MAPS API ───────────────────────────────────────
