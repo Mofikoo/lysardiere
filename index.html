@@ -93,12 +93,12 @@ input:focus,select:focus{border-color:#1a3a6b}
     </div>
   </div>
   <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-    <button class="nb active" id="btn-semaines" onclick="show('semaines')">📅 Semaines</button>
-    <button class="nb" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
     <button class="nb" id="btn-personnes" onclick="show('personnes')">Personnes</button>
-    <button class="nb" id="btn-saisie" onclick="show('saisie')">Trajets</button>
+    <button class="nb" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
+        <button class="nb" id="btn-saisie" onclick="show('saisie')">Trajets</button>
     <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
     <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
+    <button class="nb active" id="btn-semaines" onclick="show('semaines')">📅 Semaines</button>
     <button class="nb" id="btn-flotte" onclick="show('flotte')">🚐 Flotte</button>
     <span class="persist-badge" id="persist-status" style="background:#f0f0f0;color:#666">⏳ Connexion...</span>
   </div>
@@ -369,10 +369,14 @@ function show(t){
 
 // ── FLOTTE ────────────────────────────────────────────────
 function renderFlotte(){
+  var sorted=vehicles.slice().sort(function(a,b){
+    if(a.type===b.type) return a.label.localeCompare(b.label);
+    return a.type==='trafic'?-1:1;
+  });
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun vehicule.</div>';return}
-  el.innerHTML=vehicles.map(function(v,i){
+  el.innerHTML=sorted.map(function(v){
     return '<div class="item-row">'
       +'<span style="font-size:20px">'+v.ico+'</span>'
       +'<div style="flex:1;min-width:0">'
@@ -737,7 +741,11 @@ function renderResume(type){
     }).join('');
 }
 function renderVGrid(){
-  document.getElementById('vg').innerHTML=vehicles.map(function(v){
+  var sorted=vehicles.slice().sort(function(a,b){
+    if(a.type===b.type) return a.label.localeCompare(b.label);
+    return a.type==='trafic'?-1:1;
+  });
+  document.getElementById('vg').innerHTML=sorted.map(function(v){
     return '<div class="vcard '+(selV[v.id]?'sel':'')+'" onclick="toggleV(\''+v.id+'\')">'
       +'<div style="font-size:18px;margin-bottom:2px">'+v.ico+'</div>'
       +'<div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v.label+'</div>'
@@ -868,9 +876,42 @@ function lancerOptimisation(){
   if(!deps.length&&!arrs.length){alert('Selectionnez au moins une personne.');return}
   if(!vehs.length){alert('Selectionnez au moins un vehicule.');return}
   var result=vrpSolve(deps,arrs,vehs,getParams());
-  convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');
+  convoisOptimises=result.convois;await enrichirConvoisAvecMaps(convoisOptimises);renderOptim(date,result.errors);show('optim');
 }
 
+// ── GOOGLE MAPS API ───────────────────────────────────────
+var GMAPS_KEY='AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c';
+
+async function enrichirConvoisAvecMaps(convois){
+  if(!GMAPS_KEY) return; // Pas de clé = on garde les estimations
+  for(var i=0;i<convois.length;i++){
+    var c=convois[i];
+    var waypoints=c.stops
+      .filter(function(s){return s.action!=='depart'&&s.action!=='retour'})
+      .map(function(s){return s.pt.lat+','+s.pt.lng});
+    if(!waypoints.length) continue;
+    var origin=LYS.lat+','+LYS.lng;
+    var destination=LYS.lat+','+LYS.lng;
+    var wps=waypoints.slice(0,-1).join('|');
+    var dest_wp=waypoints[waypoints.length-1];
+    var url='https://maps.googleapis.com/maps/api/directions/json'
+      +'?origin='+origin+'&destination='+destination
+      +'&waypoints='+encodeURIComponent(wps+'|'+dest_wp)
+      +'&key='+GMAPS_KEY;
+    try{
+      var r=await fetch(url);var data=await r.json();
+      if(data.status==='OK'&&data.routes.length){
+        var legs=data.routes[0].legs;
+        var totalKm=Math.round(legs.reduce(function(s,l){return s+l.distance.value},0)/1000);
+        var totalMin=Math.round(legs.reduce(function(s,l){return s+l.duration.value},0)/60);
+        c.km=totalKm;c.dureeMin=totalMin;c.mapsEnrichi=true;
+        // Stocker les durées par étape pour affichage
+        c.legDurations=legs.map(function(l){return{km:Math.round(l.distance.value/1000),min:Math.round(l.duration.value/60),label:l.end_address}});
+      }
+    }catch(e){}
+  }
+}
+  
 // ── RENDU ─────────────────────────────────────────────────
 function getBadgeSt(t){if(t==='rotation') return 'background:#fff3e0;color:#b86000';if(t==='depart_only') return 'background:#fdecea;color:#c0392b';return 'background:#eaf3de;color:#2d7a4a'}
 function renderOptim(dateStr,errors){
