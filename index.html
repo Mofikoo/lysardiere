@@ -705,7 +705,6 @@ input:focus, select:focus {
     <button class="nb" id="btn-manuel" onclick="show('manuel')">Trajet Manuel</button>
     <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
     <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
-    <button class="nb" id="btn-fcond" onclick="show('fcond')">Fiches Conducteur</button>
     <button class="nb active" id="btn-semaines" onclick="show('semaines')">Semaines</button>
     <button class="nb" id="btn-flotte" onclick="show('flotte')">Flotte</button>
     <button class="nb" id="btn-stats" onclick="show('stats')">Statistiques</button>
@@ -882,7 +881,6 @@ input:focus, select:focus {
 
 <div class="tab-pane" id="pane-optim"><div id="optim-content"><div class="empty">Lancez l'optimisation depuis l'onglet "Trajets".</div></div></div>
 <div class="tab-pane" id="pane-fiches"><div id="fiches-content"><div class="empty">Les fiches apparaitront apres validation.</div></div></div>
-<div class="tab-pane" id="pane-fcond"><div id="fcond-content"><div class="empty">Les fiches conducteur apparaitront apres validation des fiches.</div></div></div>
 
 <!-- STATISTIQUES -->
 <div class="tab-pane" id="pane-stats">
@@ -1031,7 +1029,6 @@ function show(t){
   if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
   if(t==='semaines'){renderSemaines()}
   if(t==='flotte'){renderFlotte()}
-  if(t==='fcond'){renderFichesConducteur()}
   if(t==='stats'){renderStats()}
   if(t==='courrier'){}
   if(t==='manuel'){manRefresh()}
@@ -1479,7 +1476,7 @@ function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach
 function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
 function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
 function setConducteur(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.conducteur=val.trim()}
-function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();renderFichesConducteur();show('fiches');window.scrollTo({top:0,behavior:'smooth'})}
+function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches');window.scrollTo({top:0,behavior:'smooth'})}
 
 function renderFiches(){
   var el=document.getElementById('fiches-content');var date=document.getElementById('ldate').value;var dateLabel=fmtDate(date);
@@ -1520,7 +1517,14 @@ function renderFiches(){
       html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name" style="font-size:14px;font-weight:700;flex-wrap:wrap">'+s.pt.nom+heureStr+timeDetailHtml+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address" style="font-size:11px;color:var(--text-mid)">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail" style="font-size:12px;color:var(--text-mid)">'+pLine+'</div></div></div>';
       if(si===pqIdx) html+=PIQUENIQUE_HTML;
     });
-    html+='</div><div style="padding:10px 14px;background:var(--blue-bg);border-radius:var(--radius-xs);font-size:11px;color:var(--blue);word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:var(--blue)">'+mapsUrl.substring(0,80)+'...</a></div></div>';
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(mapsUrl);
+    html+='</div><div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--blue-bg);border-radius:var(--radius-xs);border:1px solid #b8ddf0">'
+      +'<img src="'+qrUrl+'" style="width:90px;height:90px;flex-shrink:0;border:1px solid var(--border)" alt="QR Maps">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:4px">Itineraire Google Maps</div>'
+      +'<div style="font-size:9px;color:var(--blue);word-break:break-all;line-height:1.4">'+mapsUrl+'</div>'
+      +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none" class="no-print"><button class="btn btn-primary btn-sm" style="margin-top:6px">Ouvrir dans Maps</button></a>'
+      +'</div></div></div>';
   });
   el.innerHTML=html;
 }
@@ -2111,72 +2115,6 @@ async function manSaveToSemaines(){
   manStops=[];
   manRenderStops();
   document.getElementById('man-preview-card').style.display='none';
-}
-
-// ── FICHES CONDUCTEUR ─────────────────────────
-function renderFichesConducteur(){
-  var el=document.getElementById('fcond-content');
-  if(!convoisOptimises.length){el.innerHTML='<div class="empty">Validez d\'abord des fiches depuis l\'onglet Optimisation.</div>';return}
-  var date=document.getElementById('ldate').value;
-  var dateLabel=fmtDate(date);
-  var html='<div class="card" style="padding:12px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px"><img src="'+LOGO_URL+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover"><span style="font-size:13px;color:var(--text-mid)">'+convoisOptimises.length+' fiche(s) conducteur - '+dateLabel+'</span></div><button class="btn btn-sm" onclick="window.print()">Imprimer</button></div>';
-  convoisOptimises.forEach(function(c,i){
-    var mapsUrl=buildMapsUrl(c);
-    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(mapsUrl);
-    var hData=computeHeures(c);
-    var heures=hData.heures;
-    var rawArr=hData.rawArrivals;
-    var pqIdx=hData.piqueniqueIdx;
-    var pqCount=hData.piqueniqueCount;
-    var clr=col(i);
-    html+='<div style="border:2px solid var(--text);border-radius:var(--radius);padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;box-shadow:var(--shadow-sm)">'
-      // Header with logo, convoi info, QR code
-      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--text)">'
-      +'<div style="display:flex;align-items:center;gap:12px">'
-      +'<img src="'+LOGO_URL+'" style="width:48px;height:48px;border-radius:50%;object-fit:cover">'
-      +'<div>'
-      +'<div style="font-size:18px;font-weight:700;color:var(--text)">'+c.vehicule.ico+' '+c.vehicule.label+'</div>'
-      +'<div style="font-size:14px;font-weight:600;color:var(--forest)">'+(c.conducteur||'Conducteur non assigne')+'</div>'
-      +'<div style="font-size:12px;color:var(--text-mid)">'+dateLabel+(c.heureDepart?' - Depart '+c.heureDepart:'')+(pqCount>0?' - '+pqCount+' pique-nique'+(pqCount>1?'s':''):'')+'</div>'
-      +'</div></div>'
-      +'<div style="text-align:center">'
-      +'<img src="'+qrUrl+'" style="width:100px;height:100px;border:1px solid var(--border)" alt="QR Maps">'
-      +'<div style="font-size:9px;color:var(--text-light);margin-top:2px">Scanner pour Maps</div>'
-      +'</div></div>'
-      // Stops timeline - simplified
-      +'<div style="margin-bottom:12px">';
-    c.stops.forEach(function(s,si){
-      var isFirst=si===0;
-      var isLast=si===c.stops.length-1;
-      var heureRdv=heures[si]!==undefined?fmtH(heures[si]):'';
-      var lieu=s.pt.nom||'?';
-      var depNames=(s.depPers||[]).map(function(p){return p.prenom+(p.nom?' '+p.nom:'')});
-      var arrNames=(s.arrPers||[]).map(function(p){return p.prenom+(p.nom?' '+p.nom:'')});
-      var bgColor=isFirst||isLast?'var(--mint)':si===pqIdx?'var(--red-bg)':'var(--bg)';
-      var borderLeft=s.action==='depot'||s.action==='rotation'?'3px solid var(--red)':s.action==='pickup'?'3px solid var(--green)':'3px solid var(--forest)';
-      html+='<div style="display:flex;align-items:stretch;margin-bottom:4px;background:'+bgColor+';border-radius:6px;border-left:'+borderLeft+';overflow:hidden">'
-        +'<div style="width:60px;padding:8px 4px;text-align:center;font-size:18px;font-weight:700;color:var(--forest);flex-shrink:0">'+heureRdv+'</div>'
-        +'<div style="flex:1;padding:8px 12px;border-left:1px solid var(--border-light)">'
-        +'<div style="font-weight:700;font-size:13px;color:var(--text)">'+lieu+'</div>';
-      if(s.action==='depart') html+='<div style="font-size:11px;color:var(--forest)">Depart - '+(s.seats||0)+' a bord</div>';
-      else if(s.action==='retour') html+='<div style="font-size:11px;color:var(--forest)">Retour - '+(s.seats||0)+' a l\'arrivee</div>';
-      else {
-        if(depNames.length) html+='<div style="font-size:11px"><strong style="color:var(--red)">DEP</strong> '+depNames.join(', ')+'</div>';
-        if(arrNames.length) html+='<div style="font-size:11px"><strong style="color:var(--green)">ARR</strong> '+arrNames.join(', ')+'</div>';
-      }
-      html+='</div></div>';
-      if(si===pqIdx) html+='<div style="background:var(--red);color:white;font-weight:700;font-size:11px;text-align:center;padding:6px;border-radius:4px;margin:2px 0">PAUSE PIQUE-NIQUE (1h)</div>';
-    });
-    html+='</div>'
-      // Footer with Maps link
-      +'<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border-light)">'
-      +'<div style="font-size:11px;color:var(--text-light)">'+c.km+'km - '+fmtDur(c.dureeMin)+' - Pic '+c.peakSeats+'/'+c.vehicule.cap+'</div>'
-      +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none" class="no-print"><button class="btn btn-primary btn-sm">Ouvrir dans Maps</button></a>'
-      +'</div>'
-      +(c.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:6px;font-style:italic">Notes : '+c.notes+'</div>':'')
-      +'</div>';
-  });
-  el.innerHTML=html;
 }
 
 loadData();
