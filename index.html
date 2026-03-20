@@ -705,6 +705,7 @@ input:focus, select:focus {
     <button class="nb" id="btn-manuel" onclick="show('manuel')">Trajet Manuel</button>
     <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
     <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
+    <button class="nb" id="btn-fcond" onclick="show('fcond')">Fiches Conducteur</button>
     <button class="nb active" id="btn-semaines" onclick="show('semaines')">Semaines</button>
     <button class="nb" id="btn-flotte" onclick="show('flotte')">Flotte</button>
     <button class="nb" id="btn-stats" onclick="show('stats')">Statistiques</button>
@@ -881,6 +882,7 @@ input:focus, select:focus {
 
 <div class="tab-pane" id="pane-optim"><div id="optim-content"><div class="empty">Lancez l'optimisation depuis l'onglet "Trajets".</div></div></div>
 <div class="tab-pane" id="pane-fiches"><div id="fiches-content"><div class="empty">Les fiches apparaitront apres validation.</div></div></div>
+<div class="tab-pane" id="pane-fcond"><div id="fcond-content"><div class="empty">Les fiches conducteur apparaitront apres validation des fiches.</div></div></div>
 
 <!-- STATISTIQUES -->
 <div class="tab-pane" id="pane-stats">
@@ -1029,6 +1031,7 @@ function show(t){
   if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
   if(t==='semaines'){renderSemaines()}
   if(t==='flotte'){renderFlotte()}
+  if(t==='fcond'){renderFichesConducteur()}
   if(t==='stats'){renderStats()}
   if(t==='courrier'){}
   if(t==='manuel'){manRefresh()}
@@ -1351,7 +1354,17 @@ function toggleConstraints(){
 function checkGPSWarnings(){var fidsVus={};personnes.filter(function(p){return selDep[p.id]||selArr[p.id]}).forEach(function(p){fidsVus[p.lieu]=true});var sg=Object.keys(fidsVus).filter(function(fid){var f=getLieu(fid);return f&&!hasGPS(f)});var el=document.getElementById('gps-warning');if(sg.length){el.style.display='block';el.innerHTML='<div class="warn-box"><strong>Lieux sans GPS ignores :</strong> '+sg.map(function(fid){var f=getLieu(fid);return f?f.nom:'?'}).join(', ')+'</div>'}else el.style.display='none'}
 function renderSelectors(){renderPS('dep-sel',selDep,'dep');renderPS('arr-sel',selArr,'arr')}
 function renderPS(cid,obj,type){var el=document.getElementById(cid);var q=(document.getElementById('search-'+type)||{value:''}).value.toLowerCase().trim();var filtered=personnes.filter(function(p){return !q||(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0});if(!filtered.length){el.innerHTML='<div class="empty" style="padding:1rem">Aucun résultat.</div>';renderResume(type);return}el.innerHTML=filtered.map(function(p){var f=getLieu(p.lieu)||{nom:'?'},gi=personnes.indexOf(p);return '<div class="pcheck '+(obj[p.id]?'sel':'')+'" onclick="toggleP(\''+p.id+'\',\''+type+'\')"><div class="av" style="background:'+col(gi)+'18;color:'+col(gi)+'">'+initials(p)+'</div><div style="min-width:0"><div style="font-weight:600;font-size:12px">'+p.prenom+' '+p.nom+'</div>'+(p.foyer?'<div style="font-size:10px;color:var(--forest);font-weight:600">'+p.foyer+'</div>':'')+'<div style="font-size:10px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div></div></div>'}).join('');renderResume(type)}
-function toggleP(pid,type){var obj=type==='dep'?selDep:selArr;obj[pid]=!obj[pid];renderSelectors();checkGPSWarnings()}
+function toggleP(pid,type){var obj=type==='dep'?selDep:selArr;obj[pid]=!obj[pid];renderSelectors();checkGPSWarnings();checkDoublonWarning()}
+function checkDoublonWarning(){
+  var doublons=[];
+  personnes.forEach(function(p){
+    if(selDep[p.id]&&selArr[p.id]) doublons.push(p.prenom+' '+p.nom);
+  });
+  var el=document.getElementById('doublon-warning');
+  if(!el){var w=document.createElement('div');w.id='doublon-warning';w.style.cssText='margin-bottom:10px';var ref=document.getElementById('gps-warning');if(ref) ref.parentNode.insertBefore(w,ref.nextSibling);el=w}
+  if(doublons.length){el.innerHTML='<div class="warn-box"><strong>Attention doublons :</strong> '+doublons.join(', ')+' sont selectionne(s) en depart ET en arrivee. Normal uniquement pour une rotation (meme foyer).</div>';el.style.display='block'}
+  else{el.style.display='none'}
+}
 function renderResume(type){var obj=type==='dep'?selDep:selArr;var sel=personnes.filter(function(p){return obj[p.id]});var el=document.getElementById(type+'-res');if(!sel.length){el.innerHTML='';return}var grouped={};sel.forEach(function(p){if(!grouped[p.lieu])grouped[p.lieu]=[];grouped[p.lieu].push(p)});el.innerHTML='<div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:5px">'+sel.length+' sélectionné(s)</div>'+Object.keys(grouped).map(function(lid){var f=getLieu(lid)||{nom:'?'},ps=grouped[lid];return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px"><span>'+(type==='dep'?'🔴':'🟢')+'</span><strong>'+f.nom+'</strong><span style="color:var(--text-light)">'+ps.map(function(p){return p.prenom}).join(', ')+'</span></div>'}).join('')}
 function renderVGrid(){var sorted=vehicles.slice().sort(function(a,b){if(a.type===b.type) return a.label.localeCompare(b.label);return a.type==='trafic'?-1:1});document.getElementById('vg').innerHTML=sorted.map(function(v){return '<div class="vcard '+(selV[v.id]?'sel':'')+'" onclick="toggleV(\''+v.id+'\')"><div style="font-size:20px;margin-bottom:3px">'+v.ico+'</div><div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v.label+'</div><div style="font-size:10px;color:var(--text-light)">'+v.cap+' p.</div><div style="width:8px;height:8px;border-radius:50%;margin:4px auto 0;background:'+(selV[v.id]?'var(--green)':'var(--border)')+'"></div></div>'}).join('');updateCap()}
 function toggleV(id){selV[id]=!selV[id];renderVGrid()}
@@ -1466,7 +1479,7 @@ function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach
 function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
 function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
 function setConducteur(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.conducteur=val.trim()}
-function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches');window.scrollTo({top:0,behavior:'smooth'})}
+function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();renderFichesConducteur();show('fiches');window.scrollTo({top:0,behavior:'smooth'})}
 
 function renderFiches(){
   var el=document.getElementById('fiches-content');var date=document.getElementById('ldate').value;var dateLabel=fmtDate(date);
@@ -2098,6 +2111,72 @@ async function manSaveToSemaines(){
   manStops=[];
   manRenderStops();
   document.getElementById('man-preview-card').style.display='none';
+}
+
+// ── FICHES CONDUCTEUR ─────────────────────────
+function renderFichesConducteur(){
+  var el=document.getElementById('fcond-content');
+  if(!convoisOptimises.length){el.innerHTML='<div class="empty">Validez d\'abord des fiches depuis l\'onglet Optimisation.</div>';return}
+  var date=document.getElementById('ldate').value;
+  var dateLabel=fmtDate(date);
+  var html='<div class="card" style="padding:12px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px"><img src="'+LOGO_URL+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover"><span style="font-size:13px;color:var(--text-mid)">'+convoisOptimises.length+' fiche(s) conducteur - '+dateLabel+'</span></div><button class="btn btn-sm" onclick="window.print()">Imprimer</button></div>';
+  convoisOptimises.forEach(function(c,i){
+    var mapsUrl=buildMapsUrl(c);
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(mapsUrl);
+    var hData=computeHeures(c);
+    var heures=hData.heures;
+    var rawArr=hData.rawArrivals;
+    var pqIdx=hData.piqueniqueIdx;
+    var pqCount=hData.piqueniqueCount;
+    var clr=col(i);
+    html+='<div style="border:2px solid var(--text);border-radius:var(--radius);padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;box-shadow:var(--shadow-sm)">'
+      // Header with logo, convoi info, QR code
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--text)">'
+      +'<div style="display:flex;align-items:center;gap:12px">'
+      +'<img src="'+LOGO_URL+'" style="width:48px;height:48px;border-radius:50%;object-fit:cover">'
+      +'<div>'
+      +'<div style="font-size:18px;font-weight:700;color:var(--text)">'+c.vehicule.ico+' '+c.vehicule.label+'</div>'
+      +'<div style="font-size:14px;font-weight:600;color:var(--forest)">'+(c.conducteur||'Conducteur non assigne')+'</div>'
+      +'<div style="font-size:12px;color:var(--text-mid)">'+dateLabel+(c.heureDepart?' - Depart '+c.heureDepart:'')+(pqCount>0?' - '+pqCount+' pique-nique'+(pqCount>1?'s':''):'')+'</div>'
+      +'</div></div>'
+      +'<div style="text-align:center">'
+      +'<img src="'+qrUrl+'" style="width:100px;height:100px;border:1px solid var(--border)" alt="QR Maps">'
+      +'<div style="font-size:9px;color:var(--text-light);margin-top:2px">Scanner pour Maps</div>'
+      +'</div></div>'
+      // Stops timeline - simplified
+      +'<div style="margin-bottom:12px">';
+    c.stops.forEach(function(s,si){
+      var isFirst=si===0;
+      var isLast=si===c.stops.length-1;
+      var heureRdv=heures[si]!==undefined?fmtH(heures[si]):'';
+      var lieu=s.pt.nom||'?';
+      var depNames=(s.depPers||[]).map(function(p){return p.prenom+(p.nom?' '+p.nom:'')});
+      var arrNames=(s.arrPers||[]).map(function(p){return p.prenom+(p.nom?' '+p.nom:'')});
+      var bgColor=isFirst||isLast?'var(--mint)':si===pqIdx?'var(--red-bg)':'var(--bg)';
+      var borderLeft=s.action==='depot'||s.action==='rotation'?'3px solid var(--red)':s.action==='pickup'?'3px solid var(--green)':'3px solid var(--forest)';
+      html+='<div style="display:flex;align-items:stretch;margin-bottom:4px;background:'+bgColor+';border-radius:6px;border-left:'+borderLeft+';overflow:hidden">'
+        +'<div style="width:60px;padding:8px 4px;text-align:center;font-size:18px;font-weight:700;color:var(--forest);flex-shrink:0">'+heureRdv+'</div>'
+        +'<div style="flex:1;padding:8px 12px;border-left:1px solid var(--border-light)">'
+        +'<div style="font-weight:700;font-size:13px;color:var(--text)">'+lieu+'</div>';
+      if(s.action==='depart') html+='<div style="font-size:11px;color:var(--forest)">Depart - '+(s.seats||0)+' a bord</div>';
+      else if(s.action==='retour') html+='<div style="font-size:11px;color:var(--forest)">Retour - '+(s.seats||0)+' a l\'arrivee</div>';
+      else {
+        if(depNames.length) html+='<div style="font-size:11px"><strong style="color:var(--red)">DEP</strong> '+depNames.join(', ')+'</div>';
+        if(arrNames.length) html+='<div style="font-size:11px"><strong style="color:var(--green)">ARR</strong> '+arrNames.join(', ')+'</div>';
+      }
+      html+='</div></div>';
+      if(si===pqIdx) html+='<div style="background:var(--red);color:white;font-weight:700;font-size:11px;text-align:center;padding:6px;border-radius:4px;margin:2px 0">PAUSE PIQUE-NIQUE (1h)</div>';
+    });
+    html+='</div>'
+      // Footer with Maps link
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border-light)">'
+      +'<div style="font-size:11px;color:var(--text-light)">'+c.km+'km - '+fmtDur(c.dureeMin)+' - Pic '+c.peakSeats+'/'+c.vehicule.cap+'</div>'
+      +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none" class="no-print"><button class="btn btn-primary btn-sm">Ouvrir dans Maps</button></a>'
+      +'</div>'
+      +(c.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:6px;font-style:italic">Notes : '+c.notes+'</div>':'')
+      +'</div>';
+  });
+  el.innerHTML=html;
 }
 
 loadData();
