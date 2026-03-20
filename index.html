@@ -914,16 +914,13 @@ var DEFAULT_VEHICLES=[
   {id:'t1',label:'Trafic Blanc 1',type:'trafic',cap:8,ico:'🚐'},
   {id:'t2',label:'Trafic Blanc 2',type:'trafic',cap:8,ico:'🚐'},
   {id:'t3',label:'Trafic Taupe',type:'trafic',cap:8,ico:'🚐'},
-  {id:'t4',label:'Trafic Bleu',type:'trafic',cap:8,ico:'🚐'},
+  {id:'t4',label:'Trafic ?',type:'trafic',cap:8,ico:'🚐'},
   {id:'t5',label:'Trafic Boxer',type:'trafic',cap:8,ico:'🚐'},
   {id:'t6',label:'Trafic Coffre',type:'trafic',cap:8,ico:'🚐'},
-  {id:'t7',label:'Trafic Gris',type:'trafic',cap:8,ico:'🚐'},
-  {id:'t8',label:'Trafic Elec',type:'trafic',cap:8,ico:'🚐'},
   {id:'v1',label:'Voiture 308',type:'voiture',cap:4,ico:'🚗'},
   {id:'v2',label:'Voiture Élysée',type:'voiture',cap:4,ico:'🚗'},
   {id:'v3',label:'Voiture Opel',type:'voiture',cap:4,ico:'🚗'},
-  {id:'v4',label:'Nissan',type:'voiture',cap:4,ico:'🚗'},
-  {id:'v5',label:'Grand Scenic',type:'voiture',cap:4,ico:'🚗'}
+  {id:'v4',label:'Voiture ?',type:'voiture',cap:4,ico:'🚗'}
 ];
 
 function initSelV(){vehicles.forEach(function(v){if(selV[v.id]===undefined) selV[v.id]=true})}
@@ -992,17 +989,18 @@ function computeHeures(c){
   var parts=c.heureDepart.split(':');
   var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
   var nbStops=c.legDurations.length+1;
-  // 1) compute raw arrival times (exact travel time, no buffer)
+  
+  // 1) compute raw arrival times (cumulative exact travel time from start, no buffer)
   var rawArrivals=[];
   rawArrivals[0]=startMin;
-  var cur=startMin;
+  var cum=startMin;
   for(var i=0;i<c.legDurations.length;i++){
-    cur+=c.legDurations[i].min;
-    rawArrivals[i+1]=cur;
+    cum+=c.legDurations[i].min;
+    rawArrivals[i+1]=cum;
   }
-  // 2) detect pique-nique: trip crosses midi
+  
+  // 2) detect pique-nique: trip crosses midi, find intermediate stop closest to midi
   var MIDI=720;var piqueniqueIdx=-1;
-  // Use raw arrivals (no buffer) to find closest stop to midi
   if(rawArrivals[0]<MIDI && rawArrivals[nbStops-1]>MIDI){
     var bestDist=Infinity;
     for(var j=1;j<nbStops-1;j++){
@@ -1010,42 +1008,63 @@ function computeHeures(c){
       if(dist<bestDist){bestDist=dist;piqueniqueIdx=j}
     }
   }
-  // 3) compute buffered times: add 15 min buffer between each intermediate stop + 60 min at pique-nique
-  var buffered=[];
-  buffered[0]=startMin;
-  cur=startMin;
-  for(var i2=0;i2<c.legDurations.length;i2++){
-    cur+=c.legDurations[i2].min;
-    // add pique-nique pause if this is the stop
-    if(i2+1===piqueniqueIdx) cur+=60;
-    // add 15 min buffer for intermediate stops (not last)
-    if(i2<c.legDurations.length-1) cur+=15;
-    buffered[i2+1]=cur;
-  }
-  // rawArrivals need pique-nique offset too for stops after it
+  
+  // 3) compute displayed heures sequentially: each stop departs from the previous stop's displayed time
+  // rawWithPause = raw arrival at each stop accounting for pique-nique delay on subsequent stops
   var rawWithPause=[];
   for(var ra=0;ra<rawArrivals.length;ra++){
     rawWithPause[ra]=rawArrivals[ra];
     if(piqueniqueIdx>0 && ra>piqueniqueIdx) rawWithPause[ra]+=60;
   }
-  // 4) round intermediate stops to quarters, preserve stop 0 and last stop exact
+  
   var heures=[];
-  heures[0]=buffered[0]; // depart exact
+  heures[0]=startMin; // depart = exact
+  var departPrev=startMin; // the time we leave the previous stop
+  
   for(var m=1;m<nbStops;m++){
-    if(m===nbStops-1){heures[m]=buffered[m];continue} // retour final exact
-    var rawMin=buffered[m];
-    var remainder=rawMin%15;
-    var rounded;
-    if(remainder<=7) rounded=rawMin-remainder;
-    else rounded=rawMin+(15-remainder);
-    // check buffer >= 10 min from raw arrival
-    var arrivalRaw=rawWithPause[m];
-    if(rounded-arrivalRaw<10){
-      rounded=rawMin-remainder+15;
+    // raw arrival at this stop = previous departure + leg duration
+    var rawArrival=departPrev+c.legDurations[m-1].min;
+    
+    if(m===nbStops-1){
+      // retour final = exact (no rounding, no buffer)
+      heures[m]=rawArrival;
+      // also apply pique-nique offset to rawWithPause for display
+      if(piqueniqueIdx>0 && m>piqueniqueIdx){
+        rawWithPause[m]=rawArrival;
+      }
+      continue;
     }
+    
+    // intermediate stop: add buffer then round to quarter
+    var isPiqueniqueStop=(m===piqueniqueIdx);
+    
+    // The buffer: 15 min normally, but 60 min (no extra 15) if pique-nique stop
+    var bufferMin=isPiqueniqueStop?60:15;
+    var withBuffer=rawArrival+bufferMin;
+    
+    // Round to nearest quarter hour
+    var remainder=withBuffer%15;
+    var rounded;
+    if(remainder<=7) rounded=withBuffer-remainder;
+    else rounded=withBuffer+(15-remainder);
+    
+    // Safety: ensure at least 10 min gap from raw arrival
+    if(rounded-rawArrival<10){
+      rounded=withBuffer-remainder+15;
+    }
+    
     heures[m]=rounded;
+    departPrev=rounded; // next leg departs from this rounded time
+    
+    // Update rawWithPause for this stop (for display: "Arrivee estimee")
+    rawWithPause[m]=rawArrival;
+    if(piqueniqueIdx>0 && m>piqueniqueIdx && !isPiqueniqueStop){
+      // raw arrival already shifted because departPrev was shifted by pique-nique
+      // rawWithPause is already correct since we compute from departPrev
+    }
   }
-  // 5) count pique-niques a prevoir: depart passengers dropped AFTER pique-nique stop
+  
+  // 4) count pique-niques a prevoir: depart passengers dropped AFTER pique-nique stop
   var piqueniqueCount=0;
   if(piqueniqueIdx>0 && c.stops){
     for(var si=piqueniqueIdx+1;si<c.stops.length;si++){
@@ -1055,7 +1074,7 @@ function computeHeures(c){
       }
     }
   }
-  // 6) apply custom overrides if present
+  // 5) apply custom overrides if present
   if(c.customHeures){
     for(var key in c.customHeures){
       if(c.customHeures.hasOwnProperty(key)){
