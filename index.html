@@ -1016,18 +1016,67 @@ var DEFAULT_VEHICLES=[
 
 function initSelV(){vehicles.forEach(function(v){if(selV[v.id]===undefined) selV[v.id]=true})}
 
+var gazoleHistorique=[];
+
 async function loadData(){
-  setPersist('⏳ Chargement...','neutral');
+  setPersist('Chargement...','neutral');
   try{
-    var[l,p,s,a,veh]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes'),dbLoadAll('semaines'),dbLoadAll('archives'),dbLoadAll('vehicules')]);
+    var[l,p,s,a,veh,gz]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes'),dbLoadAll('semaines'),dbLoadAll('archives'),dbLoadAll('vehicules'),dbLoadAll('prix_gazole')]);
     lieux=l||[];personnes=p||[];
     semaines=(s||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
     archives=(a||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+    gazoleHistorique=(gz||[]).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
     if(veh&&veh.length>0) vehicles=veh;
     else{vehicles=DEFAULT_VEHICLES;await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v)}))}
     initSelV();updatePersistBadge();
-  }catch(e){setPersist('❌ Erreur Supabase','err')}
+  }catch(e){setPersist('Erreur Supabase','err')}
   renderLieux();renderPersonnes();refreshLieuSelect();renderSemaines();renderFlotte();
+  // Auto-fetch gazole price for today
+  autoFetchGazole();
+}
+
+function getTodayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+
+async function autoFetchGazole(){
+  var today=getTodayStr();
+  // Check if we already have today's price
+  var existing=gazoleHistorique.find(function(g){return g.date===today});
+  if(existing) return; // Already fetched today
+  try{
+    var controller=new AbortController();
+    var timeout=setTimeout(function(){controller.abort()},10000);
+    var r=await fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc',{signal:controller.signal});
+    clearTimeout(timeout);
+    if(!r.ok) return;
+    var data=await r.json();
+    var prices=[];
+    if(data.results) data.results.forEach(function(x){if(x.gazole_prix>0) prices.push(x.gazole_prix)});
+    if(!prices.length) return;
+    var avg=prices.reduce(function(a,b){return a+b},0)/prices.length;
+    if(avg<0.5||avg>3.5) return;
+    var entry={date:today,prix:Math.round(avg*1000)/1000,stations:prices.length};
+    await dbUpsert('prix_gazole','gz_'+today,entry);
+    gazoleHistorique.push(entry);
+    gazoleHistorique.sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+    // Update the stats input if visible
+    var el=document.getElementById('stats-gazole');
+    if(el) el.value=entry.prix.toFixed(2);
+    var st=document.getElementById('gazole-status');
+    if(st){st.textContent='Prix du jour : '+entry.prix.toFixed(3)+' euro/L ('+entry.stations+' stations, 50km)';st.style.color='var(--green)'}
+  }catch(e){/* silently fail */}
+}
+
+// Get gazole price for a specific date from history (closest date <= target)
+function getGazolePrixForDate(dateStr){
+  if(!dateStr||!gazoleHistorique.length) return parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65;
+  var best=null;
+  for(var i=0;i<gazoleHistorique.length;i++){
+    if(gazoleHistorique[i].date<=dateStr) best=gazoleHistorique[i];
+    else break;
+  }
+  // If no price before this date, take the first available after
+  if(!best) best=gazoleHistorique[0];
+  return best?best.prix:(parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65);
 }
 
 function col(i){return COLORS[i%COLORS.length]}
@@ -1325,7 +1374,18 @@ async function archiver(id){var s=semaines.find(function(x){return x.id===id});i
 async function desarchiver(id){var s=archives.find(function(x){return x.id===id});if(!s) return;await dbUpsert('semaines',id,s);await dbDelete('archives',id);archives=archives.filter(function(x){return x.id!==id});semaines.unshift(s);semaines.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});renderSemaines();setPersist('Semaine restauree','ok')}
 async function delSemaine(id,isArchive){if(!confirm('Supprimer definitivement cette semaine ?')) return;var table=isArchive?'archives':'semaines';await dbDelete(table,id);if(isArchive) archives=archives.filter(function(s){return s.id!==id});else semaines=semaines.filter(function(s){return s.id!==id});renderSemaines()}
 function chargerSemaine(id,isArchive){var list=isArchive?archives:semaines;var s=list.find(function(x){return x.id===id});if(!s) return;convoisOptimises=s.convois;document.getElementById('ldate').value=s.date;if(s.type) document.getElementById('ltype').value=s.type;renderOptim(s.date,[]);show('optim')}
-async function sauvegarderSemaine(){if(!convoisOptimises.length){alert('Aucun convoi.');return}var date=document.getElementById('ldate').value;if(!date){alert('Selectionnez une date.');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var gazolePrice=parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65;var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises,gazolePrice:gazolePrice};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardee','ok');alert('Semaine du '+fmtDate(date)+' sauvegardee.')}
+function getGazolePriceAuto(){
+  return fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=50&select=gazole_prix&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var prices=[];
+      if(data.results&&data.results.length) data.results.forEach(function(r){if(r.gazole_prix>0) prices.push(r.gazole_prix)});
+      if(prices.length){var avg=prices.reduce(function(a,b){return a+b},0)/prices.length;if(avg>0.5&&avg<3.5) return avg}
+      return null;
+    })
+    .catch(function(){return null});
+}
+async function sauvegarderSemaine(){if(!convoisOptimises.length){alert('Aucun convoi.');return}var date=document.getElementById('ldate').value;if(!date){alert('Selectionnez une date.');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardee','ok');alert('Semaine du '+fmtDate(date)+' sauvegardee.')}
 
 // ── LIEUX ─────────────────────────────────────
 function renderLieux(){
@@ -1652,14 +1712,13 @@ function renderStats(){
       return true;
     });
   }
-  var fallbackGazole=parseFloat(document.getElementById('stats-gazole').value)||1.65;
   var CONSO_TRAFIC=10;
   var CONSO_VOITURE=7;
   
   // --- VEHICULES ---
   var vehStats={};var totalKm=0;var totalCout=0;
   allSem.forEach(function(s){
-    var gaz=s.gazolePrice||fallbackGazole;
+    var gaz=getGazolePrixForDate(s.date);
     s.convois.forEach(function(c){
       var vid=c.vehicule.id||c.vehicule.label;
       if(!vehStats[vid]) vehStats[vid]={label:c.vehicule.label,ico:c.vehicule.ico||'',type:c.vehicule.type||'trafic',km:0,passagers:0,conducteurs:[],cout:0};
@@ -1694,7 +1753,7 @@ function renderStats(){
   // --- FREQUENCE PAR FOYER ---
   var foyerStats={};
   allSem.forEach(function(s){
-    var gaz=s.gazolePrice||fallbackGazole;
+    var gaz=getGazolePrixForDate(s.date);
     s.convois.forEach(function(c){
       (c.depart||[]).concat(c.arrivee||[]).forEach(function(p){
         var foyer=p.foyer||'Sans foyer';
@@ -1729,7 +1788,7 @@ function renderStats(){
     +'<div class="stat"><div class="stat-n">'+totalKm+'</div><div class="stat-l">km totaux</div></div>'
     +'<div class="stat"><div class="stat-n">'+totalCout.toFixed(0)+'&euro;</div><div class="stat-l">cout gazole estime</div></div>'
     +'<div class="stat"><div class="stat-n">'+vacKeys.length+'</div><div class="stat-l">vacanciers</div></div>'
-    +'</div><div style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center">'+periodeLabel+' &mdash; Cout calcule avec le prix gazole enregistre par trajet (defaut '+fallbackGazole.toFixed(2)+' euro/L)</div></div>';
+    +'</div><div style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center">'+periodeLabel+' &mdash; Prix gazole : historique automatique ('+gazoleHistorique.length+' jour'+(gazoleHistorique.length>1?'s':'')+' enregistre'+(gazoleHistorique.length>1?'s':'')+')</div></div>';
   
   // Section vehicules (collapsible)
   html+='<div class="card" style="padding:0;overflow:hidden">'
@@ -1860,6 +1919,13 @@ function fetchGazolePrice(){
       document.getElementById('stats-gazole').value=avg.toFixed(2);
       statusEl.textContent='Prix actualise : '+avg.toFixed(3)+' euro/L (moyenne '+prices.length+' stations dans 50km — min '+min.toFixed(3)+' / max '+max.toFixed(3)+')';
       statusEl.style.color='var(--green)';
+      // Save to historique
+      var today=getTodayStr();
+      var entry={date:today,prix:Math.round(avg*1000)/1000,stations:prices.length};
+      dbUpsert('prix_gazole','gz_'+today,entry);
+      var existing=gazoleHistorique.find(function(g){return g.date===today});
+      if(existing){existing.prix=entry.prix;existing.stations=entry.stations}
+      else{gazoleHistorique.push(entry);gazoleHistorique.sort(function(a,b){return(a.date||'').localeCompare(b.date||'')})}
       renderStats();
     })
     .catch(function(e){
@@ -2315,7 +2381,6 @@ async function manSaveToSemaines(){
   if(!manStops.length){alert('Ajoutez au moins un arret.');return}
   var built=manBuildConvoi();
   var convoi=built.convoi;
-  // Find or create semaine for this date
   var existing=semaines.find(function(s){return s.date===date});
   if(existing){
     existing.convois.push(convoi);
@@ -2323,7 +2388,7 @@ async function manSaveToSemaines(){
     await dbUpsert('semaines',existing.id,existing);
   } else {
     var id='sem'+Date.now();
-    var data={id:id,date:date,type:built.type,convois:[convoi],gazolePrice:parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65};
+    var data={id:id,date:date,type:built.type,convois:[convoi]};
     await dbUpsert('semaines',id,data);
     semaines.unshift(data);
   }
