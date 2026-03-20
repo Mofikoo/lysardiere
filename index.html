@@ -1091,10 +1091,11 @@ function computeHeures(c){
   }
   
   // 4) count pique-niques a prevoir: depart passengers dropped AFTER pique-nique stop
+  // 4) count pique-niques: depart passengers dropped AT or AFTER pique-nique stop need a pique-nique
   var piqueniqueCount=0;
   if(piqueniqueIdx>0 && c.stops){
-    for(var si=piqueniqueIdx+1;si<c.stops.length;si++){
-      var st=c.stops[si];
+    for(var pc=piqueniqueIdx;pc<c.stops.length;pc++){
+      var st=c.stops[pc];
       if(st.action==='depot'||st.action==='rotation'){
         piqueniqueCount+=(st.depPers||[]).length;
       }
@@ -1124,11 +1125,9 @@ function renderTimeDetail(si,rawArrivals,heures,piqueniqueIdx){
   var reprise=heures[si];
   var pause=reprise-arrive;
   if(pause<=0) return '';
-  var html='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:3px;font-size:10px">';
-  html+='<span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-weight:600">Arrivee '+fmtH(arrive)+'</span>';
-  html+='<span style="background:var(--gold);color:var(--forest);padding:1px 6px;border-radius:4px;font-weight:600">Pause '+pause+'min</span>';
-  html+='<span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600">Reprise '+fmtH(reprise)+'</span>';
-  html+='</div>';
+  var html=' <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Arr. '+fmtH(arrive)+'</span>';
+  html+=' <span style="background:var(--gold);color:var(--forest);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Pause '+pause+'min</span>';
+  html+=' <span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Reprise '+fmtH(reprise)+'</span>';
   return html;
 }
 var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
@@ -1217,7 +1216,7 @@ function renderSemaineCard(s,idx,isArchive){
           if(heuresSem[si]!==undefined){
             editHourHtml=' <input type="time" class="no-print" value="'+fmtH(heuresSem[si])+'" style="width:80px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="editSemHeure(\''+s.id+'\','+ci+','+si+',this.value)">';
           }
-          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name">'+s2.pt.nom+heureStr+editHourHtml+'</div><div class="tl-detail">'+label+'</div>'+timeDetailHtml+'</div></div>';
+          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name" style="flex-wrap:wrap">'+s2.pt.nom+heureStr+timeDetailHtml+editHourHtml+'</div><div class="tl-detail">'+label+'</div></div></div>';
           if(si===pqIdx) stopHtml+=PIQUENIQUE_HTML;
           return stopHtml;
         }).join('')+'</div>'
@@ -1280,7 +1279,7 @@ function exporterPdfSemaine(id){
 async function archiver(id){var s=semaines.find(function(x){return x.id===id});if(!s) return;await dbUpsert('archives',id,s);await dbDelete('semaines',id);semaines=semaines.filter(function(x){return x.id!==id});archives.unshift(s);renderSemaines();setPersist('Semaine archivee','ok')}
 async function desarchiver(id){var s=archives.find(function(x){return x.id===id});if(!s) return;await dbUpsert('semaines',id,s);await dbDelete('archives',id);archives=archives.filter(function(x){return x.id!==id});semaines.unshift(s);semaines.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});renderSemaines();setPersist('Semaine restauree','ok')}
 async function delSemaine(id,isArchive){if(!confirm('Supprimer definitivement cette semaine ?')) return;var table=isArchive?'archives':'semaines';await dbDelete(table,id);if(isArchive) archives=archives.filter(function(s){return s.id!==id});else semaines=semaines.filter(function(s){return s.id!==id});renderSemaines()}
-function chargerSemaine(id,isArchive){var list=isArchive?archives:semaines;var s=list.find(function(x){return x.id===id});if(!s) return;convoisOptimises=s.convois;renderOptim(s.date,[]);show('optim')}
+function chargerSemaine(id,isArchive){var list=isArchive?archives:semaines;var s=list.find(function(x){return x.id===id});if(!s) return;convoisOptimises=s.convois;document.getElementById('ldate').value=s.date;if(s.type) document.getElementById('ltype').value=s.type;renderOptim(s.date,[]);show('optim')}
 async function sauvegarderSemaine(){if(!convoisOptimises.length){alert('Aucun convoi.');return}var date=document.getElementById('ldate').value;if(!date){alert('Selectionnez une date.');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardee','ok');alert('Semaine du '+fmtDate(date)+' sauvegardee.')}
 
 // ── LIEUX ─────────────────────────────────────
@@ -1485,7 +1484,7 @@ function renderFiches(){
       else if(s.action==='pickup'){phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='<strong style="color:var(--green)">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return '<strong>'+p.prenom+'</strong>'}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>'}
       else if(s.action==='retour'){pLine='<strong>'+sn+' a l\'arrivee</strong>'}
       var timeDetailHtml=renderTimeDetail(si,rawArr,heures,pqIdx);
-      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name" style="font-size:14px;font-weight:700">'+s.pt.nom+heureStr+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address" style="font-size:11px;color:var(--text-mid)">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail" style="font-size:12px;color:var(--text-mid)">'+pLine+'</div>'+timeDetailHtml+'</div></div>';
+      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name" style="font-size:14px;font-weight:700;flex-wrap:wrap">'+s.pt.nom+heureStr+timeDetailHtml+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address" style="font-size:11px;color:var(--text-mid)">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail" style="font-size:12px;color:var(--text-mid)">'+pLine+'</div></div></div>';
       if(si===pqIdx) html+=PIQUENIQUE_HTML;
     });
     html+='</div><div style="padding:10px 14px;background:var(--blue-bg);border-radius:var(--radius-xs);font-size:11px;color:var(--blue);word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:var(--blue)">'+mapsUrl.substring(0,80)+'...</a></div></div>';
