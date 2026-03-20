@@ -979,119 +979,64 @@ async function addVehicle(){var nom=document.getElementById('v-nom').value.trim(
 async function delVehicle(id){if(!confirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
 
 // ── HEURES UTILITIES ──────────────────────────
-// Arrondit aux quarts d'heure (00, 15, 30, 45) les arrets intermediaires.
-// Le depart (index 0) reste exact. Le retour final reste exact.
-// Si arrondir au plus proche donne un tampon < 10 min, on arrondit au quart superieur.
-// Insere 1h de pause pique-nique a l'arret le plus proche de midi si le trajet traverse midi.
-// Retourne: heures[] (arrondis = heure de reprise), rawArrivals[] (heure d'arrivee brute sans tampon), piqueniqueIdx, piqueniqueCount
+// heures[i] = "heure RDV" pour chaque arret
+// rawArrivals[i] = heure d'arrivee brute exacte
+// Le convoi repart de l'heure RDV de chaque arret
 function computeHeures(c){
   if(!c.heureDepart||!c.legDurations||!c.legDurations.length) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
   var parts=c.heureDepart.split(':');
   var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
   var nbStops=c.legDurations.length+1;
   
-  // 1) compute raw arrival times (cumulative exact travel time from start, no buffer)
-  var rawArrivals=[];
-  rawArrivals[0]=startMin;
-  var cum=startMin;
-  for(var i=0;i<c.legDurations.length;i++){
-    cum+=c.legDurations[i].min;
-    rawArrivals[i+1]=cum;
-  }
-  
-  // 2) detect pique-nique: trip crosses midi, place pause at the best stop around noon
-  // We simulate the sequential schedule WITH 15min buffers to find which stop we'd be at around noon
+  // 1) Detect pique-nique: simulate without pique-nique to find stop near midi
   var MIDI=720;var piqueniqueIdx=-1;
   if(startMin<MIDI){
-    // Simulate sequential heures without pique-nique to find where noon falls
-    var simDepart=startMin;
-    var simArrivals=[];
-    simArrivals[0]=startMin;
+    var simDep=startMin;var simArr=[];simArr[0]=startMin;
     for(var si=0;si<c.legDurations.length;si++){
-      var simArr=simDepart+c.legDurations[si].min;
-      simArrivals[si+1]=simArr;
-      // next depart = arrival + 15 min buffer (rounded to quarter)
-      if(si<c.legDurations.length-1){
-        var buf=simArr+15;
-        var rem=buf%15;
-        simDepart=rem<=7?buf-rem:buf+(15-rem);
-        if(simDepart-simArr<10) simDepart=buf-rem+15;
-      }
+      var sa=simDep+c.legDurations[si].min;
+      simArr[si+1]=sa;
+      if(si<c.legDurations.length-1) simDep=roundQ(sa+15,sa);
     }
-    // Only add pique-nique if the trip actually crosses midi
-    if(simArrivals[nbStops-1]>MIDI){
-      // Find the intermediate stop (not first, not last) closest to MIDI
-      // Priority: prefer stops where we arrive BEFORE or around midi (so people eat at ~12h)
+    if(simArr[nbStops-1]>MIDI){
       var bestIdx=-1;var bestScore=Infinity;
       for(var j=1;j<nbStops-1;j++){
-        // Score = distance from midi. Prefer arriving before midi (small penalty) over arriving late after midi
-        var arrTime=simArrivals[j];
-        var score=Math.abs(arrTime-MIDI);
-        // If we arrive after 13:30 it's really too late, penalize heavily
-        if(arrTime>810) score+=500;
+        var score=Math.abs(simArr[j]-MIDI);
+        if(simArr[j]>810) score+=500;
         if(score<bestScore){bestScore=score;bestIdx=j}
       }
       if(bestIdx>0) piqueniqueIdx=bestIdx;
     }
   }
   
-  // 3) compute displayed heures sequentially: each stop departs from the previous stop's displayed time
-  // rawWithPause = raw arrival at each stop accounting for pique-nique delay on subsequent stops
-  var rawWithPause=[];
-  for(var ra=0;ra<rawArrivals.length;ra++){
-    rawWithPause[ra]=rawArrivals[ra];
-    if(piqueniqueIdx>0 && ra>piqueniqueIdx) rawWithPause[ra]+=60;
-  }
-  
+  // 2) Sequential computation: arrivee brute + heure RDV
   var heures=[];
-  heures[0]=startMin; // depart = exact
-  var departPrev=startMin; // the time we leave the previous stop
+  var rawArrivals=[];
+  heures[0]=startMin;
+  rawArrivals[0]=startMin;
+  var departPrev=startMin;
   
   for(var m=1;m<nbStops;m++){
-    // raw arrival at this stop = previous departure + leg duration
     var rawArrival=departPrev+c.legDurations[m-1].min;
+    rawArrivals[m]=rawArrival;
     
     if(m===nbStops-1){
-      // retour final = exact (no rounding, no buffer)
-      heures[m]=rawArrival;
-      // also apply pique-nique offset to rawWithPause for display
-      if(piqueniqueIdx>0 && m>piqueniqueIdx){
-        rawWithPause[m]=rawArrival;
-      }
+      heures[m]=rawArrival; // retour final exact
       continue;
     }
     
-    // intermediate stop: add buffer then round to quarter
-    var isPiqueniqueStop=(m===piqueniqueIdx);
+    var isPQ=(m===piqueniqueIdx);
+    var rdv=roundQ(rawArrival+(isPQ?60:15),rawArrival);
     
-    // The buffer: 15 min normally, but 60 min (no extra 15) if pique-nique stop
-    var bufferMin=isPiqueniqueStop?60:15;
-    var withBuffer=rawArrival+bufferMin;
-    
-    // Round to nearest quarter hour
-    var remainder=withBuffer%15;
-    var rounded;
-    if(remainder<=7) rounded=withBuffer-remainder;
-    else rounded=withBuffer+(15-remainder);
-    
-    // Safety: ensure at least 10 min gap from raw arrival
-    if(rounded-rawArrival<10){
-      rounded=withBuffer-remainder+15;
+    // Custom override from manual edit in semaines
+    if(c.customHeures && c.customHeures[m]!==undefined){
+      rdv=c.customHeures[m];
     }
     
-    heures[m]=rounded;
-    departPrev=rounded; // next leg departs from this rounded time
-    
-    // Update rawWithPause for this stop (for display: "Arrivee estimee")
-    rawWithPause[m]=rawArrival;
-    if(piqueniqueIdx>0 && m>piqueniqueIdx && !isPiqueniqueStop){
-      // raw arrival already shifted because departPrev was shifted by pique-nique
-      // rawWithPause is already correct since we compute from departPrev
-    }
+    heures[m]=rdv;
+    departPrev=rdv; // convoi reparts from heure RDV
   }
   
-  // 4) count pique-niques a prevoir: depart passengers dropped AFTER pique-nique stop
-  // 4) count pique-niques: depart passengers dropped AT or AFTER pique-nique stop need a pique-nique
+  // 3) Count pique-niques: depart passengers dropped AT or AFTER pique-nique stop
   var piqueniqueCount=0;
   if(piqueniqueIdx>0 && c.stops){
     for(var pc=piqueniqueIdx;pc<c.stops.length;pc++){
@@ -1101,15 +1046,14 @@ function computeHeures(c){
       }
     }
   }
-  // 5) apply custom overrides if present
-  if(c.customHeures){
-    for(var key in c.customHeures){
-      if(c.customHeures.hasOwnProperty(key)){
-        heures[parseInt(key)]=c.customHeures[key];
-      }
-    }
-  }
-  return{heures:heures,rawArrivals:rawWithPause,piqueniqueIdx:piqueniqueIdx,piqueniqueCount:piqueniqueCount};
+  
+  return{heures:heures,rawArrivals:rawArrivals,piqueniqueIdx:piqueniqueIdx,piqueniqueCount:piqueniqueCount};
+}
+function roundQ(withBuf,rawArr){
+  var rem=withBuf%15;
+  var r=rem<=7?withBuf-rem:withBuf+(15-rem);
+  if(r-rawArr<10) r=withBuf-rem+15;
+  return r;
 }
 function fmtH(mins){
   if(mins===undefined||mins===null) return '';
@@ -1117,17 +1061,17 @@ function fmtH(mins){
   var m=mins%60;
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
-// Render time detail for an intermediate stop: arrivee estimee / pause / reprise
+// Render time detail for an intermediate stop: arrivee / heure RDV
 function renderTimeDetail(si,rawArrivals,heures,piqueniqueIdx){
   if(si===0||!rawArrivals[si]) return '';
   if(si===rawArrivals.length-1) return ''; // retour final, pas de detail
   var arrive=rawArrivals[si];
-  var reprise=heures[si];
-  var pause=reprise-arrive;
+  var rdv=heures[si];
+  var pause=rdv-arrive;
   if(pause<=0) return '';
   var html=' <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Arr. '+fmtH(arrive)+'</span>';
   html+=' <span style="background:var(--gold);color:var(--forest);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Pause '+pause+'min</span>';
-  html+=' <span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Reprise '+fmtH(reprise)+'</span>';
+  html+=' <span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">RDV '+fmtH(rdv)+'</span>';
   return html;
 }
 var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
@@ -1229,19 +1173,28 @@ function toggleSem(id){var el=document.getElementById(id);var arr=document.getEl
 function toggleArchive(){var el=document.getElementById('archive-body');var arr=document.getElementById('archive-arrow');if(el.classList.contains('open')){el.classList.remove('open');arr.textContent='\u25BC'}else{el.classList.add('open');arr.textContent='\u25B2'}}
 
 function editSemHeure(semId,convoiIdx,stopIdx,val){
-  // Manual hour edit in semaines - no recalc of other stops
   var s=semaines.find(function(x){return x.id===semId})||archives.find(function(x){return x.id===semId});
   if(!s||!s.convois[convoiIdx]) return;
   var c=s.convois[convoiIdx];
-  // Store custom hours override
   if(!c.customHeures) c.customHeures={};
-  var parts=val.split(':');
-  c.customHeures[stopIdx]=parseInt(parts[0])*60+parseInt(parts[1]);
-  // If stop 0 changed, also update heureDepart
+  var pts=val.split(':');
+  var newMin=parseInt(pts[0])*60+parseInt(pts[1]);
+  c.customHeures[stopIdx]=newMin;
   if(stopIdx===0) c.heureDepart=val;
-  // Save to db
+  // Recalculate all subsequent stops from this one
+  if(c.legDurations && c.legDurations.length){
+    var hData=computeHeures(c);
+    // Clear custom overrides for stops after the edited one and recompute
+    for(var k=stopIdx+1;k<hData.heures.length;k++){
+      delete c.customHeures[k];
+    }
+    // Recompute with only the edited override
+    hData=computeHeures(c);
+    // No need to store subsequent stops as custom - they are computed from the override
+  }
   var table=semaines.find(function(x){return x.id===semId})?'semaines':'archives';
   dbUpsert(table,semId,s);
+  renderSemaines();
 }
 
 async function modifierConducteurSem(semId,convoiIdx){
