@@ -655,9 +655,16 @@ input:focus, select:focus {
   .print-all .semaine-card { display: block !important; }
   .print-all .semaine-card .semaine-body { display: block !important; }
   .scroll-up-btn { display: none !important; }
-  /* Force ALL text to dark/black for readability */
-  * { color: #000 !important; }
-  .badge { border: 1px solid #333 !important; }
+  /* Force text to dark for readability, EXCEPT dep/arr colors */
+  body, div, span, td, th, p, li, label, strong, b, em, i { color: #000 !important; }
+  /* Preserve dep/arr colors - bright and visible */
+  span[style*="color:var(--red)"] { color: #c0392b !important; }
+  span[style*="color:var(--green)"] { color: #1b7a4a !important; }
+  strong[style*="color:var(--red)"] { color: #c0392b !important; }
+  strong[style*="color:var(--green)"] { color: #1b7a4a !important; }
+  div[style*="color:var(--red)"] { color: #c0392b !important; }
+  div[style*="color:var(--green)"] { color: #1b7a4a !important; }
+  .badge { border: 1px solid #333 !important; color: #000 !important; }
   .tl-time { background: #ddd !important; color: #000 !important; }
   .tl-detail { color: #222 !important; }
   .tl-address { color: #333 !important; }
@@ -666,11 +673,12 @@ input:focus, select:focus {
   .foyer-badge { color: #000 !important; background: #eee !important; }
   .convoi-mini { border-color: #333 !important; }
   .timeline-wrap { background: #fff !important; }
-  .semaine-body { color: #000 !important; }
   .seats-pill { color: #000 !important; background: #eee !important; }
   .retour-pill { color: #000 !important; background: #eee !important; }
   .stat { background: #f0f0f0 !important; }
   .stat-n, .stat-l { color: #000 !important; }
+  /* Pique-nique banner stays red */
+  div[style*="background:var(--red)"] { background: #c0392b !important; color: #fff !important; }
 }
 </style>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c&callback=mapsLoaded"></script>
@@ -1864,7 +1872,60 @@ function manTogglePers(stopId,listName,persId){
   var idx=list.indexOf(persId);
   if(idx>=0) list.splice(idx,1); else list.push(persId);
   s[listName]=list;
-  manRenderStops();
+  // Don't full re-render, just update the chip style
+  var chip=document.getElementById('chip-'+stopId+'-'+listName+'-'+persId);
+  if(chip){
+    var isSel=list.indexOf(persId)>=0;
+    var isArr=listName==='arrPersonnes';
+    chip.style.borderColor=isSel?(isArr?'var(--green)':'var(--red)'):'var(--border)';
+    chip.style.background=isSel?(isArr?'var(--green-bg)':'var(--red-bg)'):'var(--card)';
+    chip.style.color=isSel?(isArr?'var(--green)':'var(--red)'):'var(--text-light)';
+  }
+  // Update selected count display
+  var countEl=document.getElementById('count-'+stopId+'-'+listName);
+  if(countEl) countEl.textContent=list.length+' selectionnee(s)';
+}
+
+function manFilterPers(stopId,listName){
+  var input=document.getElementById('search-'+stopId+'-'+listName);
+  var val=input?input.value.toLowerCase():'';
+  var container=document.getElementById('chips-'+stopId+'-'+listName);
+  if(!container) return;
+  var chips=container.children;
+  for(var ci=0;ci<chips.length;ci++){
+    var txt=chips[ci].getAttribute('data-search')||'';
+    chips[ci].style.display=txt.indexOf(val)>=0?'':'none';
+  }
+}
+
+function manTogglePersList(stopId,listName){
+  var el=document.getElementById('perslist-'+stopId+'-'+listName);
+  var arrow=document.getElementById('persarrow-'+stopId+'-'+listName);
+  if(el.style.display==='none'){el.style.display='block';arrow.textContent='\u25B2'}
+  else{el.style.display='none';arrow.textContent='\u25BC'}
+}
+
+function manBuildPersSelector(s,listName,labelText,color,bgColor){
+  var list=s[listName]||[];
+  var selectedNames=list.map(function(pid){var p=manGetPers(pid);return p.prenom+' '+p.nom}).join(', ');
+  var html='<div style="margin-top:8px">';
+  html+='<div onclick="manTogglePersList(\''+s.id+'\',\''+listName+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:'+bgColor+';border:1px solid '+color+';border-radius:var(--radius-xs);user-select:none">';
+  html+='<div><span style="font-weight:700;font-size:11px;color:'+color+'">'+labelText+'</span>';
+  html+=' <span style="font-size:11px;color:var(--text-mid)" id="count-'+s.id+'-'+listName+'">'+list.length+' selectionnee(s)</span>';
+  if(selectedNames) html+='<div style="font-size:10px;color:'+color+';margin-top:2px">'+selectedNames+'</div>';
+  html+='</div>';
+  html+='<span style="font-size:12px;color:'+color+'" id="persarrow-'+s.id+'-'+listName+'">&#9660;</span>';
+  html+='</div>';
+  html+='<div id="perslist-'+s.id+'-'+listName+'" style="display:none;border:1px solid var(--border-light);border-top:none;border-radius:0 0 var(--radius-xs) var(--radius-xs);padding:8px">';
+  html+='<input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:6px 10px;font-size:11px;margin-bottom:6px;font-family:DM Sans,sans-serif" placeholder="Rechercher par prenom, nom ou foyer..." id="search-'+s.id+'-'+listName+'" oninput="manFilterPers(\''+s.id+'\',\''+listName+'\')">';
+  html+='<div id="chips-'+s.id+'-'+listName+'" style="display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow-y:auto">';
+  personnes.forEach(function(p){
+    var sel=list.indexOf(p.id)>=0;
+    var searchTxt=(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase();
+    html+='<span id="chip-'+s.id+'-'+listName+'-'+p.id+'" data-search="'+searchTxt+'" onclick="manTogglePers(\''+s.id+'\',\''+listName+'\',\''+p.id+'\')" style="cursor:pointer;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid '+(sel?color:'var(--border)')+';background:'+(sel?bgColor:'var(--card)')+';color:'+(sel?color:'var(--text-light)')+';transition:all 0.1s">'+p.prenom+' '+p.nom+(p.foyer?' <span style="font-size:9px;opacity:0.7">('+p.foyer+')</span>':'')+'</span>';
+  });
+  html+='</div></div></div>';
+  return html;
 }
 
 function manRenderStops(){
@@ -1874,26 +1935,9 @@ function manRenderStops(){
     var isPickup=s.action==='pickup';
     var isDepot=s.action==='depot';
     var isRotation=s.action==='rotation';
-    // Person selectors
     var persHtml='';
-    if(isPickup||isRotation){
-      persHtml+='<div style="margin-top:8px"><label style="color:var(--green)">Personnes en arrivee</label>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
-      personnes.forEach(function(p){
-        var sel=(s.arrPersonnes||[]).indexOf(p.id)>=0;
-        persHtml+='<span onclick="manTogglePers(\''+s.id+'\',\'arrPersonnes\',\''+p.id+'\')" style="cursor:pointer;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid '+(sel?'var(--green)':'var(--border)')+';background:'+(sel?'var(--green-bg)':'var(--card)')+';color:'+(sel?'var(--green)':'var(--text-light)')+'">'+p.prenom+' '+p.nom+'</span>';
-      });
-      persHtml+='</div></div>';
-    }
-    if(isDepot||isRotation){
-      persHtml+='<div style="margin-top:8px"><label style="color:var(--red)">Personnes en depart</label>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
-      personnes.forEach(function(p){
-        var sel=(s.depPersonnes||[]).indexOf(p.id)>=0;
-        persHtml+='<span onclick="manTogglePers(\''+s.id+'\',\'depPersonnes\',\''+p.id+'\')" style="cursor:pointer;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid '+(sel?'var(--red)':'var(--border)')+';background:'+(sel?'var(--red-bg)':'var(--card)')+';color:'+(sel?'var(--red)':'var(--text-light)')+'">'+p.prenom+' '+p.nom+'</span>';
-      });
-      persHtml+='</div></div>';
-    }
+    if(isPickup||isRotation) persHtml+=manBuildPersSelector(s,'arrPersonnes','Personnes en arrivee','var(--green)','var(--green-bg)');
+    if(isDepot||isRotation) persHtml+=manBuildPersSelector(s,'depPersonnes','Personnes en depart','var(--red)','var(--red-bg)');
     return '<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:8px;border-left:3px solid '+(isDepot?'var(--red)':isPickup?'var(--green)':'var(--copper)')+'">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<div style="width:28px;height:28px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:700;font-size:12px">'+(i+1)+'</div>'
