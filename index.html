@@ -906,6 +906,7 @@ async function lancerOptimisation(){
   // Afficher d'abord avec valeurs Haversine
   renderOptim(date,result.errors);
   show('optim');
+  window.scrollTo({top: 0, behavior: 'smooth'});
   
   // Puis enrichir avec Maps (attendre si pas encore prêt)
   setPersist('⏳ Calcul distances réelles...','neutral');
@@ -1108,7 +1109,7 @@ function buildMapsUrl(c){return buildMapsUrlFromConvoi(c)}
 function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});wps.push(LYS.lat+','+LYS.lng);return 'https://www.google.com/maps/dir/'+wps.join('/')}
 function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
 function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
-function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches')}
+function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches');window.scrollTo({top: 0, behavior: 'smooth'});}
 function renderFiches(){
   var el=document.getElementById('fiches-content');var date=document.getElementById('ldate').value;var dateLabel=fmtDate(date);
   var html='<div class="card" style="padding:0.75rem 1.25rem;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
