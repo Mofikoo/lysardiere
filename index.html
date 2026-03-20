@@ -655,6 +655,22 @@ input:focus, select:focus {
   .print-all .semaine-card { display: block !important; }
   .print-all .semaine-card .semaine-body { display: block !important; }
   .scroll-up-btn { display: none !important; }
+  /* Force ALL text to dark/black for readability */
+  * { color: #000 !important; }
+  .badge { border: 1px solid #333 !important; }
+  .tl-time { background: #ddd !important; color: #000 !important; }
+  .tl-detail { color: #222 !important; }
+  .tl-address { color: #333 !important; }
+  .tl-name { color: #000 !important; }
+  .phase-pill { color: #000 !important; background: #ddd !important; }
+  .foyer-badge { color: #000 !important; background: #eee !important; }
+  .convoi-mini { border-color: #333 !important; }
+  .timeline-wrap { background: #fff !important; }
+  .semaine-body { color: #000 !important; }
+  .seats-pill { color: #000 !important; background: #eee !important; }
+  .retour-pill { color: #000 !important; background: #eee !important; }
+  .stat { background: #f0f0f0 !important; }
+  .stat-n, .stat-l { color: #000 !important; }
 }
 </style>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c&callback=mapsLoaded"></script>
@@ -1809,7 +1825,7 @@ function manRefresh(){
 
 function manAddStop(){
   manStopId++;
-  manStops.push({id:'ms'+manStopId,lieuId:'',action:'pickup',heure:'',personnes:'',piquenique:false});
+  manStops.push({id:'ms'+manStopId,lieuNom:'',lieuAdresse:'',lieuLat:'',lieuLng:'',action:'pickup',heure:'',depPersonnes:[],arrPersonnes:[],piquenique:false});
   manRenderStops();
 }
 
@@ -1832,16 +1848,53 @@ function manMoveStop(id,dir){
 function manUpdateStop(id,field,val){
   var s=manStops.find(function(x){return x.id===id});
   if(!s) return;
-  if(field==='piquenique') s[field]=val;
-  else s[field]=val;
+  s[field]=val;
+  // If action changed, reset person assignments
+  if(field==='action'){
+    if(val==='pickup'){s.depPersonnes=[];s.arrPersonnes=s.arrPersonnes||[]}
+    if(val==='depot'){s.arrPersonnes=[];s.depPersonnes=s.depPersonnes||[]}
+    manRenderStops();
+  }
+}
+
+function manTogglePers(stopId,listName,persId){
+  var s=manStops.find(function(x){return x.id===stopId});
+  if(!s) return;
+  var list=s[listName]||[];
+  var idx=list.indexOf(persId);
+  if(idx>=0) list.splice(idx,1); else list.push(persId);
+  s[listName]=list;
+  manRenderStops();
 }
 
 function manRenderStops(){
   var el=document.getElementById('man-stops-list');
   if(!manStops.length){el.innerHTML='<div class="empty">Aucun arret. Cliquez "+ Ajouter un arret" pour commencer.</div>';return}
-  var lieuOpts='<option value="">-- Lieu --</option>'+lieux.map(function(f){return '<option value="'+f.id+'">'+f.nom+'</option>'}).join('');
   el.innerHTML=manStops.map(function(s,i){
-    return '<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:8px;border-left:3px solid var(--forest)">'
+    var isPickup=s.action==='pickup';
+    var isDepot=s.action==='depot';
+    var isRotation=s.action==='rotation';
+    // Person selectors
+    var persHtml='';
+    if(isPickup||isRotation){
+      persHtml+='<div style="margin-top:8px"><label style="color:var(--green)">Personnes en arrivee</label>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
+      personnes.forEach(function(p){
+        var sel=(s.arrPersonnes||[]).indexOf(p.id)>=0;
+        persHtml+='<span onclick="manTogglePers(\''+s.id+'\',\'arrPersonnes\',\''+p.id+'\')" style="cursor:pointer;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid '+(sel?'var(--green)':'var(--border)')+';background:'+(sel?'var(--green-bg)':'var(--card)')+';color:'+(sel?'var(--green)':'var(--text-light)')+'">'+p.prenom+' '+p.nom+'</span>';
+      });
+      persHtml+='</div></div>';
+    }
+    if(isDepot||isRotation){
+      persHtml+='<div style="margin-top:8px"><label style="color:var(--red)">Personnes en depart</label>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
+      personnes.forEach(function(p){
+        var sel=(s.depPersonnes||[]).indexOf(p.id)>=0;
+        persHtml+='<span onclick="manTogglePers(\''+s.id+'\',\'depPersonnes\',\''+p.id+'\')" style="cursor:pointer;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid '+(sel?'var(--red)':'var(--border)')+';background:'+(sel?'var(--red-bg)':'var(--card)')+';color:'+(sel?'var(--red)':'var(--text-light)')+'">'+p.prenom+' '+p.nom+'</span>';
+      });
+      persHtml+='</div></div>';
+    }
+    return '<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:8px;border-left:3px solid '+(isDepot?'var(--red)':isPickup?'var(--green)':'var(--copper)')+'">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<div style="width:28px;height:28px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:700;font-size:12px">'+(i+1)+'</div>'
       +'<span style="font-weight:600;font-size:13px">Arret '+(i+1)+'</span>'
@@ -1850,20 +1903,27 @@ function manRenderStops(){
       +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',1)" '+(i===manStops.length-1?'disabled':'')+'>&#9660;</button>'
       +'<button class="btn btn-danger btn-sm" onclick="manRemoveStop(\''+s.id+'\')">Supprimer</button>'
       +'</div>'
+      +'<div class="cols2" style="margin-bottom:6px">'
+      +'<div><label>Nom du lieu</label><input value="'+esc(s.lieuNom)+'" placeholder="Ex: Gare de Brive" onchange="manUpdateStop(\''+s.id+'\',\'lieuNom\',this.value)"></div>'
+      +'<div><label>Adresse</label><input value="'+esc(s.lieuAdresse)+'" placeholder="Adresse complete" onchange="manUpdateStop(\''+s.id+'\',\'lieuAdresse\',this.value)"></div>'
+      +'</div>'
       +'<div class="cols4">'
-      +'<div><label>Lieu</label><select onchange="manUpdateStop(\''+s.id+'\',\'lieuId\',this.value)">'+lieuOpts.replace('value="'+s.lieuId+'"','value="'+s.lieuId+'" selected')+'</select></div>'
+      +'<div><label>Latitude</label><input type="number" step="0.0001" value="'+(s.lieuLat||'')+'" placeholder="44.891" onchange="manUpdateStop(\''+s.id+'\',\'lieuLat\',this.value)"></div>'
+      +'<div><label>Longitude</label><input type="number" step="0.0001" value="'+(s.lieuLng||'')+'" placeholder="1.481" onchange="manUpdateStop(\''+s.id+'\',\'lieuLng\',this.value)"></div>'
       +'<div><label>Action</label><select onchange="manUpdateStop(\''+s.id+'\',\'action\',this.value)">'
-      +'<option value="pickup"'+(s.action==='pickup'?' selected':'')+'>Arrivee (pickup)</option>'
-      +'<option value="depot"'+(s.action==='depot'?' selected':'')+'>Depart (depot)</option>'
+      +'<option value="pickup"'+(s.action==='pickup'?' selected':'')+'>Arrivee</option>'
+      +'<option value="depot"'+(s.action==='depot'?' selected':'')+'>Depart</option>'
       +'<option value="rotation"'+(s.action==='rotation'?' selected':'')+'>Rotation (dep+arr)</option>'
       +'</select></div>'
       +'<div><label>Heure RDV</label><input type="time" value="'+s.heure+'" onchange="manUpdateStop(\''+s.id+'\',\'heure\',this.value)"></div>'
-      +'<div><label>Personnes</label><input type="text" placeholder="Prenoms separes par ," value="'+esc(s.personnes)+'" onchange="manUpdateStop(\''+s.id+'\',\'personnes\',this.value)"></div>'
       +'</div>'
+      +persHtml
       +'<div style="margin-top:6px"><label style="display:inline;cursor:pointer"><input type="checkbox" '+(s.piquenique?'checked':'')+' onchange="manUpdateStop(\''+s.id+'\',\'piquenique\',this.checked)" style="width:auto;margin-right:4px">Pause pique-nique a cet arret</label></div>'
       +'</div>';
   }).join('');
 }
+
+function manGetPers(id){return personnes.find(function(p){return p.id===id})||{prenom:'?',nom:'',foyer:''}}
 
 function manGenPreview(){
   var date=document.getElementById('man-date').value;
@@ -1875,19 +1935,21 @@ function manGenPreview(){
   var veh=vehicles.find(function(v){return v.id===vid})||vehicles[0]||{label:'?',cap:8,ico:''};
   var conducteur=document.getElementById('man-conducteur').value.trim();
   var notes=document.getElementById('man-notes').value.trim();
-  var type=document.getElementById('man-type').value;
-  
+
   var html='<div style="font-weight:600;font-size:14px;margin-bottom:12px">'+veh.ico+' '+veh.label+(conducteur?' &mdash; '+conducteur:'')+' | '+fmtDate(date)+'</div>';
   html+='<div class="timeline-wrap">';
   manStops.forEach(function(s,i){
-    var lieu=getLieu(s.lieuId)||{nom:'Arret '+(i+1),adresse:''};
     var dotC=s.action==='depot'?'var(--red)':s.action==='pickup'?'var(--green)':'var(--copper)';
-    var actionLabel=s.action==='depot'?'Depart':s.action==='pickup'?'Arrivee':'Rotation';
-    var names=s.personnes?s.personnes.split(',').map(function(n){return n.trim()}).filter(function(n){return n}):[];
+    var depNames=(s.depPersonnes||[]).map(function(id){return manGetPers(id).prenom});
+    var arrNames=(s.arrPersonnes||[]).map(function(id){return manGetPers(id).prenom});
+    var detail='';
+    if(s.action==='depot') detail='Depart : '+depNames.join(', ');
+    else if(s.action==='pickup') detail='Arrivee : '+arrNames.join(', ');
+    else detail='Dep: '+depNames.join(', ')+' / Arr: '+arrNames.join(', ');
     var heureStr=s.heure?' <span class="tl-time">'+s.heure+'</span>':'';
-    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(i+1)+'</div><div class="tl-content"><div class="tl-name">'+lieu.nom+heureStr+'</div>'
-      +(lieu.adresse?'<div class="tl-address">'+lieu.adresse+'</div>':'')
-      +'<div class="tl-detail">'+actionLabel+(names.length?' : '+names.join(', '):'')+'</div></div></div>';
+    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(i+1)+'</div><div class="tl-content"><div class="tl-name">'+(s.lieuNom||'Arret '+(i+1))+heureStr+'</div>'
+      +(s.lieuAdresse?'<div class="tl-address">'+s.lieuAdresse+'</div>':'')
+      +'<div class="tl-detail">'+detail+'</div></div></div>';
     if(s.piquenique) html+=PIQUENIQUE_HTML;
   });
   html+='</div>';
@@ -1903,27 +1965,21 @@ function manBuildConvoi(){
   var notes=document.getElementById('man-notes').value.trim();
   var type=document.getElementById('man-type').value;
   var typeMap={rotation:'rotation',entree:'arrivee_only',sortie:'depart_only'};
-  
+
   var stops=[];
   var allDep=[];var allArr=[];
   var piqueniqueIdx=-1;
-  
+
   manStops.forEach(function(s,i){
-    var lieu=getLieu(s.lieuId)||{nom:'Arret '+(i+1),adresse:'',lat:null,lng:null};
-    var names=s.personnes?s.personnes.split(',').map(function(n){return n.trim()}).filter(function(n){return n}):[];
-    var depPers=[];var arrPers=[];
-    if(s.action==='depot'||s.action==='rotation'){
-      names.forEach(function(n){var p={prenom:n,nom:'',foyer:'',lieu:s.lieuId};depPers.push(p);allDep.push(p)});
-    }
-    if(s.action==='pickup'||s.action==='rotation'){
-      names.forEach(function(n){var p={prenom:n,nom:'',foyer:'',lieu:s.lieuId};arrPers.push(p);allArr.push(p)});
-    }
+    var lieu={nom:s.lieuNom||'Arret '+(i+1),adresse:s.lieuAdresse||'',lat:parseFloat(s.lieuLat)||null,lng:parseFloat(s.lieuLng)||null};
+    var depPers=(s.depPersonnes||[]).map(function(pid){var p=manGetPers(pid);return{prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''}});
+    var arrPers=(s.arrPersonnes||[]).map(function(pid){var p=manGetPers(pid);return{prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''}});
+    depPers.forEach(function(p){allDep.push(p)});
+    arrPers.forEach(function(p){allArr.push(p)});
     if(s.piquenique) piqueniqueIdx=i;
-    stops.push({pt:lieu,fid:s.lieuId,action:s.action,depPers:depPers,arrPers:arrPers,seats:0,sameFoyer:false});
+    stops.push({pt:lieu,fid:'manual_'+i,action:s.action,depPers:depPers,arrPers:arrPers,seats:0,sameFoyer:false});
   });
-  
-  // Compute basic stats
-  var km=0;
+
   var firstHeure=manStops.length&&manStops[0].heure?manStops[0].heure:'';
   var lastHeure=manStops.length&&manStops[manStops.length-1].heure?manStops[manStops.length-1].heure:'';
   var dureeMin=0;
@@ -1931,7 +1987,12 @@ function manBuildConvoi(){
     var p1=firstHeure.split(':'),p2=lastHeure.split(':');
     dureeMin=(parseInt(p2[0])*60+parseInt(p2[1]))-(parseInt(p1[0])*60+parseInt(p1[1]));
   }
-  
+  // Compute km from GPS if available
+  var km=0;
+  for(var ki=1;ki<stops.length;ki++){
+    if(stops[ki-1].pt.lat&&stops[ki].pt.lat) km+=Math.round(hav(stops[ki-1].pt.lat,stops[ki-1].pt.lng,stops[ki].pt.lat,stops[ki].pt.lng));
+  }
+
   var convoi={
     id:'man'+Date.now(),
     vehicule:{id:veh.id,label:veh.label,cap:veh.cap,ico:veh.ico,type:veh.type},
@@ -1947,23 +2008,21 @@ function manBuildConvoi(){
     depart:allDep,
     arrivee:allArr,
     stops:stops,
-    legDurations:manStops.slice(1).map(function(s,i){
-      // No real distance data for manual, use time differences if available
-      var prev=manStops[i];
-      if(prev.heure&&s.heure){
-        var p1=prev.heure.split(':'),p2=s.heure.split(':');
-        var diff=(parseInt(p2[0])*60+parseInt(p2[1]))-(parseInt(p1[0])*60+parseInt(p1[1]));
+    legDurations:manStops.slice(1).map(function(s2,idx){
+      var prev=manStops[idx];
+      if(prev.heure&&s2.heure){
+        var pa=prev.heure.split(':'),pb=s2.heure.split(':');
+        var diff=(parseInt(pb[0])*60+parseInt(pb[1]))-(parseInt(pa[0])*60+parseInt(pa[1]));
         return{min:Math.max(diff,1),km:0};
       }
       return{min:30,km:0};
     }),
     customHeures:{}
   };
-  // Set custom heures from manual input (all stops are manually set)
-  manStops.forEach(function(s,i){
-    if(s.heure){
-      var pts=s.heure.split(':');
-      convoi.customHeures[i]=parseInt(pts[0])*60+parseInt(pts[1]);
+  manStops.forEach(function(s2,idx){
+    if(s2.heure){
+      var pts=s2.heure.split(':');
+      convoi.customHeures[idx]=parseInt(pts[0])*60+parseInt(pts[1]);
     }
   });
   return{convoi:convoi,date:date,type:type};
