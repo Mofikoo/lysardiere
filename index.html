@@ -534,13 +534,11 @@ input:focus, select:focus {
   box-shadow: var(--shadow-sm);
 }
 .semaine-header {
-  padding: 16px 20px;
+  padding: 14px 16px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   cursor: pointer;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 0;
   transition: background 0.15s;
 }
 .semaine-header:hover { background: var(--mint); }
@@ -1284,13 +1282,15 @@ function renderSemaineCard(s,idx,isArchive){
     ?'<div style="width:40px;height:40px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;flex-shrink:0">Arc</div>'
     :'<div style="width:40px;height:40px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:Fraunces,serif;font-weight:700;font-size:15px;flex-shrink:0">'+(semaines.length-idx)+'</div>';
   return '<div class="semaine-card" id="semcard-'+s.id+'"><div class="semaine-header no-print" onclick="toggleSem(\''+prefix+'-'+idx+'\')">'
-    +'<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">'+numCircle
-    +'<div style="min-width:0">'
+    +'<div style="display:flex;align-items:center;gap:12px;width:100%">'+numCircle
+    +'<div style="flex:1;min-width:0">'
     +'<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+fmtDate(s.date)+'</div>'
-    +'<div style="font-size:12px;color:var(--text-light);margin-top:2px">'+s.convois.length+' convois  -  '+tDep+' dep.  -  '+tArr+' arr.  -  '+tKm+'km  -  '+typeLabel+'</div>'
-    +(conducteursSummary?'<div style="font-size:11px;color:var(--forest-mid);margin-top:1px">Conducteurs : '+conducteursSummary+'</div>':'')
-    +'</div></div>'
-    +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap">'
+    +'<div style="font-size:11px;color:var(--text-light);margin-top:2px">'+s.convois.length+' convois - '+tDep+' dep. - '+tArr+' arr. - '+tKm+'km - '+typeLabel+'</div>'
+    +(conducteursSummary?'<div style="font-size:10px;color:var(--forest-mid);margin-top:1px">'+conducteursSummary+'</div>':'')
+    +'</div>'
+    +'<span style="font-size:14px;color:var(--text-light);flex-shrink:0" id="arr-'+prefix+'-'+idx+'">&#9660;</span>'
+    +'</div>'
+    +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;width:100%">'
     +(isArchive
       ?'<button class="btn btn-sm btn-success no-print" onclick="event.stopPropagation();desarchiver(\''+s.id+'\')">Restaurer</button>'
       :'<button class="btn btn-sm btn-archive no-print" onclick="event.stopPropagation();archiver(\''+s.id+'\')">Archiver</button>'
@@ -1299,7 +1299,6 @@ function renderSemaineCard(s,idx,isArchive){
     +'<button class="btn btn-sm no-print" onclick="event.stopPropagation();imprimerSemaine(\''+s.id+'\')">Imprimer</button>'
     +'<button class="btn btn-sm btn-primary no-print" onclick="event.stopPropagation();exporterPdfSemaine(\''+s.id+'\')">Export PDF</button>'
     +'<button class="btn btn-sm btn-danger no-print" onclick="event.stopPropagation();delSemaine(\''+s.id+'\','+(isArchive?'true':'false')+')">Supprimer</button>'
-    +'<span style="font-size:14px;color:var(--text-light)" id="arr-'+prefix+'-'+idx+'">&#9660;</span>'
     +'</div></div>'
     +'<div class="semaine-body" id="'+prefix+'-'+idx+'">'
     +s.convois.map(function(c,ci){
@@ -1510,7 +1509,7 @@ function clusterFits(cl,cap,p){return peakSeatsStops(buildStops(cl,p.maxRetourDe
 function getVehicleFlags(v){
   var label=(v.label||'').toLowerCase();
   return{
-    pmr: /gris|taupe|308/.test(label), // PMR compatible (fauteuil/deambulateur)
+    pmr: /gris|taupe|308|scenic|scénic/.test(label), // PMR compatible (fauteuil/deambulateur)
     noPeage: /boxer/.test(label), // Interdit sur autoroute a peage
     lastResort: /nissan|bleu/.test(label), // Utiliser en dernier recours
     smallGroup: /elysee|élysée/.test(label) // Prioritaire pour 1-2 passagers
