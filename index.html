@@ -822,6 +822,10 @@ input:focus, select:focus {
           <div><label>Meme foyer : surplus max (h)</label><input type="number" id="maxpassengersurplus" value="2" min="0.5" max="6" step="0.5"></div>
         </div>
         <div style="font-size:11px;color:var(--text-light);line-height:1.5">Surplus max passager : si la recuperation a l'aller fait attendre le passager plus de X heures, la recuperation se fera au retour.</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+          <label style="display:inline;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="peage" style="width:auto;margin-right:6px">Trajet avec autoroute a peage</label>
+          <span style="font-size:11px;color:var(--text-light);margin-left:8px">(interdit le Trafic Boxer)</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1040,7 +1044,7 @@ function renderFlotte(){
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun véhicule.</div>';return}
-  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
+  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';var f=getVehicleFlags(v);var tags='';if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de peage</span>';if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
 }
 async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){alert('Nom requis.');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
 async function delVehicle(id){if(!confirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
@@ -1374,11 +1378,71 @@ function nnSort(nodes,startPt){if(!nodes.length) return[];var rem=nodes.slice(),
 function shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin){if(!n.arrPers.length) return false;var allPers=n.depPers.concat(n.arrPers);var foyerRef=allPers[0].foyer||'';if(!foyerRef) return false;if(!allPers.every(function(p){return(p.foyer||'')===foyerRef})) return false;var idxInDep=depNodes.indexOf(n);var restPts=depNodes.slice(idxInDep+1);var kmAller=0,prev=n;for(var i=0;i<restPts.length;i++){kmAller+=dp(prev,restPts[i]);prev=restPts[i]}kmAller+=dp(prev,LYS);var lastPt=restPts.length?restPts[restPts.length-1]:n;var kmRetour=dp(lastPt,n)+dp(n,LYS);return(kmAller-kmRetour)/vitesse*60<=maxPassengerSurplusMin}
 function buildStops(cluster,maxRetourDetour,vitesse,maxPassengerSurplusMin){var depNodes=cluster.filter(function(n){return n.depPers.length>0}).slice().sort(function(a,b){return a.distLys-b.distLys});var arrOnlyNodes=cluster.filter(function(n){return n.arrPers.length>0&&n.depPers.length===0});var lastDepPt=depNodes.length?depNodes[depNodes.length-1]:LYS;var distSansRef=dp(lastDepPt,LYS);var rotAllerNodes=[],rotRetourNodes=[];depNodes.forEach(function(n){if(!n.arrPers.length) return;if(shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin)){rotAllerNodes.push(n)}else{var detour=dp(lastDepPt,n)+dp(n,LYS)-distSansRef;if(detour<=maxRetourDetour) rotRetourNodes.push(n);else rotAllerNodes.push(n)}});var retourRoute=nnSort(arrOnlyNodes.concat(rotRetourNodes),lastDepPt);var seats=depNodes.reduce(function(s,n){return s+n.depPers.length},0);var stops=[{action:'depart',pt:LYS,seats:seats}];depNodes.forEach(function(n){seats-=n.depPers.length;var recupAller=rotAllerNodes.indexOf(n)>=0;if(recupAller) seats+=n.arrPers.length;stops.push({action:recupAller?'rotation':'depot',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:n.depPers,arrPers:recupAller?n.arrPers:[],seats:seats,retourPrevu:rotRetourNodes.indexOf(n)>=0?n.arrPers:null,sameFoyer:recupAller})});retourRoute.forEach(function(n){seats+=n.arrPers.length;stops.push({action:'pickup',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:[],arrPers:n.arrPers,seats:seats,isRetourRotation:rotRetourNodes.indexOf(n)>=0})});stops.push({action:'retour',pt:LYS,seats:seats});return stops}
 function peakSeatsStops(stops){var pk=0;stops.forEach(function(s){if(s.seats>pk)pk=s.seats});return pk}
-function getParams(){return{capMax:parseFloat(document.getElementById('capmax').value)||55,maxDetour:parseFloat(document.getElementById('maxdetour').value)||60,maxDurMin:Math.round((parseFloat(document.getElementById('maxhours').value)||7)*60),vitesse:parseFloat(document.getElementById('vitesse').value)||70,maxRetourDetour:parseFloat(document.getElementById('maxretourdetour').value)||30,maxPassengerSurplusMin:Math.round((parseFloat(document.getElementById('maxpassengersurplus').value)||2)*60)}}
+function getParams(){return{capMax:parseFloat(document.getElementById('capmax').value)||55,maxDetour:parseFloat(document.getElementById('maxdetour').value)||60,maxDurMin:Math.round((parseFloat(document.getElementById('maxhours').value)||7)*60),vitesse:parseFloat(document.getElementById('vitesse').value)||70,maxRetourDetour:parseFloat(document.getElementById('maxretourdetour').value)||30,maxPassengerSurplusMin:Math.round((parseFloat(document.getElementById('maxpassengersurplus').value)||2)*60),peage:document.getElementById('peage').checked}}
 function clusterKm(cl,p){return routeLen(buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin).map(function(s){return s.pt}))}
 function detourSiAjout(cl,n,p){return clusterKm(cl.concat([n]),p)-clusterKm(cl,p)}
 function clusterFits(cl,cap,p){return peakSeatsStops(buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))<=cap}
-function pickVehicle(cluster,p,vehQueue){var peak=peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin));if(peak<=4){for(var i=0;i<vehQueue.length;i++){if(vehQueue[i].type==='voiture') return vehQueue.splice(i,1)[0]}}for(var i=0;i<vehQueue.length;i++){if(vehQueue[i].type==='trafic') return vehQueue.splice(i,1)[0]}return vehQueue.shift()||null}
+// Vehicle fleet rules based on name matching
+function getVehicleFlags(v){
+  var label=(v.label||'').toLowerCase();
+  return{
+    pmr: /gris|taupe|308/.test(label), // PMR compatible (fauteuil/deambulateur)
+    noPeage: /boxer/.test(label), // Interdit sur autoroute a peage
+    lastResort: /nissan|bleu/.test(label), // Utiliser en dernier recours
+    smallGroup: /elysee|élysée/.test(label) // Prioritaire pour 1-2 passagers
+  };
+}
+function checkFleetAlerts(convois,peage){
+  var alerts=[];
+  convois.forEach(function(c,ci){
+    var f=getVehicleFlags(c.vehicule);
+    var hasPMR=false;
+    (c.depart||[]).concat(c.arrivee||[]).forEach(function(p){
+      if(p.besoins&&(p.besoins==='fauteuil'||p.besoins==='deambulateur')) hasPMR=true;
+    });
+    if(hasPMR&&!f.pmr) alerts.push('Convoi '+(ci+1)+' ('+c.vehicule.label+') : passager PMR mais vehicule non PMR. Privilegier Trafic Gris, Trafic Taupe ou 308.');
+    if(peage&&f.noPeage) alerts.push('Convoi '+(ci+1)+' ('+c.vehicule.label+') : Trafic Boxer interdit sur trajet a peage.');
+  });
+  return alerts;
+}
+function pickVehicle(cluster,p,vehQueue){
+  var peak=peakSeatsStops(stops);
+  var hasPMR=false;
+  cluster.forEach(function(n){
+    (n.depPers||[]).concat(n.arrPers||[]).forEach(function(pers){
+      if(pers.besoins&&(pers.besoins==='fauteuil'||pers.besoins==='deambulateur')) hasPMR=true;
+    });
+  });
+  var hasPeage=p.peage||false;
+  // Score each vehicle: lower = better
+  function scoreVeh(v){
+    var f=getVehicleFlags(v);
+    var s=0;
+    // Eliminate: noPeage vehicle on peage trajet
+    if(hasPeage&&f.noPeage) return 99999;
+    // Eliminate: capacity too small
+    if(peak>v.cap) return 99998;
+    // Strong preference for PMR-compatible if PMR passengers
+    if(hasPMR&&!f.pmr) s+=100;
+    // Small group (1-2 passengers): prefer smallGroup vehicle
+    if(peak<=2&&f.smallGroup) s-=50;
+    if(peak<=2&&!f.smallGroup&&v.type==='voiture') s-=20;
+    // Last resort penalty
+    if(f.lastResort) s+=200;
+    // Prefer smaller vehicle when possible (voiture for <=4, trafic5 for <=5)
+    if(peak<=4&&v.type==='voiture') s-=30;
+    else if(peak<=5&&v.type==='trafic5') s-=25;
+    else if(v.type==='trafic') s-=10;
+    return s;
+  }
+  // Sort candidates by score
+  var candidates=vehQueue.map(function(v,idx){return{v:v,idx:idx,score:scoreVeh(v)}}).filter(function(c){return c.score<99990});
+  candidates.sort(function(a,b){return a.score-b.score});
+  if(!candidates.length) return null;
+  var best=candidates[0];
+  vehQueue.splice(best.idx,1);
+  return best.v;
+}
 function vrpSolve(deps,arrs,vehs,p){var sansGPS=[];deps.concat(arrs).forEach(function(x){var f=getLieu(x.lieu);if(f&&!hasGPS(f)&&sansGPS.indexOf(f.nom)<0) sansGPS.push(f.nom)});var nodes=buildNodes(deps,arrs);if(!nodes.length) return{convois:[],errors:['Aucun lieu avec GPS.']};nodes.sort(function(a,b){return b.distLys-a.distLys});var unassigned=nodes.slice(),vehQueue=vehs.slice(),convois=[],errors=[];if(sansGPS.length) errors.push('Lieux sans GPS ignorés : '+sansGPS.join(', '));while(unassigned.length>0){if(!vehQueue.length){errors.push('Véhicules épuisés.');break}var seedIdx=-1;for(var i=0;i<unassigned.length;i++){if(clusterFits([unassigned[i]],8,p)){seedIdx=i;break}}if(seedIdx<0){errors.push('Lieu impossible à assigner seul.');break}var seed=unassigned.splice(seedIdx,1)[0],cluster=[seed],changed=true;while(changed&&unassigned.length>0){changed=false;var bestIdx=-1,bestScore=Infinity;for(var j=0;j<unassigned.length;j++){var n=unassigned[j];if(angleDiff(seed.cap,n.cap)>p.capMax) continue;if(!clusterFits(cluster.concat([n]),8,p)) continue;if(detourSiAjout(cluster,n,p)>p.maxDetour) continue;if(clusterKm(cluster.concat([n]),p)/p.vitesse*60>p.maxDurMin) continue;var score=angleDiff(seed.cap,n.cap)-(n.distLys*0.3);if(score<bestScore){bestScore=score;bestIdx=j}}if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}}var veh=pickVehicle(cluster,p,vehQueue);if(!veh){errors.push('Plus de véhicules.');break}if(!clusterFits(cluster,veh.cap,p)){vehQueue.unshift(veh);var ti=-1;for(var k=0;k<vehQueue.length;k++){if(vehQueue[k].type==='trafic'){ti=k;break}}if(ti>=0) veh=vehQueue.splice(ti,1)[0];else{errors.push('Aucun véhicule adéquat.');break}}var stops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';var pk=peakSeatsStops(stops);convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})}return{convois:convois,errors:errors}}
 
 async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){alert('Sélectionnez une date.');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){alert('Sélectionnez au moins une personne.');return}if(!vehs.length){alert('Sélectionnez au moins un véhicule.');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,result.errors)}
@@ -1398,7 +1462,9 @@ function renderOptim(dateStr,errors){
   var nbRot=convoisOptimises.filter(function(c){return c.type==='rotation'}).length;
   var html='<div class="card"><div class="stitle">Résultat — '+dateLabel+'</div>';
   if(errors&&errors.length) errors.forEach(function(e){html+='<div class="err-box">⚠️ '+e+'</div>'});
-  else html+='<div class="info-box">✅ Toutes les personnes assignées.</div>';
+  else html+='<div class="info-box">Toutes les personnes assignees.</div>';
+  var fleetAlerts=checkFleetAlerts(convoisOptimises,document.getElementById('peage')?document.getElementById('peage').checked:false);
+  if(fleetAlerts.length) fleetAlerts.forEach(function(a){html+='<div class="warn-box"><strong>Alerte flotte :</strong> '+a+'</div>'});
   html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">'
     +'<div class="stat"><div class="stat-n">'+convoisOptimises.length+'</div><div class="stat-l">Convois</div></div>'
     +'<div class="stat"><div class="stat-n">'+tDep+'</div><div class="stat-l" style="color:var(--red)">Départs</div></div>'
