@@ -678,6 +678,7 @@ input:focus, select:focus {
     <button class="nb" id="btn-personnes" onclick="show('personnes')">Personnes</button>
     <button class="nb" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
     <button class="nb" id="btn-saisie" onclick="show('saisie')">Trajets</button>
+    <button class="nb" id="btn-manuel" onclick="show('manuel')">Trajet Manuel</button>
     <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
     <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
     <button class="nb active" id="btn-semaines" onclick="show('semaines')">Semaines</button>
@@ -879,6 +880,46 @@ input:focus, select:focus {
   </div>
 </div>
 
+<!-- TRAJET MANUEL -->
+<div class="tab-pane" id="pane-manuel">
+  <div class="card">
+    <div class="stitle">Trajet Manuel</div>
+    <div class="cols3" style="margin-bottom:12px">
+      <div><label>Date du trajet</label><input type="date" id="man-date"></div>
+      <div><label>Vehicule</label><select id="man-vehicule"></select></div>
+      <div><label>Conducteur (facultatif)</label><input type="text" id="man-conducteur" placeholder="Nom du conducteur"></div>
+    </div>
+    <div class="cols2" style="margin-bottom:12px">
+      <div><label>Type</label>
+        <select id="man-type">
+          <option value="rotation">Rotation (depart + arrivee)</option>
+          <option value="entree">Arrivee uniquement</option>
+          <option value="sortie">Depart uniquement</option>
+        </select>
+      </div>
+      <div><label>Notes</label><input type="text" id="man-notes" placeholder="Notes..."></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="stitle">Arrets du trajet</div>
+    <div id="man-stops-list"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="manAddStop()">+ Ajouter un arret</button>
+    </div>
+  </div>
+
+  <div class="card" id="man-preview-card" style="display:none">
+    <div class="stitle">Apercu du trajet</div>
+    <div id="man-preview"></div>
+  </div>
+
+  <div style="text-align:center;padding:1rem 0 2rem;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <button class="btn btn-accent" style="font-size:14px;padding:12px 28px" onclick="manGenPreview()">Apercu du trajet</button>
+    <button class="btn btn-success" style="font-size:14px;padding:12px 28px" onclick="manSaveToSemaines()">Sauvegarder dans Semaines</button>
+  </div>
+</div>
+
 <!-- SCROLL UP -->
 <button class="scroll-up-btn no-print" id="scrollUpBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&uarr;</button>
 
@@ -965,6 +1006,7 @@ function show(t){
   if(t==='flotte'){renderFlotte()}
   if(t==='stats'){renderStats()}
   if(t==='courrier'){}
+  if(t==='manuel'){manRefresh()}
 }
 
 // ── FLOTTE ────────────────────────────────────
@@ -1625,10 +1667,12 @@ function renderCourrier(){
       +'<div style="font-size:11px;color:var(--text-mid);margin-bottom:8px">Lieu : '+c.lieu.nom+(c.lieu.adresse?' - '+c.lieu.adresse:'')+'</div>';
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
-      // Sort: arrivees first, then departs, then by date
       var sorted=pers.trajets.slice().sort(function(a,b){
-        if(a.type!==b.type) return a.type==='arrivee'?-1:1;
-        return (a.date||'').localeCompare(b.date||'');
+        var dc=(a.date||'').localeCompare(b.date||'');
+        if(dc!==0) return dc;
+        if(a.type==='arrivee'&&b.type==='depart') return -1;
+        if(a.type==='depart'&&b.type==='arrivee') return 1;
+        return 0;
       });
       html+='<div style="margin-left:12px;margin-bottom:6px"><strong style="font-size:12px">'+pers.prenom+' '+pers.nom+'</strong>';
       sorted.forEach(function(t){
@@ -1636,19 +1680,19 @@ function renderCourrier(){
       });
       html+='</div>';
     });
+    html+='<div style="text-align:right;margin-top:8px"><button class="btn btn-accent btn-sm" onclick="genCourrierPdf(\''+k.replace(/'/g,"\\'")+'\')">Generer PDF - '+c.foyer+'</button></div>';
     html+='</div>';
   });
   html+='</div>';
   el.innerHTML=html;
-  // Store for PDF generation
   window._courrierData=courrierMap;
-  actions.style.display='block';
+  actions.style.display='none';
 }
 
-function genCourrierPdf(){
+function genCourrierPdf(singleKey){
   if(!window._courrierData){alert('Lancez d\'abord l\'apercu.');return}
   var map=window._courrierData;
-  var keys=Object.keys(map).sort();
+  var keys=singleKey?[singleKey]:Object.keys(map).sort();
   var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
   var pages='';
   keys.forEach(function(k){
@@ -1731,7 +1775,7 @@ function genCourrierPdf(){
       +'<div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#555;line-height:1.6;page-break-inside:avoid">'
       +'Veillez a bien noter l\'heure du rendez-vous et a etre ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, a l\'expression de nos meilleures salutations.'
-      +'<br><br><b style="color:#222">Severine et Christian LANDELLE</b></div>'
+      +'<br><br><b style="color:#222">Severine LANDELLE</b></div>'
       +'</div>';
   });
   var w=window.open('','_blank');
@@ -1751,6 +1795,204 @@ window.addEventListener('scroll',function(){
   var btn=document.getElementById('scrollUpBtn');
   if(window.scrollY>300){btn.style.display='flex'}else{btn.style.display='none'}
 });
+
+// ── TRAJET MANUEL ─────────────────────────────
+var manStops=[];
+var manStopId=0;
+
+function manRefresh(){
+  // Populate vehicule select
+  var sel=document.getElementById('man-vehicule');
+  sel.innerHTML=vehicles.map(function(v){return '<option value="'+v.id+'">'+v.ico+' '+v.label+' ('+v.cap+' pl.)</option>'}).join('');
+  manRenderStops();
+}
+
+function manAddStop(){
+  manStopId++;
+  manStops.push({id:'ms'+manStopId,lieuId:'',action:'pickup',heure:'',personnes:'',piquenique:false});
+  manRenderStops();
+}
+
+function manRemoveStop(id){
+  manStops=manStops.filter(function(s){return s.id!==id});
+  manRenderStops();
+}
+
+function manMoveStop(id,dir){
+  var idx=manStops.findIndex(function(s){return s.id===id});
+  if(idx<0) return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=manStops.length) return;
+  var tmp=manStops[idx];
+  manStops[idx]=manStops[newIdx];
+  manStops[newIdx]=tmp;
+  manRenderStops();
+}
+
+function manUpdateStop(id,field,val){
+  var s=manStops.find(function(x){return x.id===id});
+  if(!s) return;
+  if(field==='piquenique') s[field]=val;
+  else s[field]=val;
+}
+
+function manRenderStops(){
+  var el=document.getElementById('man-stops-list');
+  if(!manStops.length){el.innerHTML='<div class="empty">Aucun arret. Cliquez "+ Ajouter un arret" pour commencer.</div>';return}
+  var lieuOpts='<option value="">-- Lieu --</option>'+lieux.map(function(f){return '<option value="'+f.id+'">'+f.nom+'</option>'}).join('');
+  el.innerHTML=manStops.map(function(s,i){
+    return '<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:8px;border-left:3px solid var(--forest)">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<div style="width:28px;height:28px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:700;font-size:12px">'+(i+1)+'</div>'
+      +'<span style="font-weight:600;font-size:13px">Arret '+(i+1)+'</span>'
+      +'<div style="flex:1"></div>'
+      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',-1)" '+(i===0?'disabled':'')+'>&#9650;</button>'
+      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',1)" '+(i===manStops.length-1?'disabled':'')+'>&#9660;</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="manRemoveStop(\''+s.id+'\')">Supprimer</button>'
+      +'</div>'
+      +'<div class="cols4">'
+      +'<div><label>Lieu</label><select onchange="manUpdateStop(\''+s.id+'\',\'lieuId\',this.value)">'+lieuOpts.replace('value="'+s.lieuId+'"','value="'+s.lieuId+'" selected')+'</select></div>'
+      +'<div><label>Action</label><select onchange="manUpdateStop(\''+s.id+'\',\'action\',this.value)">'
+      +'<option value="pickup"'+(s.action==='pickup'?' selected':'')+'>Arrivee (pickup)</option>'
+      +'<option value="depot"'+(s.action==='depot'?' selected':'')+'>Depart (depot)</option>'
+      +'<option value="rotation"'+(s.action==='rotation'?' selected':'')+'>Rotation (dep+arr)</option>'
+      +'</select></div>'
+      +'<div><label>Heure RDV</label><input type="time" value="'+s.heure+'" onchange="manUpdateStop(\''+s.id+'\',\'heure\',this.value)"></div>'
+      +'<div><label>Personnes</label><input type="text" placeholder="Prenoms separes par ," value="'+esc(s.personnes)+'" onchange="manUpdateStop(\''+s.id+'\',\'personnes\',this.value)"></div>'
+      +'</div>'
+      +'<div style="margin-top:6px"><label style="display:inline;cursor:pointer"><input type="checkbox" '+(s.piquenique?'checked':'')+' onchange="manUpdateStop(\''+s.id+'\',\'piquenique\',this.checked)" style="width:auto;margin-right:4px">Pause pique-nique a cet arret</label></div>'
+      +'</div>';
+  }).join('');
+}
+
+function manGenPreview(){
+  var date=document.getElementById('man-date').value;
+  if(!date){alert('Selectionnez une date.');return}
+  if(!manStops.length){alert('Ajoutez au moins un arret.');return}
+  var card=document.getElementById('man-preview-card');
+  card.style.display='block';
+  var vid=document.getElementById('man-vehicule').value;
+  var veh=vehicles.find(function(v){return v.id===vid})||vehicles[0]||{label:'?',cap:8,ico:''};
+  var conducteur=document.getElementById('man-conducteur').value.trim();
+  var notes=document.getElementById('man-notes').value.trim();
+  var type=document.getElementById('man-type').value;
+  
+  var html='<div style="font-weight:600;font-size:14px;margin-bottom:12px">'+veh.ico+' '+veh.label+(conducteur?' &mdash; '+conducteur:'')+' | '+fmtDate(date)+'</div>';
+  html+='<div class="timeline-wrap">';
+  manStops.forEach(function(s,i){
+    var lieu=getLieu(s.lieuId)||{nom:'Arret '+(i+1),adresse:''};
+    var dotC=s.action==='depot'?'var(--red)':s.action==='pickup'?'var(--green)':'var(--copper)';
+    var actionLabel=s.action==='depot'?'Depart':s.action==='pickup'?'Arrivee':'Rotation';
+    var names=s.personnes?s.personnes.split(',').map(function(n){return n.trim()}).filter(function(n){return n}):[];
+    var heureStr=s.heure?' <span class="tl-time">'+s.heure+'</span>':'';
+    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(i+1)+'</div><div class="tl-content"><div class="tl-name">'+lieu.nom+heureStr+'</div>'
+      +(lieu.adresse?'<div class="tl-address">'+lieu.adresse+'</div>':'')
+      +'<div class="tl-detail">'+actionLabel+(names.length?' : '+names.join(', '):'')+'</div></div></div>';
+    if(s.piquenique) html+=PIQUENIQUE_HTML;
+  });
+  html+='</div>';
+  if(notes) html+='<div style="font-size:11px;color:var(--text-light);margin-top:6px;font-style:italic">Notes : '+notes+'</div>';
+  document.getElementById('man-preview').innerHTML=html;
+}
+
+function manBuildConvoi(){
+  var date=document.getElementById('man-date').value;
+  var vid=document.getElementById('man-vehicule').value;
+  var veh=vehicles.find(function(v){return v.id===vid})||vehicles[0]||{id:'?',label:'?',cap:8,ico:'',type:'trafic'};
+  var conducteur=document.getElementById('man-conducteur').value.trim();
+  var notes=document.getElementById('man-notes').value.trim();
+  var type=document.getElementById('man-type').value;
+  var typeMap={rotation:'rotation',entree:'arrivee_only',sortie:'depart_only'};
+  
+  var stops=[];
+  var allDep=[];var allArr=[];
+  var piqueniqueIdx=-1;
+  
+  manStops.forEach(function(s,i){
+    var lieu=getLieu(s.lieuId)||{nom:'Arret '+(i+1),adresse:'',lat:null,lng:null};
+    var names=s.personnes?s.personnes.split(',').map(function(n){return n.trim()}).filter(function(n){return n}):[];
+    var depPers=[];var arrPers=[];
+    if(s.action==='depot'||s.action==='rotation'){
+      names.forEach(function(n){var p={prenom:n,nom:'',foyer:'',lieu:s.lieuId};depPers.push(p);allDep.push(p)});
+    }
+    if(s.action==='pickup'||s.action==='rotation'){
+      names.forEach(function(n){var p={prenom:n,nom:'',foyer:'',lieu:s.lieuId};arrPers.push(p);allArr.push(p)});
+    }
+    if(s.piquenique) piqueniqueIdx=i;
+    stops.push({pt:lieu,fid:s.lieuId,action:s.action,depPers:depPers,arrPers:arrPers,seats:0,sameFoyer:false});
+  });
+  
+  // Compute basic stats
+  var km=0;
+  var firstHeure=manStops.length&&manStops[0].heure?manStops[0].heure:'';
+  var lastHeure=manStops.length&&manStops[manStops.length-1].heure?manStops[manStops.length-1].heure:'';
+  var dureeMin=0;
+  if(firstHeure&&lastHeure){
+    var p1=firstHeure.split(':'),p2=lastHeure.split(':');
+    dureeMin=(parseInt(p2[0])*60+parseInt(p2[1]))-(parseInt(p1[0])*60+parseInt(p1[1]));
+  }
+  
+  var convoi={
+    id:'man'+Date.now(),
+    vehicule:{id:veh.id,label:veh.label,cap:veh.cap,ico:veh.ico,type:veh.type},
+    type:typeMap[type]||'rotation',
+    conducteur:conducteur,
+    notes:notes,
+    heureDepart:firstHeure,
+    km:km,
+    dureeMin:Math.max(dureeMin,0),
+    maxDurMin:420,
+    peakSeats:Math.max(allDep.length,allArr.length),
+    remplissage:Math.round(Math.max(allDep.length,allArr.length)/veh.cap*100),
+    depart:allDep,
+    arrivee:allArr,
+    stops:stops,
+    legDurations:manStops.slice(1).map(function(s,i){
+      // No real distance data for manual, use time differences if available
+      var prev=manStops[i];
+      if(prev.heure&&s.heure){
+        var p1=prev.heure.split(':'),p2=s.heure.split(':');
+        var diff=(parseInt(p2[0])*60+parseInt(p2[1]))-(parseInt(p1[0])*60+parseInt(p1[1]));
+        return{min:Math.max(diff,1),km:0};
+      }
+      return{min:30,km:0};
+    }),
+    customHeures:{}
+  };
+  // Set custom heures from manual input (all stops are manually set)
+  manStops.forEach(function(s,i){
+    if(s.heure){
+      var pts=s.heure.split(':');
+      convoi.customHeures[i]=parseInt(pts[0])*60+parseInt(pts[1]);
+    }
+  });
+  return{convoi:convoi,date:date,type:type};
+}
+
+async function manSaveToSemaines(){
+  var date=document.getElementById('man-date').value;
+  if(!date){alert('Selectionnez une date.');return}
+  if(!manStops.length){alert('Ajoutez au moins un arret.');return}
+  var built=manBuildConvoi();
+  var convoi=built.convoi;
+  // Find or create semaine for this date
+  var existing=semaines.find(function(s){return s.date===date});
+  if(existing){
+    existing.convois.push(convoi);
+    existing.type=built.type;
+    await dbUpsert('semaines',existing.id,existing);
+  } else {
+    var id='sem'+Date.now();
+    var data={id:id,date:date,type:built.type,convois:[convoi]};
+    await dbUpsert('semaines',id,data);
+    semaines.unshift(data);
+  }
+  semaines.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+  alert('Trajet manuel sauvegarde dans la semaine du '+fmtDate(date)+'.');
+  manStops=[];
+  manRenderStops();
+  document.getElementById('man-preview-card').style.display='none';
+}
 
 loadData();
 </script>
