@@ -1836,9 +1836,10 @@ function fetchGazolePrice(){
   statusEl.style.color='var(--text-light)';
   
   var controller=new AbortController();
-  var timeout=setTimeout(function(){controller.abort()},10000); // 10s timeout
+  var timeout=setTimeout(function(){controller.abort()},10000);
   
-  fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&refine=carburant_nom%3AGazole&select=prix_valeur&order_by=prix_maj%20desc',{signal:controller.signal})
+  // Rayon 50km autour de La Lysardiere (lat 44.855, lng 1.358)
+  fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville%2Cdepartement&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc',{signal:controller.signal})
     .then(function(r){
       clearTimeout(timeout);
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1848,17 +1849,16 @@ function fetchGazolePrice(){
       var prices=[];
       if(data.results&&data.results.length){
         data.results.forEach(function(r){
-          var val=r.prix_valeur||r.gazole_prix||0;
-          if(val>0) prices.push(val);
+          if(r.gazole_prix&&r.gazole_prix>0) prices.push(r.gazole_prix);
         });
       }
-      if(!prices.length) throw new Error('Aucun prix trouve dans la reponse');
+      if(!prices.length) throw new Error('Aucune station trouvee dans un rayon de 50km');
       var avg=prices.reduce(function(a,b){return a+b},0)/prices.length;
-      // L'API retourne en milliemes d'euro (ex: 1650 = 1.650 euro/L)
-      var pricePerL=avg>100?avg/1000:avg; // Detecter si c'est en milliemes ou en euros
-      if(pricePerL<0.5||pricePerL>3.5) throw new Error('Prix anormal: '+pricePerL);
-      document.getElementById('stats-gazole').value=pricePerL.toFixed(2);
-      statusEl.textContent='Prix actualise : '+pricePerL.toFixed(3)+' euro/L (moyenne sur '+prices.length+' stations)';
+      var min=Math.min.apply(null,prices);
+      var max=Math.max.apply(null,prices);
+      if(avg<0.5||avg>3.5) throw new Error('Prix anormal: '+avg);
+      document.getElementById('stats-gazole').value=avg.toFixed(2);
+      statusEl.textContent='Prix actualise : '+avg.toFixed(3)+' euro/L (moyenne '+prices.length+' stations dans 50km — min '+min.toFixed(3)+' / max '+max.toFixed(3)+')';
       statusEl.style.color='var(--green)';
       renderStats();
     })
