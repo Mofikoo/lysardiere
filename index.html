@@ -1625,8 +1625,13 @@ function renderCourrier(){
       +'<div style="font-size:11px;color:var(--text-mid);margin-bottom:8px">Lieu : '+c.lieu.nom+(c.lieu.adresse?' - '+c.lieu.adresse:'')+'</div>';
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
+      // Sort: arrivees first, then departs, then by date
+      var sorted=pers.trajets.slice().sort(function(a,b){
+        if(a.type!==b.type) return a.type==='arrivee'?-1:1;
+        return (a.date||'').localeCompare(b.date||'');
+      });
       html+='<div style="margin-left:12px;margin-bottom:6px"><strong style="font-size:12px">'+pers.prenom+' '+pers.nom+'</strong>';
-      pers.trajets.forEach(function(t){
+      sorted.forEach(function(t){
         html+=' <span class="badge" style="'+(t.type==='arrivee'?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+'">'+(t.type==='arrivee'?'Arr':'Dep')+' '+fmtDate(t.date)+(t.heure?' '+t.heure:'')+'</span>';
       });
       html+='</div>';
