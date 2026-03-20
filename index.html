@@ -888,6 +888,31 @@ input:focus, select:focus {
 
 <!-- STATISTIQUES -->
 <div class="tab-pane" id="pane-stats">
+  <div class="card no-print">
+    <div class="stitle">Filtres</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn btn-sm" onclick="setStatsPeriod('all')">Tout</button>
+      <button class="btn btn-sm" onclick="setStatsPeriod('year')">Cette annee</button>
+      <button class="btn btn-sm" onclick="setStatsPeriod('3months')">3 derniers mois</button>
+      <button class="btn btn-sm" onclick="setStatsPeriod('month')">Ce mois-ci</button>
+      <button class="btn btn-sm btn-edit" onclick="setStatsPeriod('custom')">Personnalise</button>
+    </div>
+    <div id="stats-custom-range" style="display:none">
+      <div class="cols2" style="margin-bottom:12px">
+        <div><label>Date debut</label><input type="date" id="stats-debut" onchange="renderStats()"></div>
+        <div><label>Date fin</label><input type="date" id="stats-fin" onchange="renderStats()"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:150px"><label>Prix gazole (euro/L)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="stats-gazole" value="1.65" step="0.01" min="0.50" max="3.00" style="flex:1" onchange="renderStats()">
+          <button class="btn btn-sm btn-info" onclick="fetchGazolePrice()">Actualiser</button>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text-light);margin-top:6px">Consommation : Trafic/Minibus 10L/100km - Voiture 7L/100km. <span id="gazole-status"></span></div>
+  </div>
   <div id="stats-content"><div class="empty">Chargement des statistiques...</div></div>
 </div>
 
@@ -1304,7 +1329,7 @@ async function archiver(id){var s=semaines.find(function(x){return x.id===id});i
 async function desarchiver(id){var s=archives.find(function(x){return x.id===id});if(!s) return;await dbUpsert('semaines',id,s);await dbDelete('archives',id);archives=archives.filter(function(x){return x.id!==id});semaines.unshift(s);semaines.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});renderSemaines();setPersist('Semaine restauree','ok')}
 async function delSemaine(id,isArchive){if(!confirm('Supprimer definitivement cette semaine ?')) return;var table=isArchive?'archives':'semaines';await dbDelete(table,id);if(isArchive) archives=archives.filter(function(s){return s.id!==id});else semaines=semaines.filter(function(s){return s.id!==id});renderSemaines()}
 function chargerSemaine(id,isArchive){var list=isArchive?archives:semaines;var s=list.find(function(x){return x.id===id});if(!s) return;convoisOptimises=s.convois;document.getElementById('ldate').value=s.date;if(s.type) document.getElementById('ltype').value=s.type;renderOptim(s.date,[]);show('optim')}
-async function sauvegarderSemaine(){if(!convoisOptimises.length){alert('Aucun convoi.');return}var date=document.getElementById('ldate').value;if(!date){alert('Selectionnez une date.');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardee','ok');alert('Semaine du '+fmtDate(date)+' sauvegardee.')}
+async function sauvegarderSemaine(){if(!convoisOptimises.length){alert('Aucun convoi.');return}var date=document.getElementById('ldate').value;if(!date){alert('Selectionnez une date.');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var gazolePrice=parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65;var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises,gazolePrice:gazolePrice};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardee','ok');alert('Semaine du '+fmtDate(date)+' sauvegardee.')}
 
 // ── LIEUX ─────────────────────────────────────
 function renderLieux(){
@@ -1602,21 +1627,52 @@ function toggleStatsSection(id){
   if(body.style.display==='none'){body.style.display='block';arrow.innerHTML='\u25B2'}
   else{body.style.display='none';arrow.innerHTML='\u25BC'}
 }
+function setStatsPeriod(mode){
+  var debutEl=document.getElementById('stats-debut');
+  var finEl=document.getElementById('stats-fin');
+  var customEl=document.getElementById('stats-custom-range');
+  var today=new Date();
+  var y=today.getFullYear(),m=today.getMonth(),d=today.getDate();
+  function pad(n){return String(n).padStart(2,'0')}
+  if(mode==='all'){debutEl.value='';finEl.value='';customEl.style.display='none'}
+  else if(mode==='year'){debutEl.value=y+'-01-01';finEl.value=y+'-12-31';customEl.style.display='none'}
+  else if(mode==='3months'){var d3=new Date(y,m-3,d);debutEl.value=d3.getFullYear()+'-'+pad(d3.getMonth()+1)+'-'+pad(d3.getDate());finEl.value=y+'-'+pad(m+1)+'-'+pad(d);customEl.style.display='none'}
+  else if(mode==='month'){debutEl.value=y+'-'+pad(m+1)+'-01';var last=new Date(y,m+1,0);finEl.value=y+'-'+pad(m+1)+'-'+pad(last.getDate());customEl.style.display='none'}
+  else if(mode==='custom'){customEl.style.display='block';return}
+  renderStats();
+}
 function renderStats(){
   var el=document.getElementById('stats-content');
   var allSem=semaines.concat(archives);
+  var debut=document.getElementById('stats-debut').value;
+  var fin=document.getElementById('stats-fin').value;
+  if(debut||fin){
+    allSem=allSem.filter(function(s){
+      if(debut&&s.date<debut) return false;
+      if(fin&&s.date>fin) return false;
+      return true;
+    });
+  }
+  var fallbackGazole=parseFloat(document.getElementById('stats-gazole').value)||1.65;
+  var CONSO_TRAFIC=10;
+  var CONSO_VOITURE=7;
   
   // --- VEHICULES ---
-  var vehStats={};
+  var vehStats={};var totalKm=0;var totalCout=0;
   allSem.forEach(function(s){
+    var gaz=s.gazolePrice||fallbackGazole;
     s.convois.forEach(function(c){
       var vid=c.vehicule.id||c.vehicule.label;
-      if(!vehStats[vid]) vehStats[vid]={label:c.vehicule.label,ico:c.vehicule.ico||'',km:0,passagers:0,conducteurs:[]};
-      vehStats[vid].km+=c.km||0;
+      if(!vehStats[vid]) vehStats[vid]={label:c.vehicule.label,ico:c.vehicule.ico||'',type:c.vehicule.type||'trafic',km:0,passagers:0,conducteurs:[],cout:0};
+      var km=c.km||0;
+      vehStats[vid].km+=km;
+      totalKm+=km;
+      var conso=(c.vehicule.type==='voiture')?CONSO_VOITURE:CONSO_TRAFIC;
+      var cout=km*conso/100*gaz;
+      vehStats[vid].cout+=cout;
+      totalCout+=cout;
       vehStats[vid].passagers+=(c.depart?c.depart.length:0)+(c.arrivee?c.arrivee.length:0);
-      if(c.conducteur){
-        vehStats[vid].conducteurs.push({nom:c.conducteur,date:s.date||''});
-      }
+      if(c.conducteur) vehStats[vid].conducteurs.push({nom:c.conducteur,date:s.date||''});
     });
   });
   
@@ -1636,10 +1692,45 @@ function renderStats(){
     });
   });
   
+  // --- FREQUENCE PAR FOYER ---
+  var foyerStats={};
+  allSem.forEach(function(s){
+    var gaz=s.gazolePrice||fallbackGazole;
+    s.convois.forEach(function(c){
+      (c.depart||[]).concat(c.arrivee||[]).forEach(function(p){
+        var foyer=p.foyer||'Sans foyer';
+        if(!foyerStats[foyer]) foyerStats[foyer]={foyer:foyer,vacanciers:{},trajets:0,km:0,cout:0};
+        var pk=(p.prenom+' '+p.nom).trim();
+        if(pk) foyerStats[foyer].vacanciers[pk]=true;
+      });
+      var foyers={};
+      (c.depart||[]).concat(c.arrivee||[]).forEach(function(p){foyers[p.foyer||'Sans foyer']=true});
+      var nbFoyers=Object.keys(foyers).length||1;
+      var conso=(c.vehicule&&c.vehicule.type==='voiture')?CONSO_VOITURE:CONSO_TRAFIC;
+      Object.keys(foyers).forEach(function(f){
+        if(!foyerStats[f]) foyerStats[f]={foyer:f,vacanciers:{},trajets:0,km:0,cout:0};
+        foyerStats[f].trajets++;
+        var kmPart=Math.round((c.km||0)/nbFoyers);
+        foyerStats[f].km+=kmPart;
+        foyerStats[f].cout+=kmPart*conso/100*gaz;
+      });
+    });
+  });
+  
   var vehKeys=Object.keys(vehStats).sort(function(a,b){return vehStats[b].km-vehStats[a].km});
   var vacKeys=Object.keys(vacStats).sort(function(a,b){return vacStats[b].count-vacStats[a].count});
+  var foyerKeys=Object.keys(foyerStats).sort(function(a,b){return Object.keys(foyerStats[b].vacanciers).length-Object.keys(foyerStats[a].vacanciers).length});
   
   var html='';
+  
+  // Global summary
+  var periodeLabel=(debut||fin)?'Periode'+(debut?' du '+fmtDate(debut):'')+(fin?' au '+fmtDate(fin):''):'Toutes les periodes';
+  html+='<div class="card"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
+    +'<div class="stat"><div class="stat-n">'+allSem.length+'</div><div class="stat-l">semaines</div></div>'
+    +'<div class="stat"><div class="stat-n">'+totalKm+'</div><div class="stat-l">km totaux</div></div>'
+    +'<div class="stat"><div class="stat-n">'+totalCout.toFixed(0)+'&euro;</div><div class="stat-l">cout gazole estime</div></div>'
+    +'<div class="stat"><div class="stat-n">'+vacKeys.length+'</div><div class="stat-l">vacanciers</div></div>'
+    +'</div><div style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center">'+periodeLabel+' &mdash; Cout calcule avec le prix gazole enregistre par trajet (defaut '+fallbackGazole.toFixed(2)+' euro/L)</div></div>';
   
   // Section vehicules (collapsible)
   html+='<div class="card" style="padding:0;overflow:hidden">'
@@ -1647,38 +1738,60 @@ function renderStats(){
     +'<div style="display:flex;align-items:center;gap:10px">'
     +'<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:16px">V</div>'
     +'<div><div style="font-family:Fraunces,serif;font-size:16px;font-weight:600;color:var(--forest)">Vehicules</div>'
-    +'<div style="font-size:11px;color:var(--text-light)">'+vehKeys.length+' vehicule(s) utilise(s)</div></div></div>'
+    +'<div style="font-size:11px;color:var(--text-light)">'+vehKeys.length+' vehicule(s) - '+totalKm+'km - '+totalCout.toFixed(0)+' euro</div></div></div>'
     +'<span style="font-size:14px;color:var(--text-light)" id="stats-veh-arrow">&#9660;</span>'
     +'</div>'
     +'<div id="stats-veh" style="display:none;padding:0 20px 20px;border-top:1px solid var(--border-light)">';
   if(!vehKeys.length){
-    html+='<div class="empty">Aucune donnee. Sauvegardez des semaines pour voir les statistiques.</div>';
+    html+='<div class="empty">Aucune donnee.</div>';
   } else {
     html+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">';
     vehKeys.forEach(function(vid){
       var v=vehStats[vid];
       var condMap={};
-      v.conducteurs.forEach(function(cd){
-        if(!condMap[cd.nom]) condMap[cd.nom]=[];
-        if(cd.date && condMap[cd.nom].indexOf(cd.date)<0) condMap[cd.nom].push(cd.date);
-      });
-      var condList=Object.keys(condMap).map(function(nom){
-        var dates=condMap[nom].sort().map(function(d){return fmtDateShort(d)});
-        return nom+(dates.length?' ('+dates.join(', ')+')':'');
-      });
-      
+      v.conducteurs.forEach(function(cd){if(!condMap[cd.nom]) condMap[cd.nom]=[];if(cd.date&&condMap[cd.nom].indexOf(cd.date)<0) condMap[cd.nom].push(cd.date)});
+      var condList=Object.keys(condMap).map(function(nom){var dates=condMap[nom].sort().map(function(d){return fmtDateShort(d)});return nom+(dates.length?' ('+dates.join(', ')+')':'')});
       html+='<div class="item-row" style="flex-direction:column;align-items:stretch">'
-        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-        +'<span style="font-size:22px">'+v.ico+'</span>'
-        +'<div style="flex:1"><div style="font-weight:600;font-size:14px">'+v.label+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1"><div style="font-weight:600;font-size:14px">'+v.label+'</div></div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+        +'<div class="stat"><div class="stat-n">'+v.km+'</div><div class="stat-l">km</div></div>'
+        +'<div class="stat"><div class="stat-n">'+v.passagers+'</div><div class="stat-l">passagers</div></div>'
+        +'<div class="stat"><div class="stat-n">'+v.cout.toFixed(0)+'&euro;</div><div class="stat-l">gazole</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-        +'<div class="stat"><div class="stat-n">'+v.km+'</div><div class="stat-l">km total</div></div>'
-        +'<div class="stat"><div class="stat-n">'+v.passagers+'</div><div class="stat-l">personnes transportees</div></div>'
+        +(condList.length?'<div style="font-size:12px;color:var(--text-mid)"><span style="font-weight:600;color:var(--forest)">Conducteurs : </span>'+condList.join(' &mdash; ')+'</div>':'')
+        +'</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div></div>';
+  
+  // Section foyers (collapsible)
+  html+='<div class="card" style="padding:0;overflow:hidden">'
+    +'<div onclick="toggleStatsSection(\'stats-foyer\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.15s;user-select:none" onmouseover="this.style.background=\'var(--mint)\'" onmouseout="this.style.background=\'var(--card)\'">'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">F</div>'
+    +'<div><div style="font-family:Fraunces,serif;font-size:16px;font-weight:600;color:var(--forest)">Frequence par foyer</div>'
+    +'<div style="font-size:11px;color:var(--text-light)">'+foyerKeys.length+' foyer(s)</div></div></div>'
+    +'<span style="font-size:14px;color:var(--text-light)" id="stats-foyer-arrow">&#9660;</span>'
+    +'</div>'
+    +'<div id="stats-foyer" style="display:none;padding:0 20px 20px;border-top:1px solid var(--border-light)">';
+  if(!foyerKeys.length){
+    html+='<div class="empty">Aucune donnee.</div>';
+  } else {
+    html+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">';
+    foyerKeys.forEach(function(fk){
+      var f=foyerStats[fk];
+      var nbVac=Object.keys(f.vacanciers).length;
+      html+='<div class="item-row" style="flex-direction:column;align-items:stretch">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div style="font-weight:700;font-size:14px;color:var(--forest)">'+f.foyer+'</div>'
+        +'<div style="font-size:11px;color:var(--text-light)">'+f.trajets+' trajet'+(f.trajets>1?'s':'')+'</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+        +'<div class="stat"><div class="stat-n">'+nbVac+'</div><div class="stat-l">vacancier'+(nbVac>1?'s':'')+'</div></div>'
+        +'<div class="stat"><div class="stat-n">'+f.km+'</div><div class="stat-l">km</div></div>'
+        +'<div class="stat"><div class="stat-n">'+f.cout.toFixed(0)+'&euro;</div><div class="stat-l">cout gazole</div></div>'
         +'</div>'
-        +(condList.length
-          ?'<div style="font-size:12px;color:var(--text-mid)"><span style="font-weight:600;color:var(--forest)">Conducteurs : </span>'+condList.join(' &mdash; ')+'</div>'
-          :'<div style="font-size:12px;color:var(--text-light);font-style:italic">Aucun conducteur renseigne</div>')
+        +'<div style="font-size:10px;color:var(--text-light);margin-top:4px">'+Object.keys(f.vacanciers).sort().join(', ')+'</div>'
         +'</div>';
     });
     html+='</div>';
@@ -1691,20 +1804,19 @@ function renderStats(){
     +'<div style="display:flex;align-items:center;gap:10px">'
     +'<div style="width:36px;height:36px;border-radius:50%;background:var(--copper);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">P</div>'
     +'<div><div style="font-family:Fraunces,serif;font-size:16px;font-weight:600;color:var(--forest)">Vacanciers</div>'
-    +'<div style="font-size:11px;color:var(--text-light)">'+vacKeys.length+' vacancier(s) enregistre(s)</div></div></div>'
+    +'<div style="font-size:11px;color:var(--text-light)">'+vacKeys.length+' vacancier(s)</div></div></div>'
     +'<span style="font-size:14px;color:var(--text-light)" id="stats-vac-arrow">&#9660;</span>'
     +'</div>'
     +'<div id="stats-vac" style="display:none;padding:0 20px 20px;border-top:1px solid var(--border-light)">';
   if(!vacKeys.length){
-    html+='<div class="empty">Aucune donnee. Les arrivees des semaines sauvegardees apparaitront ici.</div>';
+    html+='<div class="empty">Aucune donnee.</div>';
   } else {
     html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:14px">';
     vacKeys.forEach(function(key,idx){
       var v=vacStats[key];
       html+='<div class="item-row">'
         +'<div class="av" style="background:'+col(idx)+'18;color:'+col(idx)+'">'+(v.prenom[0]+(v.nom?v.nom[0]:'')).toUpperCase()+'</div>'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-weight:600;font-size:13px">'+v.prenom+' '+v.nom+'</div>'
+        +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.prenom+' '+v.nom+'</div>'
         +(v.foyer?'<div style="font-size:11px"><span class="foyer-badge">'+v.foyer+'</span></div>':'')
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:6px">'
@@ -1717,6 +1829,30 @@ function renderStats(){
   html+='</div></div>';
   
   el.innerHTML=html;
+}
+
+function fetchGazolePrice(){
+  var statusEl=document.getElementById('gazole-status');
+  statusEl.textContent='Chargement...';
+  fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=50&refine=carburant_nom%3AGazole&select=prix_valeur&order_by=prix_maj%20desc')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data.results&&data.results.length){
+        var prices=data.results.map(function(r){return r.prix_valeur}).filter(function(p){return p>0});
+        if(prices.length){
+          var avg=prices.reduce(function(a,b){return a+b},0)/prices.length;
+          var pricePerL=avg/1000; // API returns price in millimes
+          document.getElementById('stats-gazole').value=pricePerL.toFixed(2);
+          statusEl.textContent='Actualise : '+pricePerL.toFixed(3)+' euro/L (moyenne nationale)';
+          statusEl.style.color='var(--green)';
+          renderStats();
+        }
+      }
+    })
+    .catch(function(e){
+      statusEl.textContent='Erreur : impossible de recuperer le prix. Verifiez votre connexion.';
+      statusEl.style.color='var(--red)';
+    });
 }
 
 function fmtDateShort(d){
@@ -2172,7 +2308,7 @@ async function manSaveToSemaines(){
     await dbUpsert('semaines',existing.id,existing);
   } else {
     var id='sem'+Date.now();
-    var data={id:id,date:date,type:built.type,convois:[convoi]};
+    var data={id:id,date:date,type:built.type,convois:[convoi],gazolePrice:parseFloat(document.getElementById('stats-gazole')?document.getElementById('stats-gazole').value:0)||1.65};
     await dbUpsert('semaines',id,data);
     semaines.unshift(data);
   }
