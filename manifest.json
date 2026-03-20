@@ -2,7 +2,7 @@
   "name": "La Lysardière - Transport",
   "short_name": "Lysardière",
   "description": "Gestion des itinéraires de transport pour La Lysardière",
-  "start_url": "/lysardiere/lysardiere.html",
+  "start_url": "/lysardiere/index.html",
   "scope": "/lysardiere/",
   "display": "standalone",
   "background_color": "#F5F2ED",
