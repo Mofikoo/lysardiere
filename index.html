@@ -1668,7 +1668,7 @@ function genCourrierPdf(){
         if(arr&&dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
         else if(arr) sejour='Arrivee le '+dateAllerStr;
         else if(dep) sejour='Depart le '+dateRetourStr;
-        persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px">'
+        persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
           +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
           +'<span style="font-size:15px;font-weight:bold;font-style:italic">'+civilite+pers.nom.toUpperCase()+'</span>'
           +'<span style="font-size:12px;font-weight:bold;background:#eee;padding:2px 10px;border-radius:3px">'+sejour+'</span>'
@@ -1713,7 +1713,7 @@ function genCourrierPdf(){
       +'<div style="margin-bottom:20px">Madame, Monsieur,</div>'
       +'<div style="margin-bottom:20px;line-height:1.6">Suite a l\'inscription d\'une ou plusieurs personnes aux sejours de vacances organises par la Lysardiere, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
       // Lieu RDV - highlighted
-      +'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8">'
+      +'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid">'
       +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div>'
       +'<div style="font-size:17px;font-weight:bold">'+c.lieu.nom+'</div>'
       +(c.lieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+c.lieu.adresse+'</div>':'')
@@ -1721,9 +1721,9 @@ function genCourrierPdf(){
       // Person cards
       +persCards
       // Pique-nique warning
-      +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique a l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>medicaments du midi</b> (s\'il y a).</div>':'')
+      +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique a l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>medicaments du midi</b> (s\'il y a).</div>':'')
       // Footer
-      +'<div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#555;line-height:1.6">'
+      +'<div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#555;line-height:1.6;page-break-inside:avoid">'
       +'Veillez a bien noter l\'heure du rendez-vous et a etre ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, a l\'expression de nos meilleures salutations.'
       +'<br><br><b style="color:#222">Severine et Christian LANDELLE</b></div>'
