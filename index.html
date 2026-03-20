@@ -1699,7 +1699,7 @@ function genCourrierPdf(){
         }
       });
     });
-    pages+='<div style="page-break-after:always;padding:40px 50px;font-family:Arial,Helvetica,sans-serif;font-size:13px;max-width:800px;margin:0 auto;color:#222">'
+    pages+='<div style="page-break-after:always;padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;max-width:100%;color:#222">'
       // Header
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #333">'
       +'<div>'
@@ -1730,7 +1730,7 @@ function genCourrierPdf(){
       +'</div>';
   });
   var w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardiere</title><style>@page{margin:0}body{margin:0}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardiere</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
   w.document.close();
   w.print();
 }
