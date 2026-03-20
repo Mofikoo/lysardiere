@@ -999,13 +999,39 @@ function computeHeures(c){
     rawArrivals[i+1]=cum;
   }
   
-  // 2) detect pique-nique: trip crosses midi, find intermediate stop closest to midi
+  // 2) detect pique-nique: trip crosses midi, place pause at the best stop around noon
+  // We simulate the sequential schedule WITH 15min buffers to find which stop we'd be at around noon
   var MIDI=720;var piqueniqueIdx=-1;
-  if(rawArrivals[0]<MIDI && rawArrivals[nbStops-1]>MIDI){
-    var bestDist=Infinity;
-    for(var j=1;j<nbStops-1;j++){
-      var dist=Math.abs(rawArrivals[j]-MIDI);
-      if(dist<bestDist){bestDist=dist;piqueniqueIdx=j}
+  if(startMin<MIDI){
+    // Simulate sequential heures without pique-nique to find where noon falls
+    var simDepart=startMin;
+    var simArrivals=[];
+    simArrivals[0]=startMin;
+    for(var si=0;si<c.legDurations.length;si++){
+      var simArr=simDepart+c.legDurations[si].min;
+      simArrivals[si+1]=simArr;
+      // next depart = arrival + 15 min buffer (rounded to quarter)
+      if(si<c.legDurations.length-1){
+        var buf=simArr+15;
+        var rem=buf%15;
+        simDepart=rem<=7?buf-rem:buf+(15-rem);
+        if(simDepart-simArr<10) simDepart=buf-rem+15;
+      }
+    }
+    // Only add pique-nique if the trip actually crosses midi
+    if(simArrivals[nbStops-1]>MIDI){
+      // Find the intermediate stop (not first, not last) closest to MIDI
+      // Priority: prefer stops where we arrive BEFORE or around midi (so people eat at ~12h)
+      var bestIdx=-1;var bestScore=Infinity;
+      for(var j=1;j<nbStops-1;j++){
+        // Score = distance from midi. Prefer arriving before midi (small penalty) over arriving late after midi
+        var arrTime=simArrivals[j];
+        var score=Math.abs(arrTime-MIDI);
+        // If we arrive after 13:30 it's really too late, penalize heavily
+        if(arrTime>810) score+=500;
+        if(score<bestScore){bestScore=score;bestIdx=j}
+      }
+      if(bestIdx>0) piqueniqueIdx=bestIdx;
     }
   }
   
