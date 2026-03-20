@@ -1,6 +1,6 @@
 var CACHE_NAME = 'lysardiere-v1';
 var urlsToCache = [
-  '/lysardiere/lysardiere.html',
+  '/lysardiere/index.html',
   '/lysardiere/manifest.json',
   '/lysardiere/icon-192.png',
   '/lysardiere/icon-512.png'
