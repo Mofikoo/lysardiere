@@ -617,6 +617,29 @@ input:focus, select:focus {
 .section-dep { border-left: 4px solid var(--red); }
 .section-arr { border-left: 4px solid var(--green); }
 
+/* ── SCROLL UP BUTTON ────────────────────────── */
+.scroll-up-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: var(--gold);
+  border: 2px solid var(--gold);
+  font-size: 20px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  box-shadow: var(--shadow-lg);
+  transition: opacity 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.scroll-up-btn:hover { opacity: 0.85; }
+
 /* ── PRINT ───────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
@@ -631,6 +654,7 @@ input:focus, select:focus {
   /* If no target set (fallback), show all */
   .print-all .semaine-card { display: block !important; }
   .print-all .semaine-card .semaine-body { display: block !important; }
+  .scroll-up-btn { display: none !important; }
 }
 </style>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c&callback=mapsLoaded"></script>
@@ -659,6 +683,7 @@ input:focus, select:focus {
     <button class="nb active" id="btn-semaines" onclick="show('semaines')">Semaines</button>
     <button class="nb" id="btn-flotte" onclick="show('flotte')">Flotte</button>
     <button class="nb" id="btn-stats" onclick="show('stats')">Statistiques</button>
+    <button class="nb" id="btn-courrier" onclick="show('courrier')">Courrier</button>
   </div>
 </div>
 
@@ -735,6 +760,7 @@ input:focus, select:focus {
         <button class="sort-btn" id="sort-lieu" onclick="setSort('lieu')">Lieu RDV</button>
       </div>
     </div>
+    <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-pers" placeholder="Rechercher par prenom, nom ou foyer..." oninput="renderPersonnes()">
     <div id="pl"></div>
   </div>
 </div>
@@ -813,6 +839,7 @@ input:focus, select:focus {
       <div><label>Type</label>
         <select id="v-type">
           <option value="trafic">Trafic / Minibus (8 places)</option>
+          <option value="trafic5">Trafic 5 places</option>
           <option value="voiture">Voiture (4 places)</option>
         </select>
       </div>
@@ -835,6 +862,26 @@ input:focus, select:focus {
   <div id="stats-content"><div class="empty">Chargement des statistiques...</div></div>
 </div>
 
+<!-- COURRIER -->
+<div class="tab-pane" id="pane-courrier">
+  <div class="card">
+    <div class="stitle">Courrier - Plage de dates</div>
+    <div class="cols2" style="margin-bottom:12px">
+      <div><label>Date debut</label><input type="date" id="courrier-debut"></div>
+      <div><label>Date fin</label><input type="date" id="courrier-fin"></div>
+    </div>
+    <div style="text-align:right"><button class="btn btn-primary" onclick="renderCourrier()">Afficher les vacanciers</button></div>
+  </div>
+  <div id="courrier-content"></div>
+  <div id="courrier-actions" style="display:none;text-align:center;padding:1rem 0">
+    <button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genCourrierPdf()">Generer les courriers (PDF)</button>
+    <div style="font-size:11px;color:var(--text-light);margin-top:6px">Ouvre une fenetre d'impression. Choisissez "Enregistrer au format PDF" comme destination.</div>
+  </div>
+</div>
+
+<!-- SCROLL UP -->
+<button class="scroll-up-btn no-print" id="scrollUpBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&uarr;</button>
+
 <script>
 var SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
@@ -851,7 +898,7 @@ async function dbLoadAll(table){try{var rows=await supaFetch(table+'?select=*&or
 async function dbUpsert(table,id,data){try{await supaFetch(table,'POST',{id:id,data:data,updated_at:new Date().toISOString()})}catch(e){}}
 async function dbDelete(table,id){try{await supaFetch(table+'?id=eq.'+id,'DELETE')}catch(e){}}
 
-var LYS={lat:44.855,lng:1.358,nom:'La Lysardière',adresse:'41 route de la Rivière, 24370 Saint-Julien-de-Lampon'};
+var LYS={lat:44.855,lng:1.358,nom:'La Lysardiere',adresse:'64 route de Sainte Mondane, 24370 Saint-Julien-de-Lampon'};
 var COLORS=['#18534F','#D6955B','#226D68','#6B3FA0','#0077A8','#C0392B','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
 var lieux=[],personnes=[],semaines=[],archives=[];
 var vehicles=[];
@@ -867,13 +914,16 @@ var DEFAULT_VEHICLES=[
   {id:'t1',label:'Trafic Blanc 1',type:'trafic',cap:8,ico:'🚐'},
   {id:'t2',label:'Trafic Blanc 2',type:'trafic',cap:8,ico:'🚐'},
   {id:'t3',label:'Trafic Taupe',type:'trafic',cap:8,ico:'🚐'},
-  {id:'t4',label:'Trafic ?',type:'trafic',cap:8,ico:'🚐'},
+  {id:'t4',label:'Trafic Bleu',type:'trafic',cap:8,ico:'🚐'},
   {id:'t5',label:'Trafic Boxer',type:'trafic',cap:8,ico:'🚐'},
   {id:'t6',label:'Trafic Coffre',type:'trafic',cap:8,ico:'🚐'},
+  {id:'t7',label:'Trafic Gris',type:'trafic',cap:8,ico:'🚐'},
+  {id:'t8',label:'Trafic Elec',type:'trafic',cap:8,ico:'🚐'},
   {id:'v1',label:'Voiture 308',type:'voiture',cap:4,ico:'🚗'},
   {id:'v2',label:'Voiture Élysée',type:'voiture',cap:4,ico:'🚗'},
   {id:'v3',label:'Voiture Opel',type:'voiture',cap:4,ico:'🚗'},
-  {id:'v4',label:'Voiture ?',type:'voiture',cap:4,ico:'🚗'}
+  {id:'v4',label:'Nissan',type:'voiture',cap:4,ico:'🚗'},
+  {id:'v5',label:'Grand Scenic',type:'voiture',cap:4,ico:'🚗'}
 ];
 
 function initSelV(){vehicles.forEach(function(v){if(selV[v.id]===undefined) selV[v.id]=true})}
@@ -907,6 +957,7 @@ function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'
 function fmtDate(d){if(!d) return '';try{return new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
 
 function show(t){
+  window.scrollTo({top:0,behavior:'instant'});
   document.querySelectorAll('.tab-pane').forEach(function(e){e.classList.remove('active')});
   document.querySelectorAll('.nb').forEach(function(e){e.classList.remove('active')});
   document.getElementById('pane-'+t).classList.add('active');
@@ -916,6 +967,7 @@ function show(t){
   if(t==='semaines'){renderSemaines()}
   if(t==='flotte'){renderFlotte()}
   if(t==='stats'){renderStats()}
+  if(t==='courrier'){}
 }
 
 // ── FLOTTE ────────────────────────────────────
@@ -924,9 +976,9 @@ function renderFlotte(){
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun véhicule.</div>';return}
-  el.innerHTML=sorted.map(function(v){return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places · '+(v.type==='trafic'?'Trafic / Minibus':'Voiture')+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
+  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
 }
-async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){alert('Nom requis.');return}var v={id:'veh'+Date.now(),label:nom,type:type,cap:type==='trafic'?8:4,ico:type==='trafic'?'🚐':'🚗'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
+async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){alert('Nom requis.');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
 async function delVehicle(id){if(!confirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
 
 // ── HEURES UTILITIES ──────────────────────────
@@ -934,60 +986,84 @@ async function delVehicle(id){if(!confirm('Supprimer ce véhicule ?')) return;aw
 // Le depart (index 0) reste exact. Le retour final reste exact.
 // Si arrondir au plus proche donne un tampon < 10 min, on arrondit au quart superieur.
 // Insere 1h de pause pique-nique a l'arret le plus proche de midi si le trajet traverse midi.
+// Retourne: heures[] (arrondis = heure de reprise), rawArrivals[] (heure d'arrivee brute sans tampon), piqueniqueIdx, piqueniqueCount
 function computeHeures(c){
-  if(!c.heureDepart||!c.legDurations||!c.legDurations.length) return{heures:[],piqueniqueIdx:-1};
+  if(!c.heureDepart||!c.legDurations||!c.legDurations.length) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
   var parts=c.heureDepart.split(':');
   var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
   var nbStops=c.legDurations.length+1;
-  // 1) compute raw arrival times at each stop (with 15min buffer between intermediate stops)
-  var raw=[];
-  raw[0]=startMin;
+  // 1) compute raw arrival times (exact travel time, no buffer)
+  var rawArrivals=[];
+  rawArrivals[0]=startMin;
   var cur=startMin;
   for(var i=0;i<c.legDurations.length;i++){
     cur+=c.legDurations[i].min;
-    if(i<c.legDurations.length-1) cur+=15; // 15 min tampon sauf dernier leg
-    raw[i+1]=cur;
+    rawArrivals[i+1]=cur;
   }
-  // 2) detect if trip crosses midi (12:00 = 720 min). Midi window = 11:30-13:30.
+  // 2) detect pique-nique: trip crosses midi
   var MIDI=720;var piqueniqueIdx=-1;
-  if(raw[0]<MIDI && raw[nbStops-1]>MIDI){
-    // find intermediate stop (not first, not last) closest to midi
+  // Use raw arrivals (no buffer) to find closest stop to midi
+  if(rawArrivals[0]<MIDI && rawArrivals[nbStops-1]>MIDI){
     var bestDist=Infinity;
     for(var j=1;j<nbStops-1;j++){
-      var dist=Math.abs(raw[j]-MIDI);
+      var dist=Math.abs(rawArrivals[j]-MIDI);
       if(dist<bestDist){bestDist=dist;piqueniqueIdx=j}
     }
-    // if no intermediate stop, skip
-    if(piqueniqueIdx>0){
-      // add 60 min pause at that stop, shift all subsequent
-      for(var k=piqueniqueIdx+1;k<nbStops;k++) raw[k]+=60;
-    }
   }
-  // 3) round intermediate stops to quarters, preserve stop 0 and last stop exact
+  // 3) compute buffered times: add 15 min buffer between each intermediate stop + 60 min at pique-nique
+  var buffered=[];
+  buffered[0]=startMin;
+  cur=startMin;
+  for(var i2=0;i2<c.legDurations.length;i2++){
+    cur+=c.legDurations[i2].min;
+    // add pique-nique pause if this is the stop
+    if(i2+1===piqueniqueIdx) cur+=60;
+    // add 15 min buffer for intermediate stops (not last)
+    if(i2<c.legDurations.length-1) cur+=15;
+    buffered[i2+1]=cur;
+  }
+  // rawArrivals need pique-nique offset too for stops after it
+  var rawWithPause=[];
+  for(var ra=0;ra<rawArrivals.length;ra++){
+    rawWithPause[ra]=rawArrivals[ra];
+    if(piqueniqueIdx>0 && ra>piqueniqueIdx) rawWithPause[ra]+=60;
+  }
+  // 4) round intermediate stops to quarters, preserve stop 0 and last stop exact
   var heures=[];
-  heures[0]=raw[0]; // depart exact
+  heures[0]=buffered[0]; // depart exact
   for(var m=1;m<nbStops;m++){
-    if(m===nbStops-1){heures[m]=raw[m];continue} // retour exact
-    var rawMin=raw[m];
-    var prevRaw=(m===piqueniqueIdx)?raw[m]:raw[m]; // arrival time before pause
-    // compute the raw arrival (without rounding) to check buffer
-    var arrivalBeforeBuffer=raw[m]-(m<nbStops-1?15:0);
-    // round to nearest quarter
+    if(m===nbStops-1){heures[m]=buffered[m];continue} // retour final exact
+    var rawMin=buffered[m];
     var remainder=rawMin%15;
     var rounded;
-    if(remainder<=7) rounded=rawMin-remainder; // round down
-    else rounded=rawMin+(15-remainder); // round up
-    // check buffer: time from previous stop raw arrival to this rounded time
-    var prevEnd=heures[m-1]; // previous stop display time
-    var legTime=c.legDurations[m-1].min;
-    var buffer=rounded-prevEnd-legTime;
-    if(buffer<10){
-      // round up to next quarter instead
+    if(remainder<=7) rounded=rawMin-remainder;
+    else rounded=rawMin+(15-remainder);
+    // check buffer >= 10 min from raw arrival
+    var arrivalRaw=rawWithPause[m];
+    if(rounded-arrivalRaw<10){
       rounded=rawMin-remainder+15;
     }
     heures[m]=rounded;
   }
-  return{heures:heures,piqueniqueIdx:piqueniqueIdx};
+  // 5) count pique-niques a prevoir: depart passengers dropped AFTER pique-nique stop
+  var piqueniqueCount=0;
+  if(piqueniqueIdx>0 && c.stops){
+    for(var si=piqueniqueIdx+1;si<c.stops.length;si++){
+      var st=c.stops[si];
+      if(st.action==='depot'||st.action==='rotation'){
+        piqueniqueCount+=(st.depPers||[]).length;
+      }
+    }
+  }
+  // 6) apply custom overrides if present
+  if(c.customHeures){
+    for(var key in c.customHeures){
+      if(c.customHeures.hasOwnProperty(key)){
+        heures[parseInt(key)]=c.customHeures[key];
+      }
+    }
+  }
+  return{heures:heures,rawArrivals:rawWithPause,piqueniqueIdx:piqueniqueIdx,piqueniqueCount:piqueniqueCount};
 }
 function fmtH(mins){
   if(mins===undefined||mins===null) return '';
@@ -995,7 +1071,22 @@ function fmtH(mins){
   var m=mins%60;
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
-var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:11px;text-align:center;padding:6px 12px;border-radius:6px;margin:4px 0 4px 42px;letter-spacing:0.5px">PAUSE PIQUE-NIQUE (1h)</div>';
+// Render time detail for an intermediate stop: arrivee estimee / pause / reprise
+function renderTimeDetail(si,rawArrivals,heures,piqueniqueIdx){
+  if(si===0||!rawArrivals[si]) return '';
+  if(si===rawArrivals.length-1) return ''; // retour final, pas de detail
+  var arrive=rawArrivals[si];
+  var reprise=heures[si];
+  var pause=reprise-arrive;
+  if(pause<=0) return '';
+  var html='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:3px;font-size:10px">';
+  html+='<span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:4px;font-weight:600">Arrivee '+fmtH(arrive)+'</span>';
+  html+='<span style="background:var(--gold);color:var(--forest);padding:1px 6px;border-radius:4px;font-weight:600">Pause '+pause+'min</span>';
+  html+='<span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:600">Reprise '+fmtH(reprise)+'</span>';
+  html+='</div>';
+  return html;
+}
+var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
 
 // ── SEMAINES ──────────────────────────────────
 function renderSemaines(){
@@ -1045,17 +1136,21 @@ function renderSemaineCard(s,idx,isArchive){
       var mapsUrl=buildMapsUrlFromConvoi(c);
       var hData=computeHeures(c);
       var heuresSem=hData.heures;
+      var rawArr=hData.rawArrivals;
       var pqIdx=hData.piqueniqueIdx;
+      var pqCount=hData.piqueniqueCount;
       return '<div class="convoi-mini" style="border-left:3px solid '+bord+';margin-top:12px">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
         +'<div style="width:28px;height:28px;border-radius:50%;background:'+col(ci)+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:12px">'+(ci+1)+'</div>'
         +'<div><div style="font-weight:600;font-size:13px">'+c.vehicule.ico+' '+c.vehicule.label+(c.conducteur?' &mdash; <span style="color:var(--forest-mid)">'+c.conducteur+'</span>':'')+'</div>'
         +'<div style="font-size:11px;color:var(--text-light)">'+c.km+'km  -  '+fmtDur(c.dureeMin)+(c.heureDepart?' - Depart '+c.heureDepart:'')+'</div></div></div>'
-        +'<div style="display:flex;gap:6px;align-items:center">'
+        +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
         +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span>'
         +'<span class="badge" style="background:var(--mint);color:var(--forest)">Pic '+c.peakSeats+'/'+c.vehicule.cap+'</span>'
+        +(pqCount>0?'<span class="badge" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c2">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
         +'<a href="'+mapsUrl+'" target="_blank" class="no-print" style="text-decoration:none"><button class="btn btn-info btn-sm">Maps</button></a>'
+        +'<button class="btn btn-sm btn-edit no-print" onclick="event.stopPropagation();modifierConducteurSem(\''+s.id+'\','+ci+')">Modifier conducteur</button>'
         +'</div></div>'
         +'<div style="font-size:11px;color:var(--text-light);margin-bottom:6px">'
         +(c.depart.length?'<span style="color:var(--red);font-weight:600">Dep : </span>'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?' ('+p.foyer+')':'')}).join(', '):'')
@@ -1071,7 +1166,13 @@ function renderSemaineCard(s,idx,isArchive){
           else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
           else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
           else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
-          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name">'+s2.pt.nom+heureStr+'</div><div class="tl-detail">'+label+'</div></div></div>';
+          var timeDetailHtml=renderTimeDetail(si,rawArr,heuresSem,pqIdx);
+          // Editable hour input for each stop
+          var editHourHtml='';
+          if(heuresSem[si]!==undefined){
+            editHourHtml=' <input type="time" class="no-print" value="'+fmtH(heuresSem[si])+'" style="width:80px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="editSemHeure(\''+s.id+'\','+ci+','+si+',this.value)">';
+          }
+          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name">'+s2.pt.nom+heureStr+editHourHtml+'</div><div class="tl-detail">'+label+'</div>'+timeDetailHtml+'</div></div>';
           if(si===pqIdx) stopHtml+=PIQUENIQUE_HTML;
           return stopHtml;
         }).join('')+'</div>'
@@ -1082,6 +1183,34 @@ function renderSemaineCard(s,idx,isArchive){
 
 function toggleSem(id){var el=document.getElementById(id);var arr=document.getElementById('arr-'+id);if(el.classList.contains('open')){el.classList.remove('open');if(arr)arr.textContent='\u25BC'}else{el.classList.add('open');if(arr)arr.textContent='\u25B2'}}
 function toggleArchive(){var el=document.getElementById('archive-body');var arr=document.getElementById('archive-arrow');if(el.classList.contains('open')){el.classList.remove('open');arr.textContent='\u25BC'}else{el.classList.add('open');arr.textContent='\u25B2'}}
+
+function editSemHeure(semId,convoiIdx,stopIdx,val){
+  // Manual hour edit in semaines - no recalc of other stops
+  var s=semaines.find(function(x){return x.id===semId})||archives.find(function(x){return x.id===semId});
+  if(!s||!s.convois[convoiIdx]) return;
+  var c=s.convois[convoiIdx];
+  // Store custom hours override
+  if(!c.customHeures) c.customHeures={};
+  var parts=val.split(':');
+  c.customHeures[stopIdx]=parseInt(parts[0])*60+parseInt(parts[1]);
+  // If stop 0 changed, also update heureDepart
+  if(stopIdx===0) c.heureDepart=val;
+  // Save to db
+  var table=semaines.find(function(x){return x.id===semId})?'semaines':'archives';
+  dbUpsert(table,semId,s);
+}
+
+async function modifierConducteurSem(semId,convoiIdx){
+  var s=semaines.find(function(x){return x.id===semId})||archives.find(function(x){return x.id===semId});
+  if(!s||!s.convois[convoiIdx]) return;
+  var c=s.convois[convoiIdx];
+  var nom=prompt('Nom du conducteur pour '+c.vehicule.label+' :',c.conducteur||'');
+  if(nom===null) return;
+  c.conducteur=nom.trim();
+  var table=semaines.find(function(x){return x.id===semId})?'semaines':'archives';
+  await dbUpsert(table,semId,s);
+  renderSemaines();
+}
 
 function imprimerSemaine(id){
   // Mark only this card as print target
@@ -1129,13 +1258,23 @@ function getSorted(){var s=personnes.slice();if(currentSort==='prenom') s.sort(f
 function renderPersonnes(){
   document.getElementById('pcount').textContent=personnes.length;var el=document.getElementById('pl');
   if(!personnes.length){el.innerHTML='<div class="empty">Aucune personne.</div>';return}
-  el.innerHTML=getSorted().map(function(p){
+  var searchVal=(document.getElementById('search-pers')?document.getElementById('search-pers').value:'').toLowerCase();
+  var list=getSorted();
+  if(searchVal){list=list.filter(function(p){return (p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(searchVal)>=0})}
+  if(!list.length){el.innerHTML='<div class="empty">Aucun resultat pour "'+searchVal+'".</div>';return}
+  el.innerHTML=list.map(function(p){
     var f=getLieu(p.lieu)||{nom:'?'},gi=personnes.indexOf(p);
-    if(editingPersonneId===p.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+p.prenom+' '+p.nom+'</div><div class="cols4" style="margin-bottom:8px"><div><label>Prénom</label><input id="ep-pp-'+p.id+'" value="'+esc(p.prenom)+'"></div><div><label>Nom</label><input id="ep-pn-'+p.id+'" value="'+esc(p.nom||'')+'"></div><div><label>Foyer</label><input id="ep-pfoyer-'+p.id+'" value="'+esc(p.foyer||'')+'"></div><div><label>Lieu</label><select id="ep-pf-'+p.id+'"><option value="">-- Lieu --</option>'+lieux.map(function(l){return '<option value="'+l.id+'"'+(l.id===p.lieu?' selected':'')+'>'+l.nom+'</option>'}).join('')+'</select></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Besoins</label><select id="ep-pb-'+p.id+'"><option value=""'+(p.besoins===''?' selected':'')+'>Aucun</option><option value="fauteuil"'+(p.besoins==='fauteuil'?' selected':'')+'>Fauteuil</option><option value="deambulateur"'+(p.besoins==='deambulateur'?' selected':'')+'>Déambulateur</option></select></div><div><label>Notes</label><input id="ep-pnotes-'+p.id+'" value="'+esc(p.notes||'')+'"></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingPersonneId=null;renderPersonnes()">Annuler</button><button class="btn btn-primary btn-sm" onclick="savePersonne(\''+p.id+'\')">Enregistrer</button></div></div>'}
-    return '<div class="item-row"><div class="av" style="background:'+col(gi)+'18;color:'+col(gi)+'">'+initials(p)+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+p.prenom+' '+p.nom+'</div><div style="font-size:11px;color:var(--text-light);display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+(p.foyer?'<span class="foyer-badge">'+p.foyer+'</span>':'')+'<span>'+f.nom+'</span></div></div>'+(p.besoins?'<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);flex-shrink:0">'+p.besoins+'</span>':'')+'<button class="btn btn-edit btn-sm" onclick="editingPersonneId=\''+p.id+'\';renderPersonnes()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delP(\''+p.id+'\')">✕</button></div>'}).join('');
+    if(editingPersonneId===p.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+p.prenom+' '+p.nom+'</div><div class="cols4" style="margin-bottom:8px"><div><label>Prenom</label><input id="ep-pp-'+p.id+'" value="'+esc(p.prenom)+'"></div><div><label>Nom</label><input id="ep-pn-'+p.id+'" value="'+esc(p.nom||'')+'"></div><div><label>Foyer</label><input id="ep-pfoyer-'+p.id+'" value="'+esc(p.foyer||'')+'"></div><div><label>Lieu</label><select id="ep-pf-'+p.id+'"><option value="">-- Lieu --</option>'+lieux.map(function(l){return '<option value="'+l.id+'"'+(l.id===p.lieu?' selected':'')+'>'+l.nom+'</option>'}).join('')+'</select></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Besoins</label><select id="ep-pb-'+p.id+'"><option value=""'+(p.besoins===''?' selected':'')+'>Aucun</option><option value="fauteuil"'+(p.besoins==='fauteuil'?' selected':'')+'>Fauteuil</option><option value="deambulateur"'+(p.besoins==='deambulateur'?' selected':'')+'>Deambulateur</option></select></div><div><label>Notes</label><input id="ep-pnotes-'+p.id+'" value="'+esc(p.notes||'')+'"></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingPersonneId=null;renderPersonnes()">Annuler</button><button class="btn btn-primary btn-sm" onclick="savePersonne(\''+p.id+'\')">Enregistrer</button></div></div>'}
+    return '<div class="item-row"><div class="av" style="background:'+col(gi)+'18;color:'+col(gi)+'">'+initials(p)+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+p.prenom+' '+p.nom+'</div><div style="font-size:11px;color:var(--text-light);display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+(p.foyer?'<span class="foyer-badge">'+p.foyer+'</span>':'')+'<span>'+f.nom+'</span></div>'+(p.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:3px;font-style:italic">'+p.notes+'</div>':'')+'</div>'+(p.besoins?'<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);flex-shrink:0">'+p.besoins+'</span>':'')+'<button class="btn btn-edit btn-sm" onclick="editingPersonneId=\''+p.id+'\';renderPersonnes()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delP(\''+p.id+'\')">Supprimer</button></div>'}).join('');
 }
-async function addPersonne(){var prenom=document.getElementById('pp').value.trim(),lieu=document.getElementById('pf').value;if(!prenom||!lieu){alert('Prénom et lieu requis.');return}var p={id:'p'+Date.now(),prenom:prenom,nom:document.getElementById('pn').value.trim(),foyer:document.getElementById('pfoyer').value.trim(),lieu:lieu,besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('personnes',p.id,p);personnes.push(p);['pp','pn','pfoyer','pnotes'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('pf').value='';document.getElementById('pb').value='';updatePersistBadge();renderPersonnes()}
-async function savePersonne(id){var p=personnes.find(function(x){return x.id===id});if(!p) return;p.prenom=document.getElementById('ep-pp-'+id).value.trim()||p.prenom;p.nom=document.getElementById('ep-pn-'+id).value.trim();p.foyer=document.getElementById('ep-pfoyer-'+id).value.trim();p.lieu=document.getElementById('ep-pf-'+id).value||p.lieu;p.besoins=document.getElementById('ep-pb-'+id).value;p.notes=document.getElementById('ep-pnotes-'+id).value.trim();setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('personnes',id,p);editingPersonneId=null;updatePersistBadge();renderPersonnes()}
+function normPrenom(s){s=s.trim();if(!s)return '';return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
+function normMaj(s){return s.trim().toUpperCase()}
+function isDuplicatePersonne(prenom,nom,foyer,excludeId){
+  var key=(prenom+' '+nom+' '+foyer).toLowerCase();
+  return personnes.some(function(p){return p.id!==excludeId&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase()===key});
+}
+async function addPersonne(){var prenom=normPrenom(document.getElementById('pp').value);var nom=normMaj(document.getElementById('pn').value);var foyer=normMaj(document.getElementById('pfoyer').value);var lieu=document.getElementById('pf').value;if(!prenom||!lieu){alert('Prenom et lieu requis.');return}if(isDuplicatePersonne(prenom,nom,foyer,null)){alert('Cette personne existe deja (meme prenom, nom et foyer).');return}var p={id:'p'+Date.now(),prenom:prenom,nom:nom,foyer:foyer,lieu:lieu,besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};await dbUpsert('personnes',p.id,p);personnes.push(p);['pp','pn','pfoyer','pnotes'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('pf').value='';document.getElementById('pb').value='';updatePersistBadge();renderPersonnes()}
+async function savePersonne(id){var p=personnes.find(function(x){return x.id===id});if(!p) return;var prenom=normPrenom(document.getElementById('ep-pp-'+id).value)||p.prenom;var nom=normMaj(document.getElementById('ep-pn-'+id).value);var foyer=normMaj(document.getElementById('ep-pfoyer-'+id).value);if(isDuplicatePersonne(prenom,nom,foyer,id)){alert('Cette personne existe deja (meme prenom, nom et foyer).');return}p.prenom=prenom;p.nom=nom;p.foyer=foyer;p.lieu=document.getElementById('ep-pf-'+id).value||p.lieu;p.besoins=document.getElementById('ep-pb-'+id).value;p.notes=document.getElementById('ep-pnotes-'+id).value.trim();await dbUpsert('personnes',id,p);editingPersonneId=null;updatePersistBadge();renderPersonnes()}
 async function delP(id){setPersist('⏳ Suppression...','neutral');await dbDelete('personnes',id);personnes=personnes.filter(function(p){return p.id!==id});updatePersistBadge();renderPersonnes()}
 
 // ── PAGE TRAJETS ──────────────────────────────
@@ -1267,38 +1406,41 @@ function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.h
 
 function renderFiches(){
   var el=document.getElementById('fiches-content');var date=document.getElementById('ldate').value;var dateLabel=fmtDate(date);
-  var html='<div class="card" style="padding:12px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:13px;color:var(--text-mid)">'+convoisOptimises.length+' fiche(s) · '+dateLabel+'</div><button class="btn btn-sm" onclick="window.print()">🖨️ Imprimer</button></div>';
+  var html='<div class="card" style="padding:12px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:13px;color:var(--text-mid)">'+convoisOptimises.length+' fiche(s)  -  '+dateLabel+'</div><button class="btn btn-sm" onclick="window.print()">Imprimer</button></div>';
   convoisOptimises.forEach(function(c,i){
-    var mapsUrl=buildMapsUrl(c),clr=col(i),tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Départ':'Arrivée';
+    var mapsUrl=buildMapsUrl(c),clr=col(i),tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Depart':'Arrivee';
     var durC=c.dureeMin>c.maxDurMin?'var(--red)':'var(--green)';
     var hData=computeHeures(c);
     var heures=hData.heures;
+    var rawArr=hData.rawArrivals;
     var pqIdx=hData.piqueniqueIdx;
-    html+='<div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;box-shadow:var(--shadow-sm)">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border-light);flex-wrap:wrap;gap:8px">'
+    var pqCount=hData.piqueniqueCount;
+    html+='<div style="border:2px solid var(--text);border-radius:var(--radius);padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;box-shadow:var(--shadow-md)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--text);flex-wrap:wrap;gap:8px">'
       +'<div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-family:Fraunces,serif;font-weight:700;font-size:15px">'+(i+1)+'</div>'
-      +'<div><div style="font-size:15px;font-weight:600">Convoi '+(i+1)+' — '+c.vehicule.label+(c.conducteur?' &mdash; '+c.conducteur:'')+'</div>'
-      +'<div style="font-size:12px;color:var(--text-light)">'+dateLabel+(c.heureDepart?' - Depart '+c.heureDepart:'')+'</div></div></div>'
-      +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
-      +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span>'
+      +'<div><div style="font-size:16px;font-weight:700;color:var(--text)">Convoi '+(i+1)+' &mdash; '+c.vehicule.label+(c.conducteur?' &mdash; '+c.conducteur:'')+'</div>'
+      +'<div style="font-size:13px;color:var(--text-mid);font-weight:600">'+dateLabel+(c.heureDepart?' - Depart '+c.heureDepart:'')+'</div></div></div>'
+      +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
+      +'<span class="badge" style="'+getBadgeSt(c.type)+';font-size:11px;padding:4px 10px">'+tl+'</span>'
+      +(pqCount>0?'<span class="badge" style="background:var(--red);color:white;font-size:11px;padding:4px 10px;border:none">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
       +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none" class="no-print"><button class="btn btn-primary btn-sm">Maps</button></a></div></div>'
       +'<div class="cols2" style="margin-bottom:14px">'
-      +'<div><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Passagers</div>'
-      +'<div style="font-size:13px;line-height:2">'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--red);font-size:11px">dep.</span>'}).join('<br>')+(c.depart.length&&c.arrivee.length?'<br>':'')+c.arrivee.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--green);font-size:11px">arr.</span>'}).join('<br>')+'</div></div>'
-      +'<div><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Trajet</div>'
-      +'<div style="font-size:13px;line-height:2">Distance : <strong>~'+c.km+' km</strong><br>Duree : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'+(c.conducteur?'<br>Conducteur : <strong>'+c.conducteur+'</strong>':'')+(c.notes?'<br>Notes : <em>'+c.notes+'</em>':'')+'</div></div></div>'
-      +'<div class="timeline-wrap"><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrets</div>';
-    // Timeline with times
+      +'<div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px"><div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
+      +'<div style="font-size:13px;line-height:2.2;color:var(--text)">'+c.depart.map(function(p){return '<strong>'+p.prenom+' '+p.nom+'</strong>'+(p.foyer?' <span style="font-size:10px;color:var(--forest);font-weight:600">('+p.foyer+')</span>':'')+' <span style="color:var(--red);font-size:11px;font-weight:700">DEP</span>'}).join('<br>')+(c.depart.length&&c.arrivee.length?'<br>':'')+c.arrivee.map(function(p){return '<strong>'+p.prenom+' '+p.nom+'</strong>'+(p.foyer?' <span style="font-size:10px;color:var(--forest);font-weight:600">('+p.foyer+')</span>':'')+' <span style="color:var(--green);font-size:11px;font-weight:700">ARR</span>'}).join('<br>')+'</div></div>'
+      +'<div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px"><div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
+      +'<div style="font-size:14px;line-height:2.2;color:var(--text)">Distance : <strong>~'+c.km+' km</strong><br>Duree : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'+(c.conducteur?'<br>Conducteur : <strong>'+c.conducteur+'</strong>':'')+(c.notes?'<br>Notes : <em>'+c.notes+'</em>':'')+'</div></div></div>'
+      +'<div class="timeline-wrap" style="background:white;border:2px solid var(--bg);padding:16px"><div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrets</div>';
     c.stops.forEach(function(s,si){
       var dotC=s.action==='depart'||s.action==='retour'?'var(--forest)':s.action==='pickup'?'var(--green)':'var(--red)';
-      var heureStr=heures[si]!==undefined?' <span class="tl-time">'+fmtH(heures[si])+'</span>':'';
+      var heureStr=heures[si]!==undefined?' <span class="tl-time" style="font-size:12px;padding:2px 8px">'+fmtH(heures[si])+'</span>':'';
       var phaseHtml='';var pLine='';var sn=s.seats;
-      if(s.action==='depart'){phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine=sn+' a bord'}
-      else if(s.action==='depot'){pLine='Dep. : '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
-      else if(s.action==='rotation'){pLine='Dep: '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
-      else if(s.action==='pickup'){phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='Arr. : '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
-      else if(s.action==='retour'){pLine=sn+' a l\'arrivee'}
-      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+heureStr+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail">'+pLine+'</div></div></div>';
+      if(s.action==='depart'){phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine='<strong>'+sn+' a bord</strong>'}
+      else if(s.action==='depot'){pLine='<strong style="color:var(--red)">Dep.</strong> : '+(s.depPers||[]).map(function(p){return '<strong>'+p.prenom+'</strong>'}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>'}
+      else if(s.action==='rotation'){pLine='<strong style="color:var(--red)">Dep</strong>: '+(s.depPers||[]).map(function(p){return '<strong>'+p.prenom+'</strong>'}).join(', ')+' / <strong style="color:var(--green)">Arr</strong>: '+(s.arrPers||[]).map(function(p){return '<strong>'+p.prenom+'</strong>'}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>'}
+      else if(s.action==='pickup'){phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='<strong style="color:var(--green)">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return '<strong>'+p.prenom+'</strong>'}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>'}
+      else if(s.action==='retour'){pLine='<strong>'+sn+' a l\'arrivee</strong>'}
+      var timeDetailHtml=renderTimeDetail(si,rawArr,heures,pqIdx);
+      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name" style="font-size:14px;font-weight:700">'+s.pt.nom+heureStr+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address" style="font-size:11px;color:var(--text-mid)">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail" style="font-size:12px;color:var(--text-mid)">'+pLine+'</div>'+timeDetailHtml+'</div></div>';
       if(si===pqIdx) html+=PIQUENIQUE_HTML;
     });
     html+='</div><div style="padding:10px 14px;background:var(--blue-bg);border-radius:var(--radius-xs);font-size:11px;color:var(--blue);word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:var(--blue)">'+mapsUrl.substring(0,80)+'...</a></div></div>';
@@ -1435,6 +1577,155 @@ function fmtDateShort(d){
   try{return new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
   catch(e){return d}
 }
+
+// ── COURRIER ─────────────────────────────────
+function renderCourrier(){
+  var debut=document.getElementById('courrier-debut').value;
+  var fin=document.getElementById('courrier-fin').value;
+  if(!debut||!fin){alert('Selectionnez une plage de dates.');return}
+  var el=document.getElementById('courrier-content');
+  var actions=document.getElementById('courrier-actions');
+  var allSem=semaines.concat(archives);
+  var filtered=allSem.filter(function(s){return s.date>=debut&&s.date<=fin});
+  if(!filtered.length){el.innerHTML='<div class="empty">Aucun trajet dans cette plage de dates.</div>';actions.style.display='none';return}
+  // Group by foyer+lieu: each unique (foyer, lieu RDV) gets one courrier
+  var courrierMap={};
+  filtered.forEach(function(s){
+    s.convois.forEach(function(c){
+      var allPers=(c.depart||[]).concat(c.arrivee||[]);
+      allPers.forEach(function(p){
+        var foyer=p.foyer||'Sans foyer';
+        var lieuObj=getLieu(p.lieu)||{nom:'Lieu inconnu',adresse:''};
+        var mapKey=foyer+'|||'+lieuObj.nom;
+        if(!courrierMap[mapKey]) courrierMap[mapKey]={foyer:foyer,lieu:lieuObj,personnes:{}};
+        var persKey=p.prenom+' '+p.nom;
+        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:p.prenom,nom:p.nom||'',trajets:[]};
+        var isDep=(c.depart||[]).some(function(d){return d.prenom===p.prenom&&d.nom===p.nom});
+        var isArr=(c.arrivee||[]).some(function(a){return a.prenom===p.prenom&&a.nom===p.nom});
+        // Compute hour for this person at this stop
+        var hData=computeHeures(c);
+        var heure='';
+        if(hData.heures.length){
+          c.stops.forEach(function(st,si){
+            var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+x.nom});
+            if(names.indexOf(persKey)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
+          });
+        }
+        courrierMap[mapKey].personnes[persKey].trajets.push({
+          date:s.date,type:isDep?'depart':'arrivee',heure:heure
+        });
+      });
+    });
+  });
+  // Display preview
+  var keys=Object.keys(courrierMap).sort();
+  var html='<div class="card"><div class="stitle">Apercu des courriers ('+keys.length+' courrier'+(keys.length>1?'s':'')+')</div>';
+  keys.forEach(function(k,ki){
+    var c=courrierMap[k];
+    var pKeys=Object.keys(c.personnes).sort();
+    html+='<div style="border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">'
+      +'<div style="font-weight:700;font-size:13px;color:var(--forest);margin-bottom:4px">'+c.foyer+'</div>'
+      +'<div style="font-size:11px;color:var(--text-mid);margin-bottom:8px">Lieu : '+c.lieu.nom+(c.lieu.adresse?' - '+c.lieu.adresse:'')+'</div>';
+    pKeys.forEach(function(pk){
+      var pers=c.personnes[pk];
+      html+='<div style="margin-left:12px;margin-bottom:6px"><strong style="font-size:12px">'+pers.prenom+' '+pers.nom+'</strong>';
+      pers.trajets.forEach(function(t){
+        html+=' <span class="badge" style="'+(t.type==='arrivee'?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+'">'+(t.type==='arrivee'?'Arr':'Dep')+' '+fmtDate(t.date)+(t.heure?' '+t.heure:'')+'</span>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  // Store for PDF generation
+  window._courrierData=courrierMap;
+  actions.style.display='block';
+}
+
+function genCourrierPdf(){
+  if(!window._courrierData){alert('Lancez d\'abord l\'apercu.');return}
+  var map=window._courrierData;
+  var keys=Object.keys(map).sort();
+  var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var pages='';
+  keys.forEach(function(k){
+    var c=map[k];
+    var pKeys=Object.keys(c.personnes).sort();
+    // Build person rows
+    var persRows='';
+    pKeys.forEach(function(pk){
+      var pers=c.personnes[pk];
+      // Group trajets by pairs (arrivee=aller, depart=retour)
+      var arrivees=pers.trajets.filter(function(t){return t.type==='arrivee'});
+      var departs=pers.trajets.filter(function(t){return t.type==='depart'});
+      // Match aller/retour pairs or show individually
+      var maxLen=Math.max(arrivees.length,departs.length,1);
+      for(var i=0;i<maxLen;i++){
+        var arr=arrivees[i]||null;
+        var dep=departs[i]||null;
+        var civilite=pers.nom?'Mr/Mme ':'';
+        var dateAllerStr=arr?fmtDateCourrier(arr.date):'';
+        var dateRetourStr=dep?fmtDateCourrier(dep.date):'';
+        var heureAller=arr&&arr.heure?arr.heure:'';
+        var heureRetour=dep&&dep.heure?dep.heure:'';
+        var sejour='';
+        if(arr&&dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
+        else if(arr) sejour='Arrivee le '+dateAllerStr;
+        else if(dep) sejour='Depart le '+dateRetourStr;
+        persRows+='<tr><td colspan="4" style="padding:8px 0 2px 0;border-top:1px solid #000"><b style="font-style:italic">'+civilite+pers.nom.toUpperCase()+'</b></td></tr>';
+        persRows+='<tr><td style="padding:4px 0;font-size:11px">'+sejour+'</td></tr>';
+        persRows+='<tr>'
+          +'<td style="padding:2px 0;font-size:11px">Horaires : Aller</td>'
+          +'<td style="padding:2px 0;font-size:11px">'+(arr?'le '+dateAllerStr:'')+'</td>'
+          +'<td style="padding:2px 0;font-size:11px"><b>a '+heureAller+'</b></td>'
+          +'<td style="padding:2px 0;font-size:11px">Retour : '+(dep?'le '+dateRetourStr:'')+'  <b>a '+heureRetour+'</b></td>'
+          +'</tr>';
+      }
+    });
+    // Check if any aller before 12:45 => pique-nique
+    var needPiquenique=false;
+    pKeys.forEach(function(pk){
+      c.personnes[pk].trajets.forEach(function(t){
+        if(t.type==='arrivee'&&t.heure){
+          var parts=t.heure.split(':');
+          var mins=parseInt(parts[0])*60+parseInt(parts[1]);
+          if(mins<765) needPiquenique=true; // 12:45 = 765
+        }
+      });
+    });
+    pages+='<div style="page-break-after:always;padding:40px 50px;font-family:Times New Roman,serif;font-size:12px;max-width:800px;margin:0 auto">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:30px">'
+      +'<div><b style="font-style:italic">LA LYSARDIERE</b><br>64 Route de Sainte Mondane<br>24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13<br>Siret : 79926743000012<br>N&deg; Atout France : IM0241400012</div>'
+      +'<div style="text-align:right">'+today+'</div>'
+      +'</div>'
+      +'<div style="margin-bottom:30px"><br>Madame, Monsieur,</div>'
+      +'<div style="margin-bottom:20px">Suite a l\'inscription d\'une ou plusieurs personnes aux sejours de vacances organises par la Lysardiere, voici le lieu et horaires de prise en charge aller/retour :</div>'
+      +'<div style="border:2px solid #000;padding:12px 20px;text-align:center;margin:20px auto;max-width:400px"><b style="text-decoration:underline">LIEU Aller / Retour :</b><br><br>'+c.lieu.nom+(c.lieu.adresse?'<br>'+c.lieu.adresse:'')+'</div>'
+      +'<table style="width:100%;margin-top:20px;border-collapse:collapse">'+persRows+'</table>'
+      +(needPiquenique?'<div style="margin-top:30px;font-size:11px"><b>Merci de lui fournir un pique-nique a l\'ALLER si depart avant 12H45 et d\'y ajouter les medicaments du midi (s\'il y a)</b></div>':'')
+      +'<div style="margin-top:30px;font-size:11px">Veillez a bien noter l\'heure du rendez-vous et a etre ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.</div>'
+      +'<div style="margin-top:30px;font-size:11px">Nous vous prions de croire, Madame, Monsieur, a l\'expression de nos meilleures salutations.<br><br>Severine et Christian LANDELLE</div>'
+      +'</div>';
+  });
+  // Open print window
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardiere</title><style>@page{margin:0}body{margin:0;font-family:Times New Roman,serif}</style></head><body>'+pages+'</body></html>');
+  w.document.close();
+  w.print();
+}
+
+function fmtDateCourrier(d){
+  if(!d) return '';
+  try{return new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}
+  catch(e){return d}
+}
+
+// ── SCROLL UP ────────────────────────────────
+window.addEventListener('scroll',function(){
+  var btn=document.getElementById('scrollUpBtn');
+  if(window.scrollY>300){btn.style.display='flex'}else{btn.style.display='none'}
+});
 
 loadData();
 </script>
