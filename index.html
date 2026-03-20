@@ -929,6 +929,74 @@ function renderFlotte(){
 async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){alert('Nom requis.');return}var v={id:'veh'+Date.now(),label:nom,type:type,cap:type==='trafic'?8:4,ico:type==='trafic'?'🚐':'🚗'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
 async function delVehicle(id){if(!confirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
 
+// ── HEURES UTILITIES ──────────────────────────
+// Arrondit aux quarts d'heure (00, 15, 30, 45) les arrets intermediaires.
+// Le depart (index 0) reste exact. Le retour final reste exact.
+// Si arrondir au plus proche donne un tampon < 10 min, on arrondit au quart superieur.
+// Insere 1h de pause pique-nique a l'arret le plus proche de midi si le trajet traverse midi.
+function computeHeures(c){
+  if(!c.heureDepart||!c.legDurations||!c.legDurations.length) return{heures:[],piqueniqueIdx:-1};
+  var parts=c.heureDepart.split(':');
+  var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
+  var nbStops=c.legDurations.length+1;
+  // 1) compute raw arrival times at each stop (with 15min buffer between intermediate stops)
+  var raw=[];
+  raw[0]=startMin;
+  var cur=startMin;
+  for(var i=0;i<c.legDurations.length;i++){
+    cur+=c.legDurations[i].min;
+    if(i<c.legDurations.length-1) cur+=15; // 15 min tampon sauf dernier leg
+    raw[i+1]=cur;
+  }
+  // 2) detect if trip crosses midi (12:00 = 720 min). Midi window = 11:30-13:30.
+  var MIDI=720;var piqueniqueIdx=-1;
+  if(raw[0]<MIDI && raw[nbStops-1]>MIDI){
+    // find intermediate stop (not first, not last) closest to midi
+    var bestDist=Infinity;
+    for(var j=1;j<nbStops-1;j++){
+      var dist=Math.abs(raw[j]-MIDI);
+      if(dist<bestDist){bestDist=dist;piqueniqueIdx=j}
+    }
+    // if no intermediate stop, skip
+    if(piqueniqueIdx>0){
+      // add 60 min pause at that stop, shift all subsequent
+      for(var k=piqueniqueIdx+1;k<nbStops;k++) raw[k]+=60;
+    }
+  }
+  // 3) round intermediate stops to quarters, preserve stop 0 and last stop exact
+  var heures=[];
+  heures[0]=raw[0]; // depart exact
+  for(var m=1;m<nbStops;m++){
+    if(m===nbStops-1){heures[m]=raw[m];continue} // retour exact
+    var rawMin=raw[m];
+    var prevRaw=(m===piqueniqueIdx)?raw[m]:raw[m]; // arrival time before pause
+    // compute the raw arrival (without rounding) to check buffer
+    var arrivalBeforeBuffer=raw[m]-(m<nbStops-1?15:0);
+    // round to nearest quarter
+    var remainder=rawMin%15;
+    var rounded;
+    if(remainder<=7) rounded=rawMin-remainder; // round down
+    else rounded=rawMin+(15-remainder); // round up
+    // check buffer: time from previous stop raw arrival to this rounded time
+    var prevEnd=heures[m-1]; // previous stop display time
+    var legTime=c.legDurations[m-1].min;
+    var buffer=rounded-prevEnd-legTime;
+    if(buffer<10){
+      // round up to next quarter instead
+      rounded=rawMin-remainder+15;
+    }
+    heures[m]=rounded;
+  }
+  return{heures:heures,piqueniqueIdx:piqueniqueIdx};
+}
+function fmtH(mins){
+  if(mins===undefined||mins===null) return '';
+  var h=Math.floor(mins/60)%24;
+  var m=mins%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:11px;text-align:center;padding:6px 12px;border-radius:6px;margin:4px 0 4px 42px;letter-spacing:0.5px">PAUSE PIQUE-NIQUE (1h)</div>';
+
 // ── SEMAINES ──────────────────────────────────
 function renderSemaines(){
   var actives=semaines,archs=archives;
@@ -975,9 +1043,9 @@ function renderSemaineCard(s,idx,isArchive){
       var bord=c.type==='rotation'?'var(--copper)':c.type==='depart_only'?'var(--red)':'var(--green)';
       var tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Depart':'Arrivee';
       var mapsUrl=buildMapsUrlFromConvoi(c);
-      var heuresSem=[];
-      if(c.heureDepart&&c.legDurations&&c.legDurations.length){var ps=c.heureDepart.split(':');var mc=parseInt(ps[0])*60+parseInt(ps[1]);heuresSem[0]=mc;for(var li=0;li<c.legDurations.length;li++){mc+=c.legDurations[li].min;if(li<c.legDurations.length-1) mc+=15;heuresSem[li+1]=mc}}
-      function fH(mins){if(mins===undefined) return '';var h=Math.floor(mins/60)%24,m=mins%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}
+      var hData=computeHeures(c);
+      var heuresSem=hData.heures;
+      var pqIdx=hData.piqueniqueIdx;
       return '<div class="convoi-mini" style="border-left:3px solid '+bord+';margin-top:12px">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
@@ -996,14 +1064,16 @@ function renderSemaineCard(s,idx,isArchive){
         +'</div>'
         +'<div class="timeline-wrap">'+c.stops.map(function(s2,si){
           var dotC=s2.action==='depart'||s2.action==='retour'?'var(--forest)':s2.action==='pickup'?'var(--green)':'var(--red)';
-          var heureStr=heuresSem[si]!==undefined?' <span class="tl-time">'+fH(heuresSem[si])+'</span>':'';
+          var heureStr=heuresSem[si]!==undefined?' <span class="tl-time">'+fmtH(heuresSem[si])+'</span>':'';
           var label='';
           if(s2.action==='depart') label='Depart La Lysardiere';
           else if(s2.action==='retour') label='Retour La Lysardiere';
           else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
           else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
           else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
-          return '<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name">'+s2.pt.nom+heureStr+'</div><div class="tl-detail">'+label+'</div></div></div>'
+          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name">'+s2.pt.nom+heureStr+'</div><div class="tl-detail">'+label+'</div></div></div>';
+          if(si===pqIdx) stopHtml+=PIQUENIQUE_HTML;
+          return stopHtml;
         }).join('')+'</div>'
         +(c.notes?'<div style="font-size:11px;color:var(--text-light);margin-top:6px;font-style:italic">Notes : '+c.notes+'</div>':'')
         +'</div>';
@@ -1201,34 +1271,35 @@ function renderFiches(){
   convoisOptimises.forEach(function(c,i){
     var mapsUrl=buildMapsUrl(c),clr=col(i),tl=c.type==='rotation'?'Rotation':c.type==='depart_only'?'Départ':'Arrivée';
     var durC=c.dureeMin>c.maxDurMin?'var(--red)':'var(--green)';
-    var heures=[];
-    if(c.heureDepart&&c.legDurations&&c.legDurations.length){var parts=c.heureDepart.split(':');var minsCur=parseInt(parts[0])*60+parseInt(parts[1]);heures[0]=minsCur;for(var li=0;li<c.legDurations.length;li++){minsCur+=c.legDurations[li].min;if(li<c.legDurations.length-1) minsCur+=15;heures[li+1]=minsCur}}
-    function fmtHeure(mins){if(mins===undefined) return '';var h=Math.floor(mins/60)%24,m=mins%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}
+    var hData=computeHeures(c);
+    var heures=hData.heures;
+    var pqIdx=hData.piqueniqueIdx;
     html+='<div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;box-shadow:var(--shadow-sm)">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border-light);flex-wrap:wrap;gap:8px">'
       +'<div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-family:Fraunces,serif;font-weight:700;font-size:15px">'+(i+1)+'</div>'
       +'<div><div style="font-size:15px;font-weight:600">Convoi '+(i+1)+' — '+c.vehicule.label+(c.conducteur?' &mdash; '+c.conducteur:'')+'</div>'
-      +'<div style="font-size:12px;color:var(--text-light)">'+dateLabel+(c.heureDepart?' · Départ '+c.heureDepart:'')+'</div></div></div>'
-      +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;font-weight:700;color:'+durC+'">⏱ '+fmtDur(c.dureeMin)+'</span>'
+      +'<div style="font-size:12px;color:var(--text-light)">'+dateLabel+(c.heureDepart?' - Depart '+c.heureDepart:'')+'</div></div></div>'
+      +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
       +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span>'
       +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none" class="no-print"><button class="btn btn-primary btn-sm">Maps</button></a></div></div>'
       +'<div class="cols2" style="margin-bottom:14px">'
       +'<div><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Passagers</div>'
-      +'<div style="font-size:13px;line-height:2">'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--red);font-size:11px">dép.</span>'}).join('<br>')+(c.depart.length&&c.arrivee.length?'<br>':'')+c.arrivee.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--green);font-size:11px">arr.</span>'}).join('<br>')+'</div></div>'
+      +'<div style="font-size:13px;line-height:2">'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--red);font-size:11px">dep.</span>'}).join('<br>')+(c.depart.length&&c.arrivee.length?'<br>':'')+c.arrivee.map(function(p){return p.prenom+' '+p.nom+(p.foyer?'<span style="font-size:10px;color:var(--forest)"> ('+p.foyer+')</span>':'')+' <span style="color:var(--green);font-size:11px">arr.</span>'}).join('<br>')+'</div></div>'
       +'<div><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Trajet</div>'
       +'<div style="font-size:13px;line-height:2">Distance : <strong>~'+c.km+' km</strong><br>Duree : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'+(c.conducteur?'<br>Conducteur : <strong>'+c.conducteur+'</strong>':'')+(c.notes?'<br>Notes : <em>'+c.notes+'</em>':'')+'</div></div></div>'
-      +'<div class="timeline-wrap"><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrêts</div>';
+      +'<div class="timeline-wrap"><div style="font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrets</div>';
     // Timeline with times
     c.stops.forEach(function(s,si){
       var dotC=s.action==='depart'||s.action==='retour'?'var(--forest)':s.action==='pickup'?'var(--green)':'var(--red)';
-      var heureStr=heures[si]!==undefined?' <span class="tl-time">'+fmtHeure(heures[si])+'</span>':'';
+      var heureStr=heures[si]!==undefined?' <span class="tl-time">'+fmtH(heures[si])+'</span>':'';
       var phaseHtml='';var pLine='';var sn=s.seats;
-      if(s.action==='depart'){phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine=sn+' à bord'}
-      else if(s.action==='depot'){pLine='Dép. : '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
-      else if(s.action==='rotation'){pLine='Dép: '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
+      if(s.action==='depart'){phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine=sn+' a bord'}
+      else if(s.action==='depot'){pLine='Dep. : '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
+      else if(s.action==='rotation'){pLine='Dep: '+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
       else if(s.action==='pickup'){phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='Arr. : '+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+' ['+sn+'/'+c.vehicule.cap+']'}
-      else if(s.action==='retour'){pLine=sn+' à l\'arrivée'}
-      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+heureStr+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail">'+pLine+'</div></div></div>'
+      else if(s.action==='retour'){pLine=sn+' a l\'arrivee'}
+      html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+heureStr+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+'<div class="tl-detail">'+pLine+'</div></div></div>';
+      if(si===pqIdx) html+=PIQUENIQUE_HTML;
     });
     html+='</div><div style="padding:10px 14px;background:var(--blue-bg);border-radius:var(--radius-xs);font-size:11px;color:var(--blue);word-break:break-all">GPS : <a href="'+mapsUrl+'" target="_blank" style="color:var(--blue)">'+mapsUrl.substring(0,80)+'...</a></div></div>';
   });
@@ -1236,6 +1307,12 @@ function renderFiches(){
 }
 
 // ── STATISTIQUES ──────────────────────────────
+function toggleStatsSection(id){
+  var body=document.getElementById(id);
+  var arrow=document.getElementById(id+'-arrow');
+  if(body.style.display==='none'){body.style.display='block';arrow.innerHTML='\u25B2'}
+  else{body.style.display='none';arrow.innerHTML='\u25BC'}
+}
 function renderStats(){
   var el=document.getElementById('stats-content');
   var allSem=semaines.concat(archives);
@@ -1275,15 +1352,22 @@ function renderStats(){
   
   var html='';
   
-  // Section vehicules
-  html+='<div class="card"><div class="stitle">Vehicules</div>';
+  // Section vehicules (collapsible)
+  html+='<div class="card" style="padding:0;overflow:hidden">'
+    +'<div onclick="toggleStatsSection(\'stats-veh\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.15s;user-select:none" onmouseover="this.style.background=\'var(--mint)\'" onmouseout="this.style.background=\'var(--card)\'">'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="width:36px;height:36px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:16px">V</div>'
+    +'<div><div style="font-family:Fraunces,serif;font-size:16px;font-weight:600;color:var(--forest)">Vehicules</div>'
+    +'<div style="font-size:11px;color:var(--text-light)">'+vehKeys.length+' vehicule(s) utilise(s)</div></div></div>'
+    +'<span style="font-size:14px;color:var(--text-light)" id="stats-veh-arrow">&#9660;</span>'
+    +'</div>'
+    +'<div id="stats-veh" style="display:none;padding:0 20px 20px;border-top:1px solid var(--border-light)">';
   if(!vehKeys.length){
     html+='<div class="empty">Aucune donnee. Sauvegardez des semaines pour voir les statistiques.</div>';
   } else {
-    html+='<div style="display:flex;flex-direction:column;gap:10px">';
+    html+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">';
     vehKeys.forEach(function(vid){
       var v=vehStats[vid];
-      // Deduplicate conducteurs and group dates
       var condMap={};
       v.conducteurs.forEach(function(cd){
         if(!condMap[cd.nom]) condMap[cd.nom]=[];
@@ -1310,14 +1394,22 @@ function renderStats(){
     });
     html+='</div>';
   }
-  html+='</div>';
+  html+='</div></div>';
   
-  // Section vacanciers
-  html+='<div class="card"><div class="stitle">Vacanciers</div>';
+  // Section vacanciers (collapsible)
+  html+='<div class="card" style="padding:0;overflow:hidden">'
+    +'<div onclick="toggleStatsSection(\'stats-vac\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.15s;user-select:none" onmouseover="this.style.background=\'var(--mint)\'" onmouseout="this.style.background=\'var(--card)\'">'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="width:36px;height:36px;border-radius:50%;background:var(--copper);display:flex;align-items:center;justify-content:center;color:white;font-size:16px">P</div>'
+    +'<div><div style="font-family:Fraunces,serif;font-size:16px;font-weight:600;color:var(--forest)">Vacanciers</div>'
+    +'<div style="font-size:11px;color:var(--text-light)">'+vacKeys.length+' vacancier(s) enregistre(s)</div></div></div>'
+    +'<span style="font-size:14px;color:var(--text-light)" id="stats-vac-arrow">&#9660;</span>'
+    +'</div>'
+    +'<div id="stats-vac" style="display:none;padding:0 20px 20px;border-top:1px solid var(--border-light)">';
   if(!vacKeys.length){
     html+='<div class="empty">Aucune donnee. Les arrivees des semaines sauvegardees apparaitront ici.</div>';
   } else {
-    html+='<div style="display:flex;flex-direction:column;gap:4px">';
+    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:14px">';
     vacKeys.forEach(function(key,idx){
       var v=vacStats[key];
       html+='<div class="item-row">'
@@ -1333,7 +1425,7 @@ function renderStats(){
     });
     html+='</div>';
   }
-  html+='</div>';
+  html+='</div></div>';
   
   el.innerHTML=html;
 }
