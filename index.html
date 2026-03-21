@@ -2386,44 +2386,52 @@ async function genCourrierPdf(singleKey){
   keys.forEach(function(k){
     var c=map[k];
     var pKeys=Object.keys(c.personnes).sort();
-    // Build person cards
+    // Build person cards - group persons with same aller/retour dates+heures
     var persCards='';
+    // Collect all unique sejour combos (arr date+heure, dep date+heure)
+    var sejourGroups={};
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
-      var arrivees=pers.trajets.filter(function(t){return t.type==='arrivee'});
-      var departs=pers.trajets.filter(function(t){return t.type==='depart'});
+      var arrivees=pers.trajets.filter(function(t){return t.type==='arrivee'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+      var departs=pers.trajets.filter(function(t){return t.type==='depart'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
       var maxLen=Math.max(arrivees.length,departs.length,1);
       for(var i=0;i<maxLen;i++){
         var arr=arrivees[i]||null;
         var dep=departs[i]||null;
-        var civilite=pers.nom?'Mr/Mme ':'';
-        var dateAllerStr=arr?fmtDateCourrier(arr.date):'';
-        var dateRetourStr=dep?fmtDateCourrier(dep.date):'';
-        var heureAller=arr&&arr.heure?arr.heure:'--:--';
-        var heureRetour=dep&&dep.heure?dep.heure:'--:--';
-        var sejour='';
-        if(arr&&dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
-        else if(arr) sejour='Arrivee le '+dateAllerStr;
-        else if(dep) sejour='Depart le '+dateRetourStr;
-        persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
-          +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
-          +'<span style="font-size:15px;font-weight:bold;font-style:italic">'+civilite+pers.nom.toUpperCase()+'</span>'
-          +'<span style="font-size:12px;font-weight:bold;background:#eee;padding:2px 10px;border-radius:3px">'+sejour+'</span>'
-          +'</div>'
-          +'<table style="width:100%;font-size:13px;border-collapse:collapse">'
-          +'<tr>'
-          +'<td style="padding:6px 0;width:50%;vertical-align:top">'
-          +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Aller</div>'
-          +'<div>'+(arr?'le <b>'+dateAllerStr+'</b>':'')+'</div>'
-          +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureAller+'</div>'
-          +'</td>'
-          +'<td style="padding:6px 0;width:50%;vertical-align:top;border-left:2px solid #ddd;padding-left:16px">'
-          +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Retour</div>'
-          +'<div>'+(dep?'le <b>'+dateRetourStr+'</b>':'')+'</div>'
-          +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureRetour+'</div>'
-          +'</td>'
-          +'</tr></table></div>';
+        var groupKey=(arr?arr.date+'_'+arr.heure:'none')+'||'+(dep?dep.date+'_'+dep.heure:'none');
+        if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:arr,dep:dep,noms:[]};
+        sejourGroups[groupKey].noms.push(pers.prenom+' '+pers.nom.toUpperCase());
       }
+    });
+    Object.keys(sejourGroups).forEach(function(gk){
+      var g=sejourGroups[gk];
+      var dateAllerStr=g.arr?fmtDateCourrier(g.arr.date):'';
+      var dateRetourStr=g.dep?fmtDateCourrier(g.dep.date):'';
+      var heureAller=g.arr&&g.arr.heure?g.arr.heure:'--:--';
+      var heureRetour=g.dep&&g.dep.heure?g.dep.heure:'--:--';
+      var sejour='';
+      if(g.arr&&g.dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
+      else if(g.arr) sejour='Arrivee le '+dateAllerStr;
+      else if(g.dep) sejour='Depart le '+dateRetourStr;
+      var nomsStr=g.noms.join(', ');
+      persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:4px">'
+        +'<span style="font-size:15px;font-weight:bold;font-style:italic">'+nomsStr+'</span>'
+        +'<span style="font-size:12px;font-weight:bold;background:#eee;padding:2px 10px;border-radius:3px;white-space:nowrap">'+sejour+'</span>'
+        +'</div>'
+        +'<table style="width:100%;font-size:13px;border-collapse:collapse">'
+        +'<tr>'
+        +'<td style="padding:6px 0;width:50%;vertical-align:top">'
+        +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Aller</div>'
+        +'<div>'+(g.arr?'le <b>'+dateAllerStr+'</b>':'')+'</div>'
+        +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureAller+'</div>'
+        +'</td>'
+        +'<td style="padding:6px 0;width:50%;vertical-align:top;border-left:2px solid #ddd;padding-left:16px">'
+        +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Retour</div>'
+        +'<div>'+(g.dep?'le <b>'+dateRetourStr+'</b>':'')+'</div>'
+        +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureRetour+'</div>'
+        +'</td>'
+        +'</tr></table></div>';
     });
     // Pique-nique check
     var needPiquenique=false;
