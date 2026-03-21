@@ -1018,16 +1018,18 @@ var LOGO_URL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAY
 var SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 
-async function supaFetch(path,method,body){
+async function supaFetch(path,method,body,extraHeaders){
   var url=SUPA_URL+'/rest/v1/'+path;
-  var opts={method:method||'GET',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'}};
+  var headers={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
+  if(extraHeaders){for(var k in extraHeaders) headers[k]=extraHeaders[k]}
+  var opts={method:method||'GET',headers:headers};
   if(body) opts.body=JSON.stringify(body);
   var r=await fetch(url,opts);
   if(!method||method==='GET'){var j=await r.json();return j}
   return r.ok;
 }
 async function dbLoadAll(table){try{var rows=await supaFetch(table+'?select=*&order=updated_at.desc');return rows.map(function(r){return r.data})}catch(e){return[]}}
-async function dbUpsert(table,id,data){try{await supaFetch(table,'POST',{id:id,data:data,updated_at:new Date().toISOString()})}catch(e){}}
+async function dbUpsert(table,id,data){try{await supaFetch(table,'POST',{id:id,data:data,updated_at:new Date().toISOString()},{'Prefer':'return=minimal,resolution=merge-duplicates'})}catch(e){}}
 async function dbDelete(table,id){try{await supaFetch(table+'?id=eq.'+id,'DELETE')}catch(e){}}
 
 var LYS={lat:44.855,lng:1.358,nom:'La Lysardiere',adresse:'64 route de Sainte Mondane, 24370 Saint-Julien-de-Lampon'};
