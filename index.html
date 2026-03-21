@@ -808,6 +808,7 @@ input:focus, select:focus {
     <button class="nb" id="btn-flotte" onclick="show('flotte')">Flotte</button>
     <button class="nb" id="btn-stats" onclick="show('stats')">Statistiques</button>
     <button class="nb" id="btn-courrier" onclick="show('courrier')">Courrier</button>
+    <button class="nb" id="btn-guide" onclick="show('guide')">Guide</button>
   </div>
 </div>
 
@@ -1027,6 +1028,179 @@ input:focus, select:focus {
     <div style="font-size:11px;color:var(--text-light);margin-top:6px">Ouvre une fenetre d'impression. Choisissez "Enregistrer au format PDF" comme destination.</div>
   </div>
 </div>
+
+<!-- GUIDE -->
+<div class="tab-pane" id="pane-guide">
+  <div class="card" style="border-left:4px solid var(--forest)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <img id="guide-logo" style="width:50px;height:50px;border-radius:50%;object-fit:cover">
+      <div>
+        <div style="font-family:Fraunces,serif;font-size:22px;font-weight:700;color:var(--forest)">Guide d'utilisation</div>
+        <div style="font-size:12px;color:var(--text-light)">Application de gestion de transport - La Lysardiere</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--text-mid);line-height:1.7;margin-bottom:16px">
+      Bienvenue ! Tu trouveras ici tout ce qu'il faut pour prendre en main l'application de transport de La Lysardiere. Que tu decouvres l'outil ou que tu aies besoin d'un rappel, chaque section t'explique simplement comment ca marche. N'hesite pas a y revenir autant que necessaire !
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px" id="guide-sommaire"></div>
+  </div>
+  <div id="guide-sections"></div>
+</div>
+<script>
+var guideSections=[
+{title:'1. Personnes',icon:'&#128100;',content:''
++'<b>C\'est quoi ?</b> C\'est la ou tu enregistres tous les vacanciers qui vont etre transportes. Chaque personne a sa petite fiche avec ses infos.'
++'<br><br><b>Pour ajouter quelqu\'un :</b>'
++'<br>Remplis les champs en haut : Prenom (obligatoire), Nom, Foyer d\'origine, Lieu de RDV (obligatoire), Besoins (fauteuil, deambulateur ou rien), et des notes si tu veux.'
++'<br>Clique sur <b>"+ Ajouter"</b> et c\'est fait !'
++'<br><br><b>Petit truc pratique :</b> L\'appli met automatiquement les majuscules ou il faut (prenom avec une majuscule, nom et foyer tout en MAJUSCULES). Et si tu essaies d\'ajouter quelqu\'un qui existe deja, elle te previent.'
++'<br><br><b>Pour modifier :</b> Clique sur la fiche de la personne, fais tes changements, puis clique sur <b>"Sauvegarder"</b>. Pour supprimer, c\'est le bouton en bas de la fiche.'
++'<br><br><b>La recherche :</b> Tape un prenom, un nom ou un foyer dans la barre de recherche pour retrouver quelqu\'un rapidement. Tu peux aussi trier par prenom, nom, foyer ou lieu avec les petits boutons.'
++'<br><br><b>Le badge PMR :</b> Si tu mets "Fauteuil roulant" ou "Deambulateur" dans les besoins, un badge bleu PMR apparait. Ca dit a l\'appli de privilegier les vehicules adaptes quand elle optimise les trajets.'
+},
+{title:'2. Lieux de RDV',icon:'&#128205;',content:''
++'<b>C\'est quoi ?</b> C\'est la liste des endroits ou on recupere ou depose les vacanciers (gares, foyers, parkings...).'
++'<br><br><b>Pour ajouter un lieu :</b> Renseigne le nom, la ville, l\'adresse, et si possible les coordonnees GPS (latitude / longitude).'
++'<br><br><b>Le GPS, c\'est important !</b> Sans les coordonnees, l\'optimisation automatique ne pourra pas prendre ce lieu en compte. Pour les trouver facilement : va sur Google Maps, cherche l\'adresse, fais un clic droit (ou un appui long sur telephone) et copie les coordonnees.'
++'<br><br><b>Modifier / Supprimer :</b> Clique sur un lieu pour l\'editer. Attention, tu ne peux pas supprimer un lieu si des personnes y sont rattachees.'
+},
+{title:'3. Trajets (Optimisation auto)',icon:'&#128663;',content:''
++'<b>C\'est quoi ?</b> C\'est le coeur de l\'appli ! Tu selectionnes les personnes a transporter, les vehicules dispo, et l\'algorithme s\'occupe de tout organiser au mieux.'
++'<br><br><b>Comment ca marche, etape par etape :</b>'
++'<br><br><b>1.</b> Choisis la <b>date</b> et le <b>type</b> de trajet (Rotation = aller + retour le meme jour, ou Arrivee/Depart seul).'
++'<br><b>2.</b> Dans la section rouge (Departs), coche les personnes qui partent. Dans la section verte (Arrivees), coche celles qui arrivent. Un petit compteur te montre combien tu as selectionne.'
++'<br><b>3.</b> Selectionne les vehicules disponibles pour ce jour.'
++'<br><b>4.</b> Si besoin, deplie "Contraintes conducteur et passager" pour ajuster la vitesse, la duree max, etc. En general, les valeurs par defaut fonctionnent tres bien.'
++'<br><b>5.</b> Clique sur <b>"Lancer l\'optimisation"</b> et laisse la magie operer !'
++'<br><br><b>Bon a savoir :</b> Si tu selectionnes une meme personne en depart ET en arrivee, un bandeau jaune te previent. C\'est normal pour une rotation (meme foyer), mais ca t\'evite les erreurs.'
+},
+{title:'4. Resultats d\'optimisation',icon:'&#9989;',content:''
++'<b>Une fois l\'optimisation lancee</b>, tu arrives sur les resultats avec un convoi par vehicule. C\'est la que tu peaufines les details !'
++'<br><br><b>Pour chaque convoi, remplis :</b>'
++'<br>- L\'<b>heure de depart</b> (indispensable pour calculer les horaires de chaque arret)'
++'<br>- Le <b>nom du conducteur</b> (facultatif mais pratique)'
++'<br>- Des <b>notes</b> si tu veux'
++'<br>- Coche <b>"Peage"</b> si ce convoi prend l\'autoroute a peage. Si c\'est un Trafic Boxer (interdit sur peage), l\'appli te propose automatiquement d\'echanger le vehicule avec un autre convoi. Pratique !'
++'<br><br><b>Les alertes :</b> Des bandeaux jaunes apparaissent si quelque chose cloche (passager PMR dans un vehicule pas adapte, Boxer sur un peage...). Ca t\'aide a reperer les problemes avant d\'imprimer.'
++'<br><br><b>Ensuite :</b>'
++'<br>- <b>"Sauvegarder"</b> pour enregistrer dans la base de donnees'
++'<br>- <b>"Valider &rarr; Fiches"</b> pour generer les belles fiches imprimables'
+},
+{title:'5. Fiches',icon:'&#128196;',content:''
++'<b>C\'est quoi ?</b> Les fiches detaillees de chaque convoi, pretes a imprimer et a donner aux conducteurs.'
++'<br><br><b>Sur chaque fiche tu trouves :</b>'
++'<br>- Le logo La Lysardiere, le numero du convoi, le vehicule et le conducteur'
++'<br>- La timeline complete de tous les arrets avec les horaires (arrivee, pause, RDV)'
++'<br>- Les passagers a chaque arret : en <span style="color:var(--red);font-weight:700">rouge</span> pour les departs, en <span style="color:var(--green);font-weight:700">vert</span> pour les arrivees'
++'<br>- Un bandeau rouge bien visible si pause pique-nique'
++'<br>- En bas : un <b>QR Code</b> que le conducteur scanne avec son telephone pour ouvrir l\'itineraire directement dans Google Maps'
++'<br>- L\'URL Google Maps en texte aussi, au cas ou'
++'<br><br><b>Pour imprimer :</b> Clique sur "Imprimer" en haut. Les couleurs dep/arr restent bien visibles a l\'impression, pas de souci !'
+},
+{title:'6. Trajet Manuel',icon:'&#9997;',content:''
++'<b>C\'est quoi ?</b> Parfois tu as besoin de creer un trajet a la main, sans passer par l\'optimisation. Un trajet exceptionnel, une modif de derniere minute... c\'est ici que ca se passe.'
++'<br><br><b>Comment faire :</b>'
++'<br>- Remplis la date, le vehicule, le conducteur et le type'
++'<br>- Clique sur <b>"+ Ajouter un arret"</b> pour chaque etape du trajet'
++'<br>- Pour chaque arret : donne le nom du lieu, l\'adresse, les coordonnees GPS si tu les as, le type d\'action et l\'heure de RDV'
++'<br><br><b>Pour les personnes :</b> Clique sur le bandeau vert (arrivee) ou rouge (depart) pour le derouler. Tu as une barre de recherche pour trouver quelqu\'un rapidement, puis clique sur les noms pour les cocher/decocher.'
++'<br><br><b>Si c\'est une rotation :</b> Deux listes s\'affichent, une pour les arrivees et une pour les departs. Tu peux mettre des personnes differentes dans chaque liste.'
++'<br><br><b>Avant de valider :</b> Clique sur "Apercu" pour verifier que tout est bon. Puis "Sauvegarder" pour l\'ajouter aux Semaines.'
+},
+{title:'7. Semaines',icon:'&#128197;',content:''
++'<b>C\'est quoi ?</b> C\'est l\'historique de tous tes trajets sauvegardes. Tu peux les consulter, les modifier, les imprimer ou les archiver.'
++'<br><br><b>Les boutons de chaque semaine :</b>'
++'<br>- <b>Archiver</b> : range la semaine dans les archives (section violette en bas). Utile pour les semaines passees.'
++'<br>- <b>Recharger</b> : remet les donnees dans la page Optimisation si tu veux les modifier'
++'<br>- <b>Imprimer</b> : imprime uniquement cette semaine'
++'<br>- <b>Export PDF</b> : genere un PDF'
++'<br>- <b>Supprimer</b> : supprime definitivement (attention, pas de retour en arriere !)'
++'<br><br><b>Pour voir le detail :</b> Clique sur une semaine pour la deplier. Tu verras chaque convoi avec ses arrets, passagers et horaires.'
++'<br><br><b>Modifier un horaire :</b> Clique directement sur l\'heure d\'un arret pour la changer. Les horaires suivants se recalculent automatiquement, pas besoin de tout refaire.'
++'<br><br><b>Changer le conducteur :</b> Clique sur "Modifier" a cote du nom du conducteur.'
+},
+{title:'8. Flotte',icon:'&#128656;',content:''
++'<b>C\'est quoi ?</b> La liste de tous tes vehicules. Tu peux en ajouter ou en supprimer selon ta flotte.'
++'<br><br><b>Les types :</b>'
++'<br>- <b>Trafic / Minibus</b> : 8 places'
++'<br>- <b>Trafic 5 places</b> : 5 places'
++'<br>- <b>Voiture</b> : 4 places'
++'<br><br><b>Les badges :</b> Chaque vehicule a des badges colores qui s\'affichent automatiquement selon son nom :'
++'<br>- <span style="background:var(--blue-bg);color:var(--blue);padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">PMR</span> compatible fauteuil/deambulateur (Trafic Gris, Taupe, 308, Grand Scenic)'
++'<br>- <span style="background:var(--red-bg);color:var(--red);padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">Pas de peage</span> interdit sur autoroute a peage (Boxer)'
++'<br>- <span style="background:#FFF8E8;color:var(--copper-deep);padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">Dernier recours</span> utilise seulement si rien d\'autre n\'est dispo (Nissan, Trafic Bleu)'
++'<br>- <span style="background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">Petit groupe</span> prioritaire pour 1-2 passagers (Elysee)'
++'<br><br><b>Tu n\'as rien a configurer :</b> l\'optimisation respecte automatiquement toutes ces regles quand elle attribue les vehicules.'
+},
+{title:'9. Statistiques',icon:'&#128202;',content:''
++'<b>C\'est quoi ?</b> Un tableau de bord pour suivre les km, les couts en carburant et la frequentation.'
++'<br><br><b>Les filtres en haut :</b> Tu peux afficher les stats pour toute la periode, cette annee, les 3 derniers mois, ce mois-ci, ou une plage de dates personnalisee.'
++'<br><br><b>Le prix du gazole :</b> Clique sur <b>"Actualiser"</b> pour recuperer le prix moyen dans les stations a moins de 50km de La Lysardiere. Bonne nouvelle : chaque fois que tu ouvres l\'appli, le prix du jour est sauvegarde automatiquement. Comme ca, quand un trajet du 12 juin est calcule, c\'est bien le prix du gazole du 12 juin qui est utilise, pas celui d\'aujourd\'hui.'
++'<br><br><b>La conso :</b> Trafic/Minibus = 10L/100km, Voiture = 7L/100km.'
++'<br><br><b>Section Vehicules :</b> km totaux, passagers, cout gazole et conducteurs pour chaque vehicule.'
++'<br><b>Section Frequence par foyer :</b> combien de vacanciers par foyer, les km, le nombre de trajets, et la liste des noms.'
++'<br><b>Section Vacanciers :</b> nombre de venues par personne, du plus frequent au moins frequent.'
+},
+{title:'10. Courrier',icon:'&#9993;',content:''
++'<b>C\'est quoi ?</b> Tu generes ici les courriers a envoyer aux foyers avec toutes les infos de rendez-vous pour leurs vacanciers.'
++'<br><br><b>Comment faire :</b>'
++'<br><b>1.</b> Choisis une plage de dates (debut / fin) qui couvre les sejours concernes.'
++'<br><b>2.</b> Clique sur <b>"Generer l\'apercu"</b>. L\'appli regroupe automatiquement les courriers par foyer + lieu de RDV.'
++'<br><b>3.</b> Pour chaque courrier, clique sur <b>"PDF"</b> pour le telecharger.'
++'<br><br><b>Dans chaque courrier tu trouves :</b>'
++'<br>- L\'en-tete avec le logo, l\'adresse de La Lysardiere et la date'
++'<br>- Le lieu de rendez-vous bien encadre et visible'
++'<br>- Le tableau des trajets avec dates, heures et type (aller/retour)'
++'<br>- Une note pique-nique si le depart est avant 12h45'
++'<br>- La signature de Severine LANDELLE'
+},
+{title:'11. Installer l\'appli sur ton telephone',icon:'&#128241;',content:''
++'<b>Savais-tu que cette appli peut s\'installer sur ton telephone</b> comme une vraie application ? Pas besoin de passer par l\'App Store ou le Play Store !'
++'<br><br><b>Sur iPhone (avec Safari) :</b>'
++'<br>1. Ouvre l\'appli dans Safari (pas Chrome, ca ne marche qu\'avec Safari sur iPhone)'
++'<br>2. Appuie sur le bouton de partage en bas (le carre avec la fleche vers le haut)'
++'<br>3. Descends et appuie sur <b>"Sur l\'ecran d\'accueil"</b>'
++'<br>4. Appuie sur <b>"Ajouter"</b> et voila !'
++'<br><br><b>Sur Android (avec Chrome) :</b>'
++'<br>1. Ouvre l\'appli dans Chrome'
++'<br>2. Appuie sur les 3 petits points en haut a droite'
++'<br>3. Appuie sur <b>"Installer l\'application"</b>'
++'<br><br>L\'icone avec le van de La Lysardiere apparait sur ton ecran d\'accueil. Tu l\'ouvres en plein ecran, comme une vraie appli. Et tout est connecte : ce que tu fais sur ton ordi se voit sur ton telephone et inversement.'
+},
+{title:'12. Astuces et bonnes pratiques',icon:'&#128161;',content:''
++'<b>Pense toujours a renseigner les coordonnees GPS</b> des lieux de RDV. Sans ca, l\'optimisation ne peut pas fonctionner pour ces lieux.'
++'<br><br><b>Sauvegarde regulierement</b> tes semaines apres optimisation. Les fiches et les courriers sont generes a partir des semaines sauvegardees.'
++'<br><br><b>Archive les semaines passees</b> pour garder un historique propre sans encombrer ta vue principale.'
++'<br><br><b>Ouvre l\'appli au moins une fois par semaine</b> pour que le prix du gazole soit bien enregistre. Plus tu l\'ouvres souvent, plus les estimations de cout seront justes.'
++'<br><br><b>Le QR code sur les fiches</b> est super pratique : le conducteur n\'a qu\'a le scanner avec son telephone pour ouvrir Maps avec tout l\'itineraire. Fini les explications compliquees !'
++'<br><br><b>Les badges de la flotte sont automatiques</b> : ils se basent sur le nom du vehicule. Tu n\'as rien a configurer, ca marche tout seul.'
++'<br><br><b>Un doute ? Une question ?</b> Reviens sur cette page quand tu veux, elle est toujours la pour t\'aider.'
+}
+];
+(function(){
+  var logoImg=document.getElementById('guide-logo');
+  if(logoImg&&typeof LOGO_URL!=='undefined') logoImg.src=LOGO_URL;
+  var somEl=document.getElementById('guide-sommaire');
+  var secEl=document.getElementById('guide-sections');
+  if(!somEl||!secEl) return;
+  var somHtml='';
+  var secHtml='';
+  guideSections.forEach(function(s,i){
+    somHtml+='<a href="#guide-sec-'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border-light);border-radius:var(--radius-xs);text-decoration:none;color:var(--text);transition:background 0.15s" onmouseover="this.style.background=\'var(--mint)\'" onmouseout="this.style.background=\'var(--card)\'">'
+      +'<span style="font-size:18px">'+s.icon+'</span>'
+      +'<span style="font-weight:600;font-size:13px">'+s.title+'</span></a>';
+    secHtml+='<div class="card" id="guide-sec-'+i+'" style="border-left:4px solid var(--forest);scroll-margin-top:20px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+      +'<span style="font-size:24px">'+s.icon+'</span>'
+      +'<div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--forest)">'+s.title+'</div>'
+      +'</div>'
+      +'<div style="font-size:13px;color:var(--text);line-height:1.8">'+s.content+'</div>'
+      +'</div>';
+  });
+  somEl.innerHTML=somHtml;
+  secEl.innerHTML=secHtml;
+})();
+</script>
 
 <!-- TRAJET MANUEL -->
 <div class="tab-pane" id="pane-manuel">
