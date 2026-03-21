@@ -1667,7 +1667,42 @@ function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach
 function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
 function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
 function setConducteur(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.conducteur=val.trim()}
-function setPeage(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c){c.peage=val;var f=getVehicleFlags(c.vehicule);if(val&&f.noPeage) alert('Attention : '+c.vehicule.label+' est interdit sur les trajets a peage. Changez de vehicule.')}}
+function setPeage(cid,val){
+  var c=convoisOptimises.find(function(x){return x.id===cid});
+  if(!c) return;
+  c.peage=val;
+  var f=getVehicleFlags(c.vehicule);
+  if(val&&f.noPeage){
+    // Try to swap with a vehicle from another convoi that has no peage
+    var swapped=false;
+    for(var i=0;i<convoisOptimises.length;i++){
+      var other=convoisOptimises[i];
+      if(other.id===cid) continue;
+      if(other.peage) continue; // this one also has peage, can't take the Boxer
+      var otherFlags=getVehicleFlags(other.vehicule);
+      if(otherFlags.noPeage) continue; // other is also noPeage, no point swapping
+      // Check capacity: other vehicle must fit our peak, our vehicle must fit other's peak
+      if(other.vehicule.cap>=c.peakSeats&&c.vehicule.cap>=other.peakSeats){
+        // Swap!
+        var tmp=c.vehicule;
+        c.vehicule=other.vehicule;
+        other.vehicule=tmp;
+        // Recalc remplissage
+        c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+        other.remplissage=Math.round(other.peakSeats/other.vehicule.cap*100);
+        swapped=true;
+        alert('Vehicule echange : '+c.vehicule.label+' (peage OK) remplace '+tmp.label+' sur ce convoi. '+tmp.label+' deplace vers le convoi '+other.vehicule.label+'.');
+        break;
+      }
+    }
+    if(!swapped){
+      alert('Attention : '+c.vehicule.label+' est interdit sur les trajets a peage. Aucun vehicule compatible disponible pour un echange automatique.');
+    }
+    // Re-render
+    var date=document.getElementById('ldate').value;
+    renderOptim(date,[]);
+  }
+}
 function genFiches(){var missing=convoisOptimises.filter(function(c){return !c.heureDepart});if(missing.length&&!confirm(missing.length+' convoi(s) sans heure. Continuer ?')) return;renderFiches();show('fiches');window.scrollTo({top:0,behavior:'smooth'})}
 
 function renderFiches(){
