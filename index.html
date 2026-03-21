@@ -1690,8 +1690,15 @@ function setPeage(cid,val){
         // Recalc remplissage
         c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
         other.remplissage=Math.round(other.peakSeats/other.vehicule.cap*100);
+        if(!confirm('Changement de vehicule : '+tmp.label+' (Pas de Peage). Remplacement avec '+c.vehicule.label+'. Valider ?')){
+          // User cancelled, undo swap
+          other.vehicule=c.vehicule;
+          c.vehicule=tmp;
+          c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+          other.remplissage=Math.round(other.peakSeats/other.vehicule.cap*100);
+          c.peage=false;
+        }
         swapped=true;
-        alert('Vehicule echange : '+c.vehicule.label+' (peage OK) remplace '+tmp.label+' sur ce convoi. '+tmp.label+' deplace vers le convoi '+other.vehicule.label+'.');
         break;
       }
     }
