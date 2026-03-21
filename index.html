@@ -2771,6 +2771,65 @@ async function manSaveToSemaines(){
 
 loadData();
 
+// ── REALTIME SYNC ────────────────────────────
+var realtimeWs=null;
+function initRealtime(){
+  try{
+    var wsUrl=SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0';
+    realtimeWs=new WebSocket(wsUrl);
+    var heartbeat=null;
+    realtimeWs.onopen=function(){
+      // Join the realtime channel for all tables
+      var tables=['personnes','semaines','archives','vehicules','lieux'];
+      tables.forEach(function(t){
+        realtimeWs.send(JSON.stringify({topic:'realtime:public:'+t,event:'phx_join',payload:{},ref:t}));
+      });
+      // Heartbeat every 30s to keep connection alive
+      heartbeat=setInterval(function(){
+        if(realtimeWs.readyState===1) realtimeWs.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'}));
+      },30000);
+    };
+    realtimeWs.onmessage=function(ev){
+      try{
+        var msg=JSON.parse(ev.data);
+        if(msg.event==='INSERT'||msg.event==='UPDATE'||msg.event==='DELETE'){
+          // Reload data silently and refresh UI
+          reloadDataSilent();
+        }
+      }catch(e){}
+    };
+    realtimeWs.onclose=function(){
+      clearInterval(heartbeat);
+      // Reconnect after 5s
+      setTimeout(initRealtime,5000);
+    };
+    realtimeWs.onerror=function(){
+      realtimeWs.close();
+    };
+  }catch(e){}
+}
+async function reloadDataSilent(){
+  try{
+    var[l,p,s,a,veh]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes'),dbLoadAll('semaines'),dbLoadAll('archives'),dbLoadAll('vehicules')]);
+    lieux=l||[];personnes=p||[];
+    semaines=(s||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+    archives=(a||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+    if(veh&&veh.length>0) vehicles=veh;
+    // Refresh whichever tab is currently active
+    var active=document.querySelector('.tab-pane.active');
+    if(active){
+      var id=active.id.replace('pane-','');
+      if(id==='personnes'){refreshLieuSelect();renderPersonnes()}
+      else if(id==='lieux') renderLieux();
+      else if(id==='semaines') renderSemaines();
+      else if(id==='flotte'){renderFlotte();renderVGrid()}
+      else if(id==='stats') renderStats();
+    }
+  }catch(e){}
+}
+// Start realtime after data loads
+setTimeout(initRealtime,2000);
+
 // PWA Service Worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(function(){}).catch(function(){});
