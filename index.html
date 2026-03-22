@@ -1719,7 +1719,43 @@ function getGazolePriceAuto(){
     })
     .catch(function(){return null});
 }
-async function sauvegarderSemaine(){if(!convoisOptimises.length){await lyAlert('Aucun convoi.','error');return}var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var existing=semaines.find(function(s){return s.date===date});var id=existing?existing.id:'sem'+Date.now();var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises};await dbUpsert('semaines',id,data);if(existing){semaines[semaines.indexOf(existing)]=data}else{semaines.unshift(data)}renderSemaines();setPersist('Semaine sauvegardée','ok');lyAlert('Semaine du '+fmtDate(date)+' sauvegardée.','success')}
+async function sauvegarderSemaine(){if(!convoisOptimises.length){await lyAlert('Aucun convoi.','error');return}var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var existing=semaines.find(function(s){return s.date===date});if(existing){
+  // Date already has convois - ask user what to do
+  var nbExisting=existing.convois.length;
+  var choice=await new Promise(function(resolve){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    var box=document.createElement('div');
+    box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px 28px;max-width:420px;width:90%;box-shadow:var(--shadow-lg);text-align:center';
+    box.innerHTML='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:12px">Date déjà utilisée</div>'
+      +'<div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Il y a déjà <strong>'+nbExisting+' convoi'+(nbExisting>1?'s':'')+'</strong> enregistré'+(nbExisting>1?'s':'')+' au <strong>'+fmtDate(date)+'</strong>.<br>Que souhaitez-vous faire ?</div>'
+      +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
+      +'<button class="btn btn-primary" id="sem-merge">Ajouter à côté</button>'
+      +'<button class="btn" style="background:var(--red);color:white;border:none" id="sem-replace">Remplacer tout</button>'
+      +'<button class="btn btn-sm" id="sem-cancel">Annuler</button></div>';
+    overlay.appendChild(box);document.body.appendChild(overlay);
+    document.getElementById('sem-merge').onclick=function(){overlay.remove();resolve('merge')};
+    document.getElementById('sem-replace').onclick=function(){overlay.remove();resolve('replace')};
+    document.getElementById('sem-cancel').onclick=function(){overlay.remove();resolve('cancel')};
+    overlay.onclick=function(e){if(e.target===overlay){overlay.remove();resolve('cancel')}};
+  });
+  if(choice==='cancel') return;
+  if(choice==='merge'){
+    existing.convois=existing.convois.concat(convoisOptimises);
+    await dbUpsert('semaines',existing.id,existing);
+    renderSemaines();setPersist('Semaine sauvegardée','ok');
+    lyAlert(convoisOptimises.length+' convoi'+(convoisOptimises.length>1?'s':'')+' ajouté'+(convoisOptimises.length>1?'s':'')+' à la semaine du '+fmtDate(date)+'.','success');
+    return;
+  }
+  // replace
+  existing.convois=convoisOptimises.slice();
+  existing.type=document.getElementById('ltype').value;
+  await dbUpsert('semaines',existing.id,existing);
+  renderSemaines();setPersist('Semaine sauvegardée','ok');
+  lyAlert('Semaine du '+fmtDate(date)+' remplacée.','success');
+  return;
+}
+var id='sem'+Date.now();var data={id:id,date:date,type:document.getElementById('ltype').value,convois:convoisOptimises};await dbUpsert('semaines',id,data);semaines.unshift(data);renderSemaines();setPersist('Semaine sauvegardée','ok');lyAlert('Semaine du '+fmtDate(date)+' sauvegardée.','success')}
 
 // ── LIEUX ─────────────────────────────────────
 function renderLieux(){
