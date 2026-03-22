@@ -1979,12 +1979,17 @@ function greedySolve(nodeList, vehList, params){
         // Hard constraints
         if(!clusterFits(cluster.concat([n]),maxCap,params)) continue;
         var newKm=clusterKm(cluster.concat([n]),params);
-        if(newKm/params.vitesse*60>params.maxDurMin*0.80) continue;
+        if(newKm/params.vitesse*60>params.maxDurMin) continue;
         // Soft score: extra km added by this node
         var oldKm=clusterKm(cluster,params);
         var extraKm=newKm-oldKm;
         if(extraKm>params.maxDetour) continue;
-        if(extraKm<bestScore){bestScore=extraKm;bestIdx=j}
+        // Compare: is combining better than separate trips?
+        var separateKm=n.distLys*2; // cost of a separate round trip for this node
+        var savings=separateKm-extraKm; // km saved by combining
+        // Score: lower is better. Negative savings = combining costs more than separate
+        var score=extraKm-(savings*0.5);
+        if(score<bestScore){bestScore=score;bestIdx=j}
       }
       if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}
     }
@@ -2116,8 +2121,8 @@ if(pk>veh.cap){
 var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
 var dureeMin=Math.round(km/p.vitesse*60);
 
-// HARD constraint: if duration exceeds 80% of maxDurMin (safety margin for real Maps times), split
-if(dureeMin>p.maxDurMin*0.80&&cluster.length>1){
+// HARD constraint: if duration exceeds maxDurMin, split
+if(dureeMin>p.maxDurMin&&cluster.length>1){
   // Remove nodes from the end until we fit under the limit
   while(cluster.length>1){
     var removed=cluster.pop();
@@ -2125,7 +2130,7 @@ if(dureeMin>p.maxDurMin*0.80&&cluster.length>1){
     var testStops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
     var testKm=Math.round(routeLen(testStops.map(function(s){return s.pt})));
     var testDur=Math.round(testKm/p.vitesse*60);
-    if(testDur<=p.maxDurMin*0.80){
+    if(testDur<=p.maxDurMin){
       stops=testStops;km=testKm;dureeMin=testDur;pk=peakSeatsStops(stops);
       allDep=[];allArr=[];
       cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});
