@@ -2045,7 +2045,7 @@ for(var vi=0;vi<vehQueue.length;vi++){
   if(p.peage&&flags.noPeage) continue;
   anyVeh=vehQueue[vi];anyIdx=vi;break;
 }
-if(!anyVeh){errors.push('Plus de véhicules compatibles.');break}
+if(!anyVeh){errors.push('Plus de véhicules compatibles.');return}
 vehQueue.splice(anyIdx,1);
 // Shrink cluster to fit this vehicle's capacity
 while(cluster.length>1&&peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))>anyVeh.cap){
