@@ -1976,6 +1976,12 @@ function greedySolve(nodeList, vehList, params){
       var bestIdx=-1, bestScore=Infinity;
       for(var j=0;j<unassigned.length;j++){
         var n=unassigned[j];
+        // Hard constraint: angle must be compatible with ALL nodes in cluster
+        var angleOk=true;
+        for(var ai=0;ai<cluster.length;ai++){
+          if(angleDiff(cluster[ai].cap,n.cap)>params.capMax){angleOk=false;break}
+        }
+        if(!angleOk) continue;
         // Hard constraints
         if(!clusterFits(cluster.concat([n]),maxCap,params)) continue;
         var newKm=clusterKm(cluster.concat([n]),params);
