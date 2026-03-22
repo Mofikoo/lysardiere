@@ -1979,7 +1979,7 @@ function greedySolve(nodeList, vehList, params){
         // Hard constraints
         if(!clusterFits(cluster.concat([n]),maxCap,params)) continue;
         var newKm=clusterKm(cluster.concat([n]),params);
-        if(newKm/params.vitesse*60>params.maxDurMin) continue;
+        if(newKm/params.vitesse*60>params.maxDurMin*0.80) continue;
         // Soft score: extra km added by this node
         var oldKm=clusterKm(cluster,params);
         var extraKm=newKm-oldKm;
@@ -2116,8 +2116,8 @@ if(pk>veh.cap){
 var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
 var dureeMin=Math.round(km/p.vitesse*60);
 
-// HARD constraint: if duration exceeds maxDurMin, split the cluster
-if(dureeMin>p.maxDurMin&&cluster.length>1){
+// HARD constraint: if duration exceeds 80% of maxDurMin (safety margin for real Maps times), split
+if(dureeMin>p.maxDurMin*0.80&&cluster.length>1){
   // Remove nodes from the end until we fit under the limit
   while(cluster.length>1){
     var removed=cluster.pop();
@@ -2125,7 +2125,7 @@ if(dureeMin>p.maxDurMin&&cluster.length>1){
     var testStops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
     var testKm=Math.round(routeLen(testStops.map(function(s){return s.pt})));
     var testDur=Math.round(testKm/p.vitesse*60);
-    if(testDur<=p.maxDurMin){
+    if(testDur<=p.maxDurMin*0.80){
       stops=testStops;km=testKm;dureeMin=testDur;pk=peakSeatsStops(stops);
       allDep=[];allArr=[];
       cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});
@@ -2156,7 +2156,16 @@ if(unassigned.length){
 if(sansGPS.length) errors.unshift('Lieux sans GPS ignorés : '+sansGPS.join(', '));
 return{convois:convois,errors:errors}}
 
-async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,result.errors)}
+async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);
+// Post-Maps: check if any convoi exceeds duration after real distances
+var postErrors=result.errors.slice();
+var maxDur=getParams().maxDurMin;
+convoisOptimises.forEach(function(c,i){
+  if(c.mapsEnrichi&&c.dureeMin>maxDur){
+    postErrors.push('Convoi '+(i+1)+' ('+c.vehicule.label+') : durée réelle Maps = '+fmtDur(c.dureeMin)+' dépasse la limite de '+fmtDur(maxDur)+'. Ce lieu est trop éloigné pour un seul aller-retour dans la contrainte de temps.');
+  }
+});
+setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,postErrors)}
 function attendreMaps(){return new Promise(function(resolve){if(window.googleMapsReady){resolve();return}var interval=setInterval(function(){if(window.googleMapsReady){clearInterval(interval);resolve()}},200);setTimeout(function(){clearInterval(interval);resolve()},10000)})}
 
 // ── GOOGLE MAPS ───────────────────────────────
