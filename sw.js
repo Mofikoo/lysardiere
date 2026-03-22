@@ -1,4 +1,4 @@
-var CACHE_NAME = 'lysardiere-22032026';
+var CACHE_NAME = 'lysardiere-22032026-v12';
 var urlsToCache = [
   '/lysardiere/index.html',
   '/lysardiere/manifest.json',
