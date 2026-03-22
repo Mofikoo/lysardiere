@@ -2113,7 +2113,29 @@ if(pk>veh.cap){
     pk=peakSeatsStops(stops);
   }
 }
-var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})
+var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
+var dureeMin=Math.round(km/p.vitesse*60);
+
+// HARD constraint: if duration exceeds maxDurMin, split the cluster
+if(dureeMin>p.maxDurMin&&cluster.length>1){
+  // Remove nodes from the end until we fit under the limit
+  while(cluster.length>1){
+    var removed=cluster.pop();
+    unassigned.push(removed);
+    var testStops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var testKm=Math.round(routeLen(testStops.map(function(s){return s.pt})));
+    var testDur=Math.round(testKm/p.vitesse*60);
+    if(testDur<=p.maxDurMin){
+      stops=testStops;km=testKm;dureeMin=testDur;pk=peakSeatsStops(stops);
+      allDep=[];allArr=[];
+      cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});
+      ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
+      break;
+    }
+  }
+}
+
+convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:dureeMin,maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})
 });
 // Handle any unassigned overflow from vehicle shrinking
 if(unassigned.length){
