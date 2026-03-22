@@ -2009,14 +2009,81 @@ function totalKmForClusters(clusters,params){
   return clusters.reduce(function(sum,c){return sum+clusterKm(c.cluster,params)},0);
 }
 
-// Strategy 1: sort by distance (farthest first) - original
+// Swap optimization: try moving nodes between clusters to reduce total km
+function swapOptimize(solution,params){
+  var clusters=solution.clusters;
+  if(clusters.length<2) return solution;
+  var improved=true;
+  var maxIter=50;
+  while(improved&&maxIter-->0){
+    improved=false;
+    for(var i=0;i<clusters.length;i++){
+      for(var j=i+1;j<clusters.length;j++){
+        var ci=clusters[i].cluster, cj=clusters[j].cluster;
+        // Try moving each node from ci to cj
+        for(var ni=ci.length-1;ni>=0;ni--){
+          if(ci.length<=1) break; // don't empty a cluster
+          var node=ci[ni];
+          // Check angle compatibility with cj
+          var angleOk=true;
+          for(var ai=0;ai<cj.length;ai++){
+            if(angleDiff(cj[ai].cap,node.cap)>params.capMax){angleOk=false;break}
+          }
+          if(!angleOk) continue;
+          // Check capacity
+          var newCj=cj.concat([node]);
+          if(peakSeatsStops(buildStops(newCj,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
+          // Check duration
+          if(clusterKm(newCj,params)/params.vitesse*60>params.maxDurMin) continue;
+          // Compare km
+          var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
+          var newCi=ci.slice();newCi.splice(ni,1);
+          var newTotal=clusterKm(newCi,params)+clusterKm(newCj,params);
+          if(newTotal<oldTotal-5){ // at least 5km improvement
+            ci.splice(ni,1);
+            cj.push(node);
+            improved=true;
+          }
+        }
+        // Try moving each node from cj to ci
+        for(var nj=cj.length-1;nj>=0;nj--){
+          if(cj.length<=1) break;
+          var node=cj[nj];
+          var angleOk=true;
+          for(var ai=0;ai<ci.length;ai++){
+            if(angleDiff(ci[ai].cap,node.cap)>params.capMax){angleOk=false;break}
+          }
+          if(!angleOk) continue;
+          var newCi=ci.concat([node]);
+          if(peakSeatsStops(buildStops(newCi,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
+          if(clusterKm(newCi,params)/params.vitesse*60>params.maxDurMin) continue;
+          var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
+          var newCj=cj.slice();newCj.splice(nj,1);
+          var newTotal=clusterKm(newCi,params)+clusterKm(newCj,params);
+          if(newTotal<oldTotal-5){
+            cj.splice(nj,1);
+            ci.push(node);
+            improved=true;
+          }
+        }
+      }
+    }
+  }
+  // Remove empty clusters
+  solution.clusters=clusters.filter(function(c){return c.cluster.length>0});
+  return solution;
+}
+
+// Strategy 1: sort by distance (farthest first)
 var strat1=greedySolve(nodes.slice(),vehs.slice(),p);
+strat1=swapOptimize(strat1,p);
 var bestClusters=strat1;
 var bestKm=totalKmForClusters(strat1.clusters,p);
 
 // Strategy 2: sort by angle (group nearby angles together)
 var byAngle=nodes.slice().sort(function(a,b){return a.cap-b.cap});
 var strat2=greedySolve(byAngle,vehs.slice(),p);
+strat2=swapOptimize(strat2,p);
 var km2=totalKmForClusters(strat2.clusters,p);
 if(km2<bestKm&&strat2.errors.length<=bestClusters.errors.length){bestClusters=strat2;bestKm=km2}
 
@@ -2032,14 +2099,24 @@ while(remaining.length){
   nnOrder.push(picked);cur=picked;
 }
 var strat3=greedySolve(nnOrder,vehs.slice(),p);
+strat3=swapOptimize(strat3,p);
 var km3=totalKmForClusters(strat3.clusters,p);
 if(km3<bestKm&&strat3.errors.length<=bestClusters.errors.length){bestClusters=strat3;bestKm=km3}
 
-// Strategy 4: random shuffle (try a few times)
+// Strategy 4: sort by angle sectors (closest angles first as seeds)
+var byAngle2=nodes.slice().sort(function(a,b){return a.cap-b.cap});
+// Reverse to start with different sector
+var strat4=greedySolve(byAngle2.reverse(),vehs.slice(),p);
+strat4=swapOptimize(strat4,p);
+var km4=totalKmForClusters(strat4.clusters,p);
+if(km4<bestKm&&strat4.errors.length<=bestClusters.errors.length){bestClusters=strat4;bestKm=km4}
+
+// Strategy 5-7: random shuffles
 for(var ri=0;ri<3;ri++){
   var shuffled=nodes.slice();
   for(var si=shuffled.length-1;si>0;si--){var rj=Math.floor(Math.random()*(si+1));var tmp=shuffled[si];shuffled[si]=shuffled[rj];shuffled[rj]=tmp}
   var stratR=greedySolve(shuffled,vehs.slice(),p);
+  stratR=swapOptimize(stratR,p);
   var kmR=totalKmForClusters(stratR.clusters,p);
   if(kmR<bestKm&&stratR.errors.length<=bestClusters.errors.length){bestClusters=stratR;bestKm=kmR}
 }
