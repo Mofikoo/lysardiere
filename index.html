@@ -1825,7 +1825,7 @@ function getVehicleFlags(v){
   return{
     pmr: /gris|taupe|308|scenic|scénic/.test(label), // PMR compatible (fauteuil/deambulateur)
     noPeage: /boxer/.test(label), // Interdit sur autoroute a péage
-    lastResort: /nissan|bleu/.test(label), // Utiliser en dernier recours
+    lastResort: /nissan|bleu|coffre/.test(label), // Utiliser en dernier recours
     smallGroup: /elysee|élysée/.test(label) // Prioritaire pour 1-2 passagers
   };
 }
