@@ -1833,13 +1833,18 @@ function updateType(){var t=document.getElementById('ltype').value;document.getE
 // ── MOTEUR VRP ────────────────────────────────
 function buildNodes(deps,arrs){var map={};function add(p,side){
   var ll=getPersonLieux(p);
-  // Pick the first lieu with GPS; optimization will handle the rest
-  var bestLieu=null;
-  for(var i=0;i<ll.length;i++){var f=getLieu(ll[i]);if(f&&hasGPS(f)){bestLieu=f;break}}
+  // Pick the lieu closest to La Lysardière (shortest round trip)
+  var bestLieu=null;var bestDist=Infinity;
+  for(var i=0;i<ll.length;i++){
+    var f=getLieu(ll[i]);
+    if(!f||!hasGPS(f)) continue;
+    var d=dLys(f);
+    if(d<bestDist){bestDist=d;bestLieu=f}
+  }
   if(!bestLieu) return;
   var fid=bestLieu.id;
   if(!map[fid]) map[fid]={fid:fid,lat:parseFloat(bestLieu.lat),lng:parseFloat(bestLieu.lng),nom:bestLieu.nom,adresse:bestLieu.adresse,depPers:[],arrPers:[],distLys:dLys(bestLieu),cap:bearing(LYS,bestLieu)};
-  var pc=Object.assign({},p);pc.lieu=fid;
+  var pc=Object.assign({},p);pc.lieu=fid;pc.altLieux=ll;
   if(side==='dep') map[fid].depPers.push(pc);else map[fid].arrPers.push(pc);
 }deps.forEach(function(p){add(p,'dep')});arrs.forEach(function(p){add(p,'arr')});return Object.values(map)}
 function nnSort(nodes,startPt){if(!nodes.length) return[];var rem=nodes.slice(),route=[],cur=startPt;while(rem.length){var bi=0,bd=Infinity;for(var i=0;i<rem.length;i++){var d=dp(cur,rem[i]);if(d<bd){bd=d;bi=i}}route.push(rem.splice(bi,1)[0]);cur=route[route.length-1]}return route}
