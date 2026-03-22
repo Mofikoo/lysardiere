@@ -1938,17 +1938,106 @@ nodes.forEach(function(n){
 });
 nodes=splitNodes;
 
-nodes.sort(function(a,b){return b.distLys-a.distLys});var unassigned=nodes.slice(),vehQueue=vehs.slice(),convois=[],errors=[];if(sansGPS.length) errors.push('Lieux sans GPS ignorés : '+sansGPS.join(', '));while(unassigned.length>0){if(!vehQueue.length){errors.push('Véhicules épuisés. '+unassigned.length+' lieu(x) non assigné(s).');break}var seedIdx=-1;for(var i=0;i<unassigned.length;i++){if(clusterFits([unassigned[i]],maxCap,p)){seedIdx=i;break}}if(seedIdx<0){
-unassigned.forEach(function(n){
-  var names=(n.depPers||[]).concat(n.arrPers||[]).map(function(pp){return pp.prenom+' '+pp.nom}).join(', ');
-  var kmAllerRetour=Math.round(n.distLys*2);
-  var dureeMin=Math.round(kmAllerRetour/p.vitesse*60);
-  var reason='';
-  if(dureeMin>p.maxDurMin) reason='trajet trop long ('+Math.round(dureeMin/60)+'h'+dureeMin%60+' > max '+Math.round(p.maxDurMin/60)+'h)';
-  else reason='contrainte non satisfaite';
-  errors.push('Lieu non assigné : '+n.nom+' ('+names+') — '+reason);
+nodes.sort(function(a,b){return b.distLys-a.distLys});
+
+// Build distance matrix between all nodes (and LYS)
+var distMatrix={};
+function nodeKey(n){return n.fid+'_'+n.depPers.length+'_'+n.arrPers.length}
+nodes.forEach(function(a){
+  nodes.forEach(function(b){
+    if(a===b) return;
+    distMatrix[nodeKey(a)+'|'+nodeKey(b)]=dp(a,b);
+  });
 });
-break}var seed=unassigned.splice(seedIdx,1)[0],cluster=[seed],changed=true;while(changed&&unassigned.length>0){changed=false;var bestIdx=-1,bestScore=Infinity;for(var j=0;j<unassigned.length;j++){var n=unassigned[j];if(angleDiff(seed.cap,n.cap)>p.capMax) continue;if(!clusterFits(cluster.concat([n]),maxCap,p)) continue;if(detourSiAjout(cluster,n,p)>p.maxDetour) continue;if(clusterKm(cluster.concat([n]),p)/p.vitesse*60>p.maxDurMin) continue;var score=angleDiff(seed.cap,n.cap)-(n.distLys*0.3);if(score<bestScore){bestScore=score;bestIdx=j}}if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}}var veh=pickVehicle(cluster,p,vehQueue);if(!veh){
+
+// Greedy clustering function that builds one solution from a given seed order
+function greedySolve(nodeList, vehList, params){
+  var unassigned=nodeList.slice(), vQ=vehList.slice(), result=[], errs=[];
+  while(unassigned.length>0){
+    if(!vQ.length){errs.push('Véhicules épuisés. '+unassigned.length+' lieu(x) restant(s).');break}
+    // Find a valid seed
+    var seedIdx=-1;
+    for(var i=0;i<unassigned.length;i++){
+      if(clusterFits([unassigned[i]],maxCap,params)){seedIdx=i;break}
+    }
+    if(seedIdx<0){
+      unassigned.forEach(function(n){
+        var names=(n.depPers||[]).concat(n.arrPers||[]).map(function(pp){return pp.prenom+' '+pp.nom}).join(', ');
+        var dureeMin=Math.round(n.distLys*2/params.vitesse*60);
+        var reason=dureeMin>params.maxDurMin?'trajet trop long':'contrainte non satisfaite';
+        errs.push('Lieu non assigné : '+n.nom+' ('+names+') — '+reason);
+      });
+      break;
+    }
+    var seed=unassigned.splice(seedIdx,1)[0];
+    var cluster=[seed], changed=true;
+    while(changed&&unassigned.length>0){
+      changed=false;
+      var bestIdx=-1, bestScore=Infinity;
+      for(var j=0;j<unassigned.length;j++){
+        var n=unassigned[j];
+        // Hard constraints
+        if(!clusterFits(cluster.concat([n]),maxCap,params)) continue;
+        var newKm=clusterKm(cluster.concat([n]),params);
+        if(newKm/params.vitesse*60>params.maxDurMin) continue;
+        // Soft score: extra km added by this node
+        var oldKm=clusterKm(cluster,params);
+        var extraKm=newKm-oldKm;
+        if(extraKm>params.maxDetour) continue;
+        if(extraKm<bestScore){bestScore=extraKm;bestIdx=j}
+      }
+      if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}
+    }
+    result.push({cluster:cluster});
+  }
+  return {clusters:result, errors:errs, vehRemaining:vQ};
+}
+
+// Try multiple seed strategies and keep the one with lowest total km
+function totalKmForClusters(clusters,params){
+  return clusters.reduce(function(sum,c){return sum+clusterKm(c.cluster,params)},0);
+}
+
+// Strategy 1: sort by distance (farthest first) - original
+var strat1=greedySolve(nodes.slice(),vehs.slice(),p);
+var bestClusters=strat1;
+var bestKm=totalKmForClusters(strat1.clusters,p);
+
+// Strategy 2: sort by angle (group nearby angles together)
+var byAngle=nodes.slice().sort(function(a,b){return a.cap-b.cap});
+var strat2=greedySolve(byAngle,vehs.slice(),p);
+var km2=totalKmForClusters(strat2.clusters,p);
+if(km2<bestKm&&strat2.errors.length<=bestClusters.errors.length){bestClusters=strat2;bestKm=km2}
+
+// Strategy 3: sort by nearest-neighbor from LYS
+var nnOrder=[];var remaining=nodes.slice();var cur=LYS;
+while(remaining.length){
+  var nearest=-1,nearDist=Infinity;
+  for(var ni=0;ni<remaining.length;ni++){
+    var d=dp(cur,remaining[ni]);
+    if(d<nearDist){nearDist=d;nearest=ni}
+  }
+  var picked=remaining.splice(nearest,1)[0];
+  nnOrder.push(picked);cur=picked;
+}
+var strat3=greedySolve(nnOrder,vehs.slice(),p);
+var km3=totalKmForClusters(strat3.clusters,p);
+if(km3<bestKm&&strat3.errors.length<=bestClusters.errors.length){bestClusters=strat3;bestKm=km3}
+
+// Strategy 4: random shuffle (try a few times)
+for(var ri=0;ri<3;ri++){
+  var shuffled=nodes.slice();
+  for(var si=shuffled.length-1;si>0;si--){var rj=Math.floor(Math.random()*(si+1));var tmp=shuffled[si];shuffled[si]=shuffled[rj];shuffled[rj]=tmp}
+  var stratR=greedySolve(shuffled,vehs.slice(),p);
+  var kmR=totalKmForClusters(stratR.clusters,p);
+  if(kmR<bestKm&&stratR.errors.length<=bestClusters.errors.length){bestClusters=stratR;bestKm=kmR}
+}
+
+// Now assign vehicles to the best clusters
+var unassigned=[],vehQueue=vehs.slice(),convois=[],errors=bestClusters.errors.slice();
+
+bestClusters.clusters.forEach(function(item){
+var cluster=item.cluster;var veh=pickVehicle(cluster,p,vehQueue);if(!veh){
 // No vehicle fits this cluster - try to find any vehicle and shrink cluster to fit
 var anyVeh=null;var anyIdx=-1;
 for(var vi=0;vi<vehQueue.length;vi++){
@@ -2024,7 +2113,26 @@ if(pk>veh.cap){
     pk=peakSeatsStops(stops);
   }
 }
-var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})}return{convois:convois,errors:errors}}
+var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})
+});
+// Handle any unassigned overflow from vehicle shrinking
+if(unassigned.length){
+  var overflowResult=greedySolve(unassigned,vehQueue,p);
+  overflowResult.clusters.forEach(function(item){
+    var cl=item.cluster;
+    var v2=pickVehicle(cl,p,vehQueue);
+    if(!v2&&vehQueue.length){v2=vehQueue.shift()}
+    if(!v2){errors.push('Véhicules épuisés pour le surplus.');return}
+    var st2=buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var pk2=peakSeatsStops(st2);var km2=Math.round(routeLen(st2.map(function(s){return s.pt})));
+    var ad2=[],aa2=[];cl.forEach(function(n){ad2=ad2.concat(n.depPers);aa2=aa2.concat(n.arrPers)});
+    var ct2=(ad2.length&&aa2.length)?'rotation':ad2.length?'depart_only':'arrivee_only';
+    convois.push({id:'c'+convois.length,vehicule:v2,stops:st2,depart:ad2,arrivee:aa2,type:ct2,km:km2,dureeMin:Math.round(km2/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk2,remplissage:Math.round(pk2/v2.cap*100)});
+  });
+  errors=errors.concat(overflowResult.errors);
+}
+if(sansGPS.length) errors.unshift('Lieux sans GPS ignorés : '+sansGPS.join(', '));
+return{convois:convois,errors:errors}}
 
 async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,result.errors)}
 function attendreMaps(){return new Promise(function(resolve){if(window.googleMapsReady){resolve();return}var interval=setInterval(function(){if(window.googleMapsReady){clearInterval(interval);resolve()}},200);setTimeout(function(){clearInterval(interval);resolve()},10000)})}
