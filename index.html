@@ -1912,7 +1912,36 @@ unassigned.forEach(function(n){
   else reason='contrainte non satisfaite';
   errors.push('Lieu non assigné : '+n.nom+' ('+names+') — '+reason);
 });
-break}var seed=unassigned.splice(seedIdx,1)[0],cluster=[seed],changed=true;while(changed&&unassigned.length>0){changed=false;var bestIdx=-1,bestScore=Infinity;for(var j=0;j<unassigned.length;j++){var n=unassigned[j];if(angleDiff(seed.cap,n.cap)>p.capMax) continue;if(!clusterFits(cluster.concat([n]),maxCap,p)) continue;if(detourSiAjout(cluster,n,p)>p.maxDetour) continue;if(clusterKm(cluster.concat([n]),p)/p.vitesse*60>p.maxDurMin) continue;var score=angleDiff(seed.cap,n.cap)-(n.distLys*0.3);if(score<bestScore){bestScore=score;bestIdx=j}}if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}}var veh=pickVehicle(cluster,p,vehQueue);if(!veh){errors.push('Plus de véhicules.');break}if(!clusterFits(cluster,veh.cap,p)){vehQueue.unshift(veh);var ti=-1;for(var k=0;k<vehQueue.length;k++){if(vehQueue[k].type==='trafic'){ti=k;break}}if(ti>=0) veh=vehQueue.splice(ti,1)[0];else{errors.push('Aucun véhicule adéquat.');break}}var stops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';var pk=peakSeatsStops(stops);convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})}return{convois:convois,errors:errors}}
+break}var seed=unassigned.splice(seedIdx,1)[0],cluster=[seed],changed=true;while(changed&&unassigned.length>0){changed=false;var bestIdx=-1,bestScore=Infinity;for(var j=0;j<unassigned.length;j++){var n=unassigned[j];if(angleDiff(seed.cap,n.cap)>p.capMax) continue;if(!clusterFits(cluster.concat([n]),maxCap,p)) continue;if(detourSiAjout(cluster,n,p)>p.maxDetour) continue;if(clusterKm(cluster.concat([n]),p)/p.vitesse*60>p.maxDurMin) continue;var score=angleDiff(seed.cap,n.cap)-(n.distLys*0.3);if(score<bestScore){bestScore=score;bestIdx=j}}if(bestIdx>=0){cluster.push(unassigned.splice(bestIdx,1)[0]);changed=true}}var veh=pickVehicle(cluster,p,vehQueue);if(!veh){
+// No vehicle fits this cluster - try to find any vehicle and shrink cluster to fit
+var anyVeh=null;var anyIdx=-1;
+for(var vi=0;vi<vehQueue.length;vi++){
+  var flags=getVehicleFlags(vehQueue[vi]);
+  if(p.peage&&flags.noPeage) continue;
+  anyVeh=vehQueue[vi];anyIdx=vi;break;
+}
+if(!anyVeh){errors.push('Plus de véhicules compatibles.');break}
+vehQueue.splice(anyIdx,1);
+// Shrink cluster to fit this vehicle's capacity
+while(cluster.length>1&&peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))>anyVeh.cap){
+  unassigned.push(cluster.pop());
+}
+veh=anyVeh;
+}if(!clusterFits(cluster,veh.cap,p)){
+// Try a bigger vehicle
+var found=false;
+for(var k=0;k<vehQueue.length;k++){
+  if(vehQueue[k].cap>=peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))){
+    vehQueue.unshift(veh);veh=vehQueue.splice(k+1,1)[0];found=true;break;
+  }
+}
+if(!found){
+  // Shrink cluster to fit current vehicle
+  while(cluster.length>1&&peakSeatsStops(buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin))>veh.cap){
+    unassigned.push(cluster.pop());
+  }
+}
+}var stops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);var km=Math.round(routeLen(stops.map(function(s){return s.pt})));var allDep=[],allArr=[];cluster.forEach(function(n){allDep=allDep.concat(n.depPers);allArr=allArr.concat(n.arrPers)});var ctype=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';var pk=peakSeatsStops(stops);convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})}return{convois:convois,errors:errors}}
 
 async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,result.errors)}
 function attendreMaps(){return new Promise(function(resolve){if(window.googleMapsReady){resolve();return}var interval=setInterval(function(){if(window.googleMapsReady){clearInterval(interval);resolve()}},200);setTimeout(function(){clearInterval(interval);resolve()},10000)})}
