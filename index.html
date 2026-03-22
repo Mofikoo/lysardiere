@@ -1369,10 +1369,7 @@ async function autoFetchGazole(){
   var existing=gazoleHistorique.find(function(g){return g.date===today});
   if(existing) return; // Already fetched today
   try{
-    var controller=new AbortController();
-    var timeout=setTimeout(function(){controller.abort()},10000);
-    var r=await fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc',{signal:controller.signal});
-    clearTimeout(timeout);
+    var r=await fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc');
     if(!r.ok) return;
     var data=await r.json();
     var prices=[];
@@ -2297,13 +2294,8 @@ function fetchGazolePrice(){
   statusEl.textContent='Chargement...';
   statusEl.style.color='var(--text-light)';
   
-  var controller=new AbortController();
-  var timeout=setTimeout(function(){controller.abort()},10000);
-  
-  // Rayon 50km autour de La Lysardiere (lat 44.855, lng 1.358)
-  fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville%2Cdépartement&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc',{signal:controller.signal})
+  fetch('https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=100&select=gazole_prix%2Cville%2Cdepartement&where=gazole_prix%20is%20not%20null%20and%20distance(geom%2C%20geom%27POINT(1.358%2044.855)%27%2C%2050km)&order_by=gazole_maj%20desc')
     .then(function(r){
-      clearTimeout(timeout);
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
     })
@@ -2332,9 +2324,7 @@ function fetchGazolePrice(){
       renderStats();
     })
     .catch(function(e){
-      clearTimeout(timeout);
-      var msg=e.name==='AbortError'?'Delai depasse (10s). Reessayez.':'Erreur : '+e.message+'. Entrez le prix manuellement.';
-      statusEl.textContent=msg;
+      statusEl.textContent='Erreur : '+e.message+'. Entrez le prix manuellement.';
       statusEl.style.color='var(--red)';
     });
 }
