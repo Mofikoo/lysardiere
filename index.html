@@ -931,6 +931,13 @@ input:focus, select:focus {
     </div>
   </div>
 
+  <div class="card" style="padding:12px 16px;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="showChargerSemaine()" style="font-size:11px">📋 Charger depuis une semaine sauvegardée</button>
+      <button class="btn btn-sm" onclick="selDep={};selArr={};renderSelectors();checkGPSWarnings()" style="font-size:11px">✕ Tout désélectionner</button>
+    </div>
+  </div>
+
   <div class="card section-dep" id="sec-dep">
     <div class="stitle" style="color:var(--red);border-color:var(--red)">🔴 Personnes qui partent</div>
     <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-dep" placeholder="🔍 Rechercher par prénom, nom ou foyer..." oninput="renderPS('dep-sel',selDep,'dep')">
@@ -1813,6 +1820,73 @@ function toggleConstraints(){
   else{body.style.display='none';arrow.innerHTML='\u25BC'}
 }
 function checkGPSWarnings(){var fidsVus={};personnes.filter(function(p){return selDep[p.id]||selArr[p.id]}).forEach(function(p){getPersonLieux(p).forEach(function(lid){fidsVus[lid]=true})});var sg=Object.keys(fidsVus).filter(function(fid){var f=getLieu(fid);return f&&!hasGPS(f)});var el=document.getElementById('gps-warning');if(sg.length){el.style.display='block';el.innerHTML='<div class="warn-box"><strong>Lieux sans GPS ignores :</strong> '+sg.map(function(fid){var f=getLieu(fid);return f?f.nom:'?'}).join(', ')+'</div>'}else el.style.display='none'}
+function showChargerSemaine(){
+  if(!semaines.length&&!archives.length){lyAlert('Aucune semaine sauvegardée.','error');return}
+  var allSem=semaines.concat(archives).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+  
+  var html='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:12px">Charger depuis une semaine</div>';
+  html+='<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Les personnes arrivées ce jour-là seront présélectionnées en <strong style="color:var(--red)">départ</strong>, et les personnes parties seront présélectionnées en <strong style="color:var(--green)">arrivée</strong>.</div>';
+  
+  allSem.forEach(function(s){
+    var tDep=s.convois.reduce(function(a,c){return a+(c.depart||[]).length},0);
+    var tArr=s.convois.reduce(function(a,c){return a+(c.arrivee||[]).length},0);
+    html+='<button class="btn btn-sm" style="margin:3px;display:block;width:100%;text-align:left;font-size:12px" onclick="chargerDepuisSemaine(\''+s.id+'\')">'
+      +'<strong>'+fmtDate(s.date)+'</strong> — '+s.convois.length+' convoi'+(s.convois.length>1?'s':'')+' · '
+      +'<span style="color:var(--red)">'+tDep+' dép.</span> · <span style="color:var(--green)">'+tArr+' arr.</span>'
+      +'</button>';
+  });
+  
+  html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
+  
+  var overlay=document.createElement('div');
+  overlay.className='ly-modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px;max-width:450px;width:90%;box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto';
+  box.innerHTML=html;
+  overlay.appendChild(box);
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove()};
+  document.body.appendChild(overlay);
+}
+
+function chargerDepuisSemaine(semId){
+  document.querySelector('.ly-modal-overlay').remove();
+  var sem=semaines.find(function(s){return s.id===semId})||archives.find(function(s){return s.id===semId});
+  if(!sem) return;
+  
+  // Collect all persons from this semaine
+  // Arrivals of that week → become departures of the new week
+  // Departures of that week → become arrivals of the new week
+  var newDep={};  // persons who arrived that week will now depart
+  var newArr={};  // persons who departed that week will now arrive
+  
+  sem.convois.forEach(function(c){
+    (c.arrivee||[]).forEach(function(p){
+      // Find matching person in personnes by prenom+nom
+      var match=personnes.find(function(pp){
+        return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
+      });
+      if(match) newDep[match.id]=true;
+    });
+    (c.depart||[]).forEach(function(p){
+      var match=personnes.find(function(pp){
+        return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
+      });
+      if(match) newArr[match.id]=true;
+    });
+  });
+  
+  var nbDep=Object.keys(newDep).length;
+  var nbArr=Object.keys(newArr).length;
+  
+  selDep=newDep;
+  selArr=newArr;
+  renderSelectors();
+  checkGPSWarnings();
+  checkDoublonWarning();
+  lyAlert('Chargé depuis '+fmtDate(sem.date)+' : '+nbDep+' départ'+(nbDep>1?'s':'')+', '+nbArr+' arrivée'+(nbArr>1?'s':'')+'.','success');
+}
+
 function renderSelectors(){renderPS('dep-sel',selDep,'dep');renderPS('arr-sel',selArr,'arr')}
 function renderPS(cid,obj,type){var el=document.getElementById(cid);var q=(document.getElementById('search-'+type)||{value:''}).value.toLowerCase().trim();var filtered=personnes.filter(function(p){if(!q) return true;var lieuLabel=getPersonLieuLabel(p).toLowerCase();return (p.prenom+' '+p.nom+' '+(p.foyer||'')+' '+lieuLabel).toLowerCase().indexOf(q)>=0});if(!filtered.length){el.innerHTML='<div class="empty" style="padding:1rem">Aucun résultat.</div>';renderResume(type);return}el.innerHTML=filtered.map(function(p){var f={nom:getPersonLieuLabel(p)},gi=personnes.indexOf(p);return '<div class="pcheck '+(obj[p.id]?'sel':'')+'" onclick="toggleP(\''+p.id+'\',\''+type+'\')"><div class="av" style="background:'+col(gi)+'18;color:'+col(gi)+'">'+initials(p)+'</div><div style="min-width:0"><div style="font-weight:600;font-size:12px">'+p.prenom+' '+p.nom+'</div>'+(p.foyer?'<div style="font-size:10px;color:var(--forest);font-weight:600">'+p.foyer+'</div>':'')+'<div style="font-size:10px;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div></div></div>'}).join('');renderResume(type)}
 function toggleP(pid,type){var obj=type==='dep'?selDep:selArr;obj[pid]=!obj[pid];renderSelectors();checkGPSWarnings();checkDoublonWarning()}
