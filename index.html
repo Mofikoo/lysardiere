@@ -2382,14 +2382,30 @@ function deplacerStop(convoiIdx,stopIdx){
     +'</div>';
   html+='<div style="font-size:12px;font-weight:600;margin-bottom:8px">Vers quel convoi ?</div>';
   
+  var p=getParams();
   convoisOptimises.forEach(function(dest,di){
     if(di===convoiIdx) return;
-    var newPeak=dest.peakSeats+(stop.arrPers||[]).length;
+    // Simulate adding this stop to the destination cluster
+    var dstCluster=[];
+    dest.stops.forEach(function(s2){
+      if(s2.action==='depart'||s2.action==='retour') return;
+      dstCluster.push({fid:s2.fid,lat:parseFloat(s2.pt.lat),lng:parseFloat(s2.pt.lng),nom:s2.pt.nom,adresse:s2.pt.adresse||'',
+        depPers:(s2.depPers||[]).slice(),arrPers:(s2.arrPers||[]).slice(),
+        distLys:dLys(s2.pt),cap:bearing(LYS,s2.pt)});
+    });
+    var movedNode={fid:stop.fid,lat:parseFloat(stop.pt.lat),lng:parseFloat(stop.pt.lng),nom:stop.pt.nom,adresse:stop.pt.adresse||'',
+      depPers:(stop.depPers||[]).slice(),arrPers:(stop.arrPers||[]).slice(),
+      distLys:dLys(stop.pt),cap:bearing(LYS,stop.pt)};
+    dstCluster.push(movedNode);
+    var simStops=buildStops(dstCluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var newPeak=peakSeatsStops(simStops);
     var fits=newPeak<=dest.vehicule.cap;
+    var simKm=Math.round(routeLen(simStops.map(function(s2){return s2.pt})));
+    var kmDiff=simKm-dest.km;
     html+='<button class="btn btn-sm" style="margin:3px;'+(fits?'':'opacity:0.4;cursor:not-allowed;')+'" '
       +(fits?'onclick="execDeplacerStop('+convoiIdx+','+stopIdx+','+di+')"':'')
-      +'>Convoi '+(di+1)+' — '+dest.vehicule.ico+' '+dest.vehicule.label+' ('+dest.peakSeats+'/'+dest.vehicule.cap+')'
-      +(fits?'':' — PLEIN')+'</button><br>';
+      +'>Convoi '+(di+1)+' — '+dest.vehicule.ico+' '+dest.vehicule.label+' (pic '+newPeak+'/'+dest.vehicule.cap+')'
+      +(fits?(' — '+(kmDiff>=0?'+':'')+kmDiff+'km'):' — PLEIN')+'</button><br>';
   });
   
   html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
