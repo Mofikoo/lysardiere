@@ -1321,6 +1321,8 @@ var lieux=[],personnes=[],semaines=[],archives=[];
 var vehicles=[];
 var selDep={},selArr={},selV={};
 var convoisOptimises=[];
+var solutionHistory=[];
+var currentSolutionIdx=-1;
 var currentSort='prenom';
 var editingLieuId=null,editingPersonneId=null;
 
@@ -2304,7 +2306,11 @@ if(unassigned.length){
 if(sansGPS.length) errors.unshift('Lieux sans GPS ignorés : '+sansGPS.join(', '));
 return{convois:convois,errors:errors}}
 
-async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);
+async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;
+solutionHistory=[{convois:result.convois,errors:result.errors,km:result.convois.reduce(function(s,c){return s+c.km},0)}];
+currentSolutionIdx=0;
+renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);
+solutionHistory[0].km=convoisOptimises.reduce(function(s,c){return s+c.km},0);solutionHistory[0].convois=convoisOptimises;
 // Post-Maps: check if any convoi exceeds duration after real distances
 var postErrors=result.errors.slice();
 var maxDur=getParams().maxDurMin;
@@ -2314,6 +2320,45 @@ convoisOptimises.forEach(function(c,i){
   }
 });
 setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,postErrors)}
+
+async function recalculerOptimisation(){
+  var date=document.getElementById('ldate').value;
+  if(!date) return;
+  var deps=personnes.filter(function(p){return selDep[p.id]});
+  var arrs=personnes.filter(function(p){return selArr[p.id]});
+  var vehs=vehicles.filter(function(v){return selV[v.id]});
+  if(!deps.length&&!arrs.length) return;
+  if(!vehs.length) return;
+  var result=vrpSolve(deps,arrs,vehs,getParams());
+  var newKm=result.convois.reduce(function(s,c){return s+c.km},0);
+  // Store in history
+  solutionHistory.push({convois:result.convois,errors:result.errors,km:newKm});
+  currentSolutionIdx=solutionHistory.length-1;
+  convoisOptimises=result.convois;
+  renderOptim(date,result.errors);
+  window.scrollTo({top:0,behavior:'smooth'});
+  setPersist('⏳ Calcul distances réelles...','neutral');
+  await attendreMaps();
+  await enrichirConvoisAvecMaps(convoisOptimises);
+  // Update km after Maps
+  solutionHistory[currentSolutionIdx].km=convoisOptimises.reduce(function(s,c){return s+c.km},0);
+  solutionHistory[currentSolutionIdx].convois=convoisOptimises;
+  var maxDur=getParams().maxDurMin;
+  var postErrors=result.errors.slice();
+  convoisOptimises.forEach(function(c,i){
+    if(c.mapsEnrichi&&c.dureeMin>maxDur) postErrors.push('Convoi '+(i+1)+' : durée Maps '+fmtDur(c.dureeMin)+' dépasse '+fmtDur(maxDur));
+  });
+  setPersist('✅ Variante '+(currentSolutionIdx+1)+' calculée','ok');
+  renderOptim(date,postErrors);
+}
+
+function switchSolution(idx){
+  if(idx<0||idx>=solutionHistory.length) return;
+  currentSolutionIdx=idx;
+  convoisOptimises=solutionHistory[idx].convois;
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,solutionHistory[idx].errors);
+}
 function attendreMaps(){return new Promise(function(resolve){if(window.googleMapsReady){resolve();return}var interval=setInterval(function(){if(window.googleMapsReady){clearInterval(interval);resolve()}},200);setTimeout(function(){clearInterval(interval);resolve()},10000)})}
 
 // ── GOOGLE MAPS ───────────────────────────────
@@ -2329,6 +2374,27 @@ function renderOptim(dateStr,errors){
   var tKm=convoisOptimises.reduce(function(s,c){return s+c.km},0);
   var nbRot=convoisOptimises.filter(function(c){return c.type==='rotation'}).length;
   var html='<div class="card"><div class="stitle">Résultat — '+dateLabel+'</div>';
+  // Solution selector + recalculate button
+  if(solutionHistory.length>0){
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+    html+='<button class="btn btn-primary btn-sm" onclick="recalculerOptimisation()" style="display:flex;align-items:center;gap:4px">🔄 Recalculer une variante</button>';
+    if(solutionHistory.length>1){
+      html+='<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">';
+      for(var si=0;si<solutionHistory.length;si++){
+        var isActive=si===currentSolutionIdx;
+        var sKm=solutionHistory[si].km;
+        var bestInHistory=Math.min.apply(null,solutionHistory.map(function(s){return s.km}));
+        var isBest=sKm===bestInHistory;
+        html+='<button class="btn btn-sm" onclick="switchSolution('+si+')" style="'
+          +(isActive?'background:var(--forest);color:white;border-color:var(--forest);':'')
+          +(isBest&&!isActive?'border-color:var(--green);color:var(--green);':'')
+          +'font-size:11px;padding:4px 10px">V'+(si+1)+' · '+sKm+'km'+(isBest?' ✓':'')+'</button>';
+      }
+      html+='</div>';
+    }
+    html+='<span style="font-size:11px;color:var(--text-light)">'+solutionHistory.length+' variante'+(solutionHistory.length>1?'s':'')+' calculée'+(solutionHistory.length>1?'s':'')+'</span>';
+    html+='</div>';
+  }
   if(errors&&errors.length) errors.forEach(function(e){html+='<div class="err-box">⚠️ '+e+'</div>'});
   else html+='<div class="info-box">Toutes les personnes assignees.</div>';
   var fleetAlerts=checkFleetAlerts(convoisOptimises);
