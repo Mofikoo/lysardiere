@@ -1854,7 +1854,36 @@ function buildStops(cluster,maxRetourDetour,vitesse,maxPassengerSurplusMin){var 
 var existingStop=null;for(var ei=0;ei<stops.length;ei++){if(stops[ei].fid===n.fid&&stops[ei].action==='depot'){existingStop=stops[ei];break}}
 if(existingStop){existingStop.action='rotation';existingStop.arrPers=n.arrPers;existingStop.seats=existingStop.seats+n.arrPers.length;existingStop.sameFoyer=true}
 else{stops.push({action:'pickup',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:[],arrPers:n.arrPers,seats:seats,isRetourRotation:rotRetourNodes.indexOf(n)>=0})}
-});stops.push({action:'retour',pt:LYS,seats:seats});return stops}
+});
+// Final merge: combine all stops at the same fid into single rotation stops
+var mergedStops=[stops[0]]; // keep depart
+for(var mi=1;mi<stops.length;mi++){
+  var s=stops[mi];
+  if(s.action==='retour'){mergedStops.push(s);continue}
+  var existing=null;
+  for(var me=1;me<mergedStops.length;me++){
+    if(mergedStops[me].fid&&mergedStops[me].fid===s.fid){existing=mergedStops[me];break}
+  }
+  if(existing){
+    // Merge into existing stop
+    existing.action='rotation';
+    existing.depPers=(existing.depPers||[]).concat(s.depPers||[]);
+    existing.arrPers=(existing.arrPers||[]).concat(s.arrPers||[]);
+    existing.seats=existing.seats+(s.arrPers||[]).length-(s.depPers||[]).length;
+    existing.sameFoyer=true;
+  } else {
+    mergedStops.push(s);
+  }
+}
+// Recalculate seats for merged stops
+var runSeats=mergedStops[0].seats;
+for(var ri=1;ri<mergedStops.length-1;ri++){
+  runSeats=runSeats-(mergedStops[ri].depPers||[]).length+(mergedStops[ri].arrPers||[]).length;
+  mergedStops[ri].seats=runSeats;
+}
+if(mergedStops.length>1) mergedStops[mergedStops.length-1].seats=runSeats;
+stops=mergedStops;
+return stops}
 function peakSeatsStops(stops){var pk=0;stops.forEach(function(s){if(s.seats>pk)pk=s.seats});return pk}
 function getParams(){return{capMax:parseFloat(document.getElementById('capmax').value)||55,maxDetour:parseFloat(document.getElementById('maxdetour').value)||60,maxDurMin:Math.round((parseFloat(document.getElementById('maxhours').value)||7)*60),vitesse:parseFloat(document.getElementById('vitesse').value)||70,maxRetourDetour:parseFloat(document.getElementById('maxretourdetour').value)||30,maxPassengerSurplusMin:Math.round((parseFloat(document.getElementById('maxpassengersurplus').value)||2)*60),péage:false}}
 function clusterKm(cl,p){return routeLen(buildStops(cl,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin).map(function(s){return s.pt}))}
@@ -2019,62 +2048,88 @@ function swapOptimize(solution,params){
   var clusters=solution.clusters;
   if(clusters.length<2) return solution;
   var improved=true;
-  var maxIter=50;
+  var maxIter=80;
   while(improved&&maxIter-->0){
     improved=false;
     for(var i=0;i<clusters.length;i++){
       for(var j=i+1;j<clusters.length;j++){
         var ci=clusters[i].cluster, cj=clusters[j].cluster;
-        // Try moving each node from ci to cj
+        
+        // Phase 1: Try MOVING nodes between clusters
         for(var ni=ci.length-1;ni>=0;ni--){
-          if(ci.length<=1) break; // don't empty a cluster
+          if(ci.length<=1) break;
           var node=ci[ni];
-          // Check angle compatibility with cj
           var angleOk=true;
-          for(var ai=0;ai<cj.length;ai++){
-            if(angleDiff(cj[ai].cap,node.cap)>params.capMax){angleOk=false;break}
-          }
+          for(var ai=0;ai<cj.length;ai++){if(angleDiff(cj[ai].cap,node.cap)>params.capMax){angleOk=false;break}}
           if(!angleOk) continue;
-          // Check capacity
           var newCj=cj.concat([node]);
           if(peakSeatsStops(buildStops(newCj,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
-          // Check duration
           if(clusterKm(newCj,params)/params.vitesse*60>params.maxDurMin) continue;
-          // Compare km
           var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
-          var newCi=ci.slice();newCi.splice(ni,1);
-          var newTotal=clusterKm(newCi,params)+clusterKm(newCj,params);
-          if(newTotal<oldTotal-5){ // at least 5km improvement
-            ci.splice(ni,1);
-            cj.push(node);
-            improved=true;
-          }
+          var testCi=ci.slice();testCi.splice(ni,1);
+          var newTotal=clusterKm(testCi,params)+clusterKm(newCj,params);
+          if(newTotal<oldTotal-2){ci.splice(ni,1);cj.push(node);improved=true}
         }
-        // Try moving each node from cj to ci
         for(var nj=cj.length-1;nj>=0;nj--){
           if(cj.length<=1) break;
           var node=cj[nj];
           var angleOk=true;
-          for(var ai=0;ai<ci.length;ai++){
-            if(angleDiff(ci[ai].cap,node.cap)>params.capMax){angleOk=false;break}
-          }
+          for(var ai=0;ai<ci.length;ai++){if(angleDiff(ci[ai].cap,node.cap)>params.capMax){angleOk=false;break}}
           if(!angleOk) continue;
           var newCi=ci.concat([node]);
           if(peakSeatsStops(buildStops(newCi,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
           if(clusterKm(newCi,params)/params.vitesse*60>params.maxDurMin) continue;
           var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
-          var newCj=cj.slice();newCj.splice(nj,1);
-          var newTotal=clusterKm(newCi,params)+clusterKm(newCj,params);
-          if(newTotal<oldTotal-5){
-            cj.splice(nj,1);
-            ci.push(node);
-            improved=true;
+          var testCj=cj.slice();testCj.splice(nj,1);
+          var newTotal=clusterKm(newCi,params)+clusterKm(testCj,params);
+          if(newTotal<oldTotal-2){cj.splice(nj,1);ci.push(node);improved=true}
+        }
+        
+        // Phase 2: Try SWAPPING one node from ci with one from cj
+        for(var ni=0;ni<ci.length;ni++){
+          for(var nj=0;nj<cj.length;nj++){
+            var nodeI=ci[ni],nodeJ=cj[nj];
+            var okI=true,okJ=true;
+            for(var ai=0;ai<cj.length;ai++){if(ai!==nj&&angleDiff(cj[ai].cap,nodeI.cap)>params.capMax){okI=false;break}}
+            if(!okI) continue;
+            for(var ai=0;ai<ci.length;ai++){if(ai!==ni&&angleDiff(ci[ai].cap,nodeJ.cap)>params.capMax){okJ=false;break}}
+            if(!okJ) continue;
+            var testCi=ci.slice();testCi[ni]=nodeJ;
+            var testCj=cj.slice();testCj[nj]=nodeI;
+            if(peakSeatsStops(buildStops(testCi,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
+            if(peakSeatsStops(buildStops(testCj,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin))>maxCap) continue;
+            if(clusterKm(testCi,params)/params.vitesse*60>params.maxDurMin) continue;
+            if(clusterKm(testCj,params)/params.vitesse*60>params.maxDurMin) continue;
+            var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
+            var newTotal=clusterKm(testCi,params)+clusterKm(testCj,params);
+            if(newTotal<oldTotal-2){ci[ni]=nodeJ;cj[nj]=nodeI;improved=true}
+          }
+        }
+        
+        // Phase 3: Try MERGING two clusters if combined is cheaper than separate
+        var merged=ci.concat(cj);
+        var allAnglesOk=true;
+        for(var ma=0;ma<merged.length&&allAnglesOk;ma++){
+          for(var mb=ma+1;mb<merged.length;mb++){
+            if(angleDiff(merged[ma].cap,merged[mb].cap)>params.capMax){allAnglesOk=false;break}
+          }
+        }
+        if(allAnglesOk){
+          var mergedPeak=peakSeatsStops(buildStops(merged,params.maxRetourDetour,params.vitesse,params.maxPassengerSurplusMin));
+          var mergedDur=clusterKm(merged,params)/params.vitesse*60;
+          if(mergedPeak<=maxCap&&mergedDur<=params.maxDurMin){
+            var oldTotal=clusterKm(ci,params)+clusterKm(cj,params);
+            var newTotal=clusterKm(merged,params);
+            if(newTotal<oldTotal-2){
+              clusters[i].cluster=merged;clusters.splice(j,1);
+              improved=true;break;
+            }
           }
         }
       }
+      if(improved) break;
     }
   }
-  // Remove empty clusters
   solution.clusters=clusters.filter(function(c){return c.cluster.length>0});
   return solution;
 }
