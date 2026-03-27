@@ -2433,7 +2433,7 @@ function deplacerStop(convoiIdx,stopIdx){
       +'>'+label+'</button><br>';
   });
   
-  // Swap section: exchange this stop with a stop from another convoi
+  // Swap section
   html+='<div style="font-size:12px;font-weight:600;margin-top:14px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px">Échanger avec un arrêt d\'un autre convoi :</div>';
   convoisOptimises.forEach(function(dest,di){
     if(di===convoiIdx) return;
@@ -2444,6 +2444,20 @@ function deplacerStop(convoiIdx,stopIdx){
         +'↔ '+destStop.pt.nom+' (convoi '+(di+1)+')</button> ';
     });
   });
+  
+  // New vehicle section
+  var usedVehIds2=convoisOptimises.map(function(cc){return cc.vehicule.id});
+  var freeVehs2=vehicles.filter(function(v){return usedVehIds2.indexOf(v.id)<0});
+  if(freeVehs2.length){
+    html+='<div style="font-size:12px;font-weight:600;margin-top:14px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px">Isoler dans un nouveau véhicule :</div>';
+    freeVehs2.forEach(function(v){
+      var nbPers=(stop.depPers||[]).length+(stop.arrPers||[]).length;
+      var fits=nbPers<=v.cap;
+      html+='<button class="btn btn-sm" style="margin:2px;font-size:10px;padding:3px 8px;'+(fits?'':'opacity:0.4;cursor:not-allowed;')+'" '
+        +(fits?'onclick="execIsolerStop('+convoiIdx+','+stopIdx+',\''+v.id+'\')"':'')
+        +'>'+v.ico+' '+v.label+' ('+v.cap+' pl.)'+(fits?'':' — trop petit')+'</button> ';
+    });
+  }
   
   html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
   
@@ -2505,13 +2519,31 @@ function execSwapStops(fromIdx,fromStopIdx,toIdx,toStopIdx){
   rebuildConvoi(fromConvoi,stopA.fid,stopA.pt,nodeB,p);
   rebuildConvoi(toConvoi,stopB.fid,stopB.pt,nodeA,p);
   
-  // Check capacity warnings
-  if(fromConvoi.peakSeats>fromConvoi.vehicule.cap){
-    lyAlert('Attention : Convoi '+(fromIdx+1)+' en surcharge ('+fromConvoi.peakSeats+'/'+fromConvoi.vehicule.cap+'). Changez le véhicule.','error');
-  }
-  if(toConvoi.peakSeats>toConvoi.vehicule.cap){
-    lyAlert('Attention : Convoi '+(toIdx+1)+' en surcharge ('+toConvoi.peakSeats+'/'+toConvoi.vehicule.cap+'). Changez le véhicule.','error');
-  }
+  // Auto-upgrade vehicles if needed
+  var usedVehIds=convoisOptimises.map(function(cc){return cc.vehicule.id});
+  var freeVehs=vehicles.filter(function(v){return usedVehIds.indexOf(v.id)<0});
+  
+  [fromConvoi,toConvoi].forEach(function(conv,ci){
+    if(conv.peakSeats>conv.vehicule.cap){
+      // Try to find a free vehicle with enough capacity
+      var upgraded=false;
+      for(var ui=0;ui<freeVehs.length;ui++){
+        if(freeVehs[ui].cap>=conv.peakSeats){
+          var oldVeh=conv.vehicule;
+          conv.vehicule=freeVehs[ui];
+          conv.remplissage=Math.round(conv.peakSeats/conv.vehicule.cap*100);
+          freeVehs.splice(ui,1);
+          freeVehs.push(oldVeh); // old vehicle becomes available
+          upgraded=true;
+          lyAlert('Véhicule surclassé : '+oldVeh.label+' → '+conv.vehicule.label+' (convoi '+(convoisOptimises.indexOf(conv)+1)+')','success');
+          break;
+        }
+      }
+      if(!upgraded){
+        lyAlert('Attention : Convoi '+(convoisOptimises.indexOf(conv)+1)+' en surcharge ('+conv.peakSeats+'/'+conv.vehicule.cap+'). Aucun véhicule libre disponible.','error');
+      }
+    }
+  });
   
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
@@ -2565,6 +2597,46 @@ function addToConvoi(convoi,node,p){
   convoi.remplissage=Math.round(convoi.peakSeats/convoi.vehicule.cap*100);
   convoi.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
   convoi.mapsEnrichi=false;
+}
+
+function execIsolerStop(fromIdx,stopIdx,vehId){
+  document.querySelector('.ly-modal-overlay').remove();
+  
+  var p=getParams();
+  var fromConvoi=convoisOptimises[fromIdx];
+  var stop=fromConvoi.stops[stopIdx];
+  var veh=vehicles.find(function(v){return v.id===vehId});
+  if(!veh) return;
+  
+  var node={fid:stop.fid,lat:parseFloat(stop.pt.lat),lng:parseFloat(stop.pt.lng),nom:stop.pt.nom,adresse:stop.pt.adresse||'',
+    depPers:(stop.depPers||[]).slice(),arrPers:(stop.arrPers||[]).slice(),
+    distLys:dLys(stop.pt),cap:bearing(LYS,stop.pt)};
+  
+  // Remove from source
+  rebuildConvoi(fromConvoi,stop.fid,stop.pt,null,p);
+  
+  // Create new convoi
+  var newCluster=[node];
+  var newStops=buildStops(newCluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+  var km=Math.round(routeLen(newStops.map(function(s){return s.pt})));
+  var dep=node.depPers.slice(),arr=node.arrPers.slice();
+  var pk=peakSeatsStops(newStops);
+  var ctype=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
+  
+  convoisOptimises.push({
+    id:'c'+convoisOptimises.length,vehicule:veh,stops:newStops,
+    depart:dep,arrivee:arr,type:ctype,km:km,
+    dureeMin:Math.round(km/p.vitesse*60),maxDurMin:p.maxDurMin,
+    heureDepart:'',notes:'',peakSeats:pk,
+    remplissage:Math.round(pk/veh.cap*100),mapsEnrichi:false
+  });
+  
+  // Remove empty convois
+  convoisOptimises=convoisOptimises.filter(function(c){return c.stops.length>2});
+  
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert('Arrêt '+stop.pt.nom+' isolé dans un nouveau convoi ('+veh.label+').','success');
 }
 
 function switchSolution(idx){
