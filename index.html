@@ -1825,14 +1825,14 @@ function showChargerSemaine(){
   var allSem=semaines.concat(archives).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
   
   var html='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:12px">Charger depuis une semaine</div>';
-  html+='<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Les personnes arrivées ce jour-là seront présélectionnées en <strong style="color:var(--red)">départ</strong>, et les personnes parties seront présélectionnées en <strong style="color:var(--green)">arrivée</strong>.</div>';
+  html+='<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Les personnes <strong style="color:var(--green)">arrivées</strong> ce jour-là seront présélectionnées en <strong style="color:var(--red)">départ</strong> pour le nouveau trajet.</div>';
   
   allSem.forEach(function(s){
-    var tDep=s.convois.reduce(function(a,c){return a+(c.depart||[]).length},0);
     var tArr=s.convois.reduce(function(a,c){return a+(c.arrivee||[]).length},0);
+    if(!tArr) return; // skip weeks with no arrivals
     html+='<button class="btn btn-sm" style="margin:3px;display:block;width:100%;text-align:left;font-size:12px" onclick="chargerDepuisSemaine(\''+s.id+'\')">'
       +'<strong>'+fmtDate(s.date)+'</strong> — '+s.convois.length+' convoi'+(s.convois.length>1?'s':'')+' · '
-      +'<span style="color:var(--red)">'+tDep+' dép.</span> · <span style="color:var(--green)">'+tArr+' arr.</span>'
+      +'<span style="color:var(--green)">'+tArr+' arrivée'+(tArr>1?'s':'')+'</span> → <span style="color:var(--red)">départs</span>'
       +'</button>';
   });
   
@@ -1854,37 +1854,26 @@ function chargerDepuisSemaine(semId){
   var sem=semaines.find(function(s){return s.id===semId})||archives.find(function(s){return s.id===semId});
   if(!sem) return;
   
-  // Collect all persons from this semaine
   // Arrivals of that week → become departures of the new week
-  // Departures of that week → become arrivals of the new week
-  var newDep={};  // persons who arrived that week will now depart
-  var newArr={};  // persons who departed that week will now arrive
+  var newDep={};
   
   sem.convois.forEach(function(c){
     (c.arrivee||[]).forEach(function(p){
-      // Find matching person in personnes by prenom+nom
       var match=personnes.find(function(pp){
         return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
       });
       if(match) newDep[match.id]=true;
     });
-    (c.depart||[]).forEach(function(p){
-      var match=personnes.find(function(pp){
-        return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
-      });
-      if(match) newArr[match.id]=true;
-    });
   });
   
   var nbDep=Object.keys(newDep).length;
-  var nbArr=Object.keys(newArr).length;
   
   selDep=newDep;
-  selArr=newArr;
+  selArr={};
   renderSelectors();
   checkGPSWarnings();
   checkDoublonWarning();
-  lyAlert('Chargé depuis '+fmtDate(sem.date)+' : '+nbDep+' départ'+(nbDep>1?'s':'')+', '+nbArr+' arrivée'+(nbArr>1?'s':'')+'.','success');
+  lyAlert('Chargé depuis '+fmtDate(sem.date)+' : '+nbDep+' personne'+(nbDep>1?'s':'')+' présélectionnée'+(nbDep>1?'s':'')+' en départ.','success');
 }
 
 function renderSelectors(){renderPS('dep-sel',selDep,'dep');renderPS('arr-sel',selArr,'arr')}
