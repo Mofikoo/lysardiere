@@ -23,7 +23,7 @@
   --gold-deep: #F5D96B;
   --copper: #D6955B;
   --copper-deep: #B87A45;
-  --bg: #F5F2ED;
+  --bg: #F7EEDF;
   --card: #FFFFFF;
   --text: #1A2A28;
   --text-mid: #4A5E5C;
@@ -1931,10 +1931,13 @@ for(var mi=1;mi<stops.length;mi++){
   for(var me=1;me<mergedStops.length;me++){
     var ms=mergedStops[me];
     if(ms.action==='retour') continue;
-    // Match by fid OR by same coordinates (same physical stop)
     var sameFid=ms.fid&&s.fid&&ms.fid===s.fid;
-    var sameCoords=ms.pt&&s.pt&&String(ms.pt.lat)===String(s.pt.lat)&&String(ms.pt.lng)===String(s.pt.lng);
-    if(sameFid||sameCoords){existing=ms;break}
+    var sameNom=ms.pt&&s.pt&&ms.pt.nom&&s.pt.nom&&ms.pt.nom===s.pt.nom;
+    var sameCoords=false;
+    if(ms.pt&&s.pt&&ms.pt.lat&&s.pt.lat){
+      sameCoords=Math.abs(parseFloat(ms.pt.lat)-parseFloat(s.pt.lat))<0.002&&Math.abs(parseFloat(ms.pt.lng)-parseFloat(s.pt.lng))<0.002;
+    }
+    if(sameFid||sameNom||sameCoords){existing=ms;break}
   }
   if(existing){
     existing.action='rotation';
@@ -2642,6 +2645,173 @@ function rebuildConvoi(convoi,removeFid,removePt,addNode,p){
   }
 }
 
+function showOptimRemoveResults(){
+  var q=(document.getElementById('optim-remove-search')||{}).value.toLowerCase().trim();
+  var el=document.getElementById('optim-remove-results');
+  if(!q||q.length<2){el.innerHTML='';return}
+  // Find all persons currently in convois
+  var inConvois=[];
+  convoisOptimises.forEach(function(c,ci){
+    c.stops.forEach(function(s,si){
+      if(s.action==='depart'||s.action==='retour') return;
+      (s.depPers||[]).forEach(function(p){
+        if((p.prenom+' '+p.nom).toLowerCase().indexOf(q)>=0) inConvois.push({p:p,ci:ci,si:si,side:'dep'});
+      });
+      (s.arrPers||[]).forEach(function(p){
+        if((p.prenom+' '+p.nom).toLowerCase().indexOf(q)>=0) inConvois.push({p:p,ci:ci,si:si,side:'arr'});
+      });
+    });
+  });
+  el.innerHTML=inConvois.map(function(item){
+    var sideLabel=item.side==='dep'?'<span style="color:var(--red)">dép</span>':'<span style="color:var(--green)">arr</span>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border-light)">'
+      +'<span>'+item.p.prenom+' '+item.p.nom+' — '+sideLabel+' convoi '+(item.ci+1)+'</span>'
+      +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;background:var(--red);color:white;border:none" '
+      +'onclick="retirerPassager('+item.ci+',\''+item.p.prenom.replace(/'/g,"\\'")+'\',\''+item.p.nom.replace(/'/g,"\\'")+'\',\''+item.side+'\')">Retirer</button></div>';
+  }).join('')||'<div style="font-size:11px;color:var(--text-light);padding:4px">Aucun résultat.</div>';
+}
+
+function showOptimAddResults(){
+  var q=(document.getElementById('optim-add-search')||{}).value.toLowerCase().trim();
+  var el=document.getElementById('optim-add-results');
+  if(!q||q.length<2){el.innerHTML='';return}
+  // Find persons NOT currently in any convoi
+  var inConvoisIds={};
+  convoisOptimises.forEach(function(c){
+    c.stops.forEach(function(s){
+      (s.depPers||[]).forEach(function(p){inConvoisIds[p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase()]=true});
+      (s.arrPers||[]).forEach(function(p){inConvoisIds[p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase()]=true});
+    });
+  });
+  var available=personnes.filter(function(p){
+    var key=p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase();
+    return !inConvoisIds[key]&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0;
+  });
+  el.innerHTML=available.slice(0,10).map(function(p){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border-light)">'
+      +'<span>'+p.prenom+' '+p.nom+(p.foyer?' <span style="color:var(--forest);font-size:9px">('+p.foyer+')</span>':'')+'</span>'
+      +'<span>'
+      +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;margin:1px;background:var(--red);color:white;border:none" '
+      +'onclick="ajouterPassager(\''+p.id+'\',\'dep\')">+ Dép</button>'
+      +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;margin:1px;background:var(--green);color:white;border:none" '
+      +'onclick="ajouterPassager(\''+p.id+'\',\'arr\')">+ Arr</button>'
+      +'</span></div>';
+  }).join('')||'<div style="font-size:11px;color:var(--text-light);padding:4px">Aucun résultat.</div>';
+}
+
+function retirerPassager(convoiIdx,prenom,nom,side){
+  var c=convoisOptimises[convoiIdx];
+  var p=getParams();
+  c.stops.forEach(function(s){
+    if(side==='dep'&&s.depPers){
+      s.depPers=s.depPers.filter(function(pp){return !(pp.prenom===prenom&&pp.nom===nom)});
+    }
+    if(side==='arr'&&s.arrPers){
+      s.arrPers=s.arrPers.filter(function(pp){return !(pp.prenom===prenom&&pp.nom===nom)});
+    }
+  });
+  // Rebuild convoi from its stops
+  var cluster=[];
+  c.stops.forEach(function(s){
+    if(s.action==='depart'||s.action==='retour') return;
+    if((s.depPers||[]).length===0&&(s.arrPers||[]).length===0) return; // remove empty stops
+    cluster.push({fid:s.fid,lat:parseFloat(s.pt.lat),lng:parseFloat(s.pt.lng),nom:s.pt.nom,adresse:s.pt.adresse||'',
+      depPers:s.depPers||[],arrPers:s.arrPers||[],distLys:dLys(s.pt),cap:bearing(LYS,s.pt)});
+  });
+  if(cluster.length>0){
+    var newStops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var km=Math.round(routeLen(newStops.map(function(s){return s.pt})));
+    var dep=[],arr=[];cluster.forEach(function(n){dep=dep.concat(n.depPers);arr=arr.concat(n.arrPers)});
+    c.stops=newStops;c.km=km;c.dureeMin=Math.round(km/p.vitesse*60);
+    c.depart=dep;c.arrivee=arr;c.peakSeats=peakSeatsStops(newStops);
+    c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+    c.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
+    c.mapsEnrichi=false;
+  }
+  convoisOptimises=convoisOptimises.filter(function(cc){return cc.stops.length>2||(cc.depart&&cc.depart.length)||(cc.arrivee&&cc.arrivee.length)});
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert(prenom+' '+nom+' retiré(e) du convoi '+(convoiIdx+1)+'.','success');
+}
+
+function ajouterPassager(persId,side){
+  var pers=personnes.find(function(p){return p.id===persId});
+  if(!pers) return;
+  var p=getParams();
+  var lieuId=getPersonLieux(pers)[0];
+  var lieu=getLieu(lieuId);
+  if(!lieu||!hasGPS(lieu)){lyAlert('Cette personne n\'a pas de lieu de RDV avec GPS.','error');return}
+  
+  // Find the convoi with the most compatible angle
+  var bestConvoi=-1,bestExtra=Infinity;
+  var newNode={fid:lieuId,lat:parseFloat(lieu.lat),lng:parseFloat(lieu.lng),nom:lieu.nom,adresse:lieu.adresse||'',
+    depPers:side==='dep'?[{prenom:pers.prenom,nom:pers.nom,foyer:pers.foyer||'',id:pers.id}]:[],
+    arrPers:side==='arr'?[{prenom:pers.prenom,nom:pers.nom,foyer:pers.foyer||'',id:pers.id}]:[],
+    distLys:dLys(lieu),cap:bearing(LYS,lieu)};
+  
+  convoisOptimises.forEach(function(c,ci){
+    // Check if this lieu is already in this convoi
+    var alreadyHere=c.stops.some(function(s){return s.fid===lieuId||(s.pt&&s.pt.nom===lieu.nom)});
+    if(alreadyHere){bestConvoi=ci;bestExtra=-999;return}
+    // Check angle
+    var angleOk=true;
+    c.stops.forEach(function(s){
+      if(s.action==='depart'||s.action==='retour') return;
+      if(s.pt&&s.pt.lat&&angleDiff(bearing(LYS,s.pt),newNode.cap)>p.capMax) angleOk=false;
+    });
+    if(!angleOk) return;
+    // Check capacity simulation
+    var cluster=[];
+    c.stops.forEach(function(s){
+      if(s.action==='depart'||s.action==='retour') return;
+      cluster.push({fid:s.fid,lat:parseFloat(s.pt.lat),lng:parseFloat(s.pt.lng),nom:s.pt.nom,adresse:s.pt.adresse||'',
+        depPers:(s.depPers||[]).slice(),arrPers:(s.arrPers||[]).slice(),distLys:dLys(s.pt),cap:bearing(LYS,s.pt)});
+    });
+    cluster.push(newNode);
+    var sim=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    if(peakSeatsStops(sim)>c.vehicule.cap) return;
+    var extra=clusterKm(cluster,p)-c.km;
+    if(extra<bestExtra){bestExtra=extra;bestConvoi=ci}
+  });
+  
+  if(bestConvoi<0){lyAlert('Aucun convoi compatible trouvé. Isolez cette personne dans un nouveau véhicule.','error');return}
+  
+  addToConvoi(convoisOptimises[bestConvoi],newNode,p);
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert(pers.prenom+' '+pers.nom+' ajouté(e) au convoi '+(bestConvoi+1)+' ('+(side==='dep'?'départ':'arrivée')+').','success');
+}
+
+function fusionnerDoublons(convoiIdx){
+  var c=convoisOptimises[convoiIdx];
+  var p=getParams();
+  // Rebuild cluster, grouping by nom
+  var nodeMap={};
+  c.stops.forEach(function(s){
+    if(s.action==='depart'||s.action==='retour') return;
+    var key=s.pt.nom;
+    if(!nodeMap[key]){
+      nodeMap[key]={fid:s.fid,lat:parseFloat(s.pt.lat),lng:parseFloat(s.pt.lng),nom:s.pt.nom,adresse:s.pt.adresse||'',
+        depPers:[],arrPers:[],distLys:dLys(s.pt),cap:bearing(LYS,s.pt)};
+    }
+    nodeMap[key].depPers=nodeMap[key].depPers.concat((s.depPers||[]).slice());
+    nodeMap[key].arrPers=nodeMap[key].arrPers.concat((s.arrPers||[]).slice());
+  });
+  var cluster=Object.values(nodeMap);
+  var newStops=buildStops(cluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+  var km=Math.round(routeLen(newStops.map(function(s){return s.pt})));
+  var dep=[],arr=[];cluster.forEach(function(n){dep=dep.concat(n.depPers);arr=arr.concat(n.arrPers)});
+  c.stops=newStops;c.km=km;c.dureeMin=Math.round(km/p.vitesse*60);
+  c.depart=dep;c.arrivee=arr;
+  c.peakSeats=peakSeatsStops(newStops);
+  c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+  c.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
+  c.mapsEnrichi=false;
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert('Doublons fusionnés dans le convoi '+(convoiIdx+1)+'.','success');
+}
+
 function addToConvoi(convoi,node,p){
   var cluster=[];
   convoi.stops.forEach(function(s){
@@ -2782,14 +2952,31 @@ function renderOptim(dateStr,errors){
       +'<label style="margin:0;font-size:11px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:auto" '+(c.peage?'checked':'')+' onchange="setPeage(\''+c.id+'\',this.checked)">Péage</label>'
       +'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none"><button class="btn btn-info btn-sm">Maps</button></a></div></div>';
   });
-  if(convoisOptimises.length) html+='<div style="text-align:center;padding:1rem 0 2rem;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+  if(convoisOptimises.length){
+    // Add/remove person section
+    html+='<div class="card" style="padding:14px 18px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--forest);margin-bottom:10px">Modifier les passagers après optimisation</div>'
+      +'<div class="cols2" style="gap:10px">'
+      +'<div><div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:4px">Retirer un passager</div>'
+      +'<input id="optim-remove-search" placeholder="Rechercher un passager..." style="width:100%;font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-xs)" oninput="showOptimRemoveResults()">'
+      +'<div id="optim-remove-results" style="max-height:120px;overflow-y:auto;margin-top:4px"></div></div>'
+      +'<div><div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:4px">Ajouter un passager</div>'
+      +'<input id="optim-add-search" placeholder="Rechercher une personne..." style="width:100%;font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-xs)" oninput="showOptimAddResults()">'
+      +'<div id="optim-add-results" style="max-height:120px;overflow-y:auto;margin-top:4px"></div></div>'
+      +'</div></div>';
+    html+='<div style="text-align:center;padding:1rem 0 2rem;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
     +'<button class="btn btn-success" style="font-size:13px;padding:11px 24px" onclick="sauvegarderSemaine()">💾 Sauvegarder</button>'
     +'<button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genFiches()">Valider → Fiches</button></div>';
+  }
   el.innerHTML=html;
 }
 
 function renderTimelineStops(stops,cap,convoiIdx){
   var html='<div class="timeline-wrap">';
+  // Detect duplicates for merge button
+  var nomCount={};
+  stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.nom) nomCount[s.pt.nom]=(nomCount[s.pt.nom]||0)+1});
+  
   stops.forEach(function(s,si){
     var dotC,pLine='',phaseHtml='';var sn=s.seats;
     if(s.action==='depart'){dotC='var(--forest)';phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à bord</span>'}
@@ -2799,9 +2986,14 @@ function renderTimelineStops(stops,cap,convoiIdx){
     else if(s.action==='retour'){dotC='var(--forest)';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à l\'arrivée</span>'}
     var moveBtn='';
     if(convoiIdx!==undefined&&s.action!=='depart'&&s.action!=='retour'&&s.fid&&convoisOptimises.length>1){
-      moveBtn='<button class="btn btn-sm no-print" onclick="deplacerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;margin-left:6px" title="Déplacer cet arrêt vers un autre convoi">↔</button>';
+      moveBtn='<button class="btn btn-sm no-print" onclick="deplacerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;margin-left:6px" title="Déplacer cet arrêt">↔</button>';
     }
-    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+moveBtn+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')+'</div></div>';
+    // Duplicate warning + merge button
+    var dupBtn='';
+    if(s.pt&&s.pt.nom&&nomCount[s.pt.nom]>1&&convoiIdx!==undefined){
+      dupBtn='<button class="btn btn-sm no-print" onclick="fusionnerDoublons('+convoiIdx+')" style="font-size:9px;padding:2px 8px;margin-left:4px;background:var(--red);color:white;border:none" title="Fusionner les arrêts en doublon">⚠ Fusionner</button>';
+    }
+    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+moveBtn+dupBtn+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')+'</div></div>';
   });
   return html+'</div>';
 }
