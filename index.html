@@ -23,7 +23,7 @@
   --gold-deep: #F5D96B;
   --copper: #D6955B;
   --copper-deep: #B87A45;
-  --bg: #F7EEDF;
+  --bg: #F7F3EC;
   --card: #FFFFFF;
   --text: #1A2A28;
   --text-mid: #4A5E5C;
@@ -1007,7 +1007,7 @@ input:focus, select:focus {
     </div>
     <div id="stats-custom-range" style="display:none">
       <div class="cols2" style="margin-bottom:12px">
-        <div><label>Date debut</label><input type="date" id="stats-debut" onchange="renderStats()"></div>
+        <div><label>Date début</label><input type="date" id="stats-debut" onchange="renderStats()"></div>
         <div><label>Date fin</label><input type="date" id="stats-fin" onchange="renderStats()"></div>
       </div>
     </div>
@@ -1029,7 +1029,7 @@ input:focus, select:focus {
   <div class="card">
     <div class="stitle">Courrier - Plage de dates</div>
     <div class="cols2" style="margin-bottom:12px">
-      <div><label>Date debut</label><input type="date" id="courrier-debut"></div>
+      <div><label>Date début</label><input type="date" id="courrier-debut"></div>
       <div><label>Date fin</label><input type="date" id="courrier-fin"></div>
     </div>
     <div style="text-align:right"><button class="btn btn-primary" onclick="renderCourrier()">Afficher les vacanciers</button></div>
@@ -1164,7 +1164,7 @@ var guideSections=[
 +'<br>- Le lieu de rendez-vous bien encadre et visible'
 +'<br>- Le tableau des trajets avec dates, heures et type (aller/retour)'
 +'<br>- Une note pique-nique si le départ est avant 12h45'
-+'<br>- La signature de Severine LANDELLE'
++'<br>- La signature de Séverine LANDELLE'
 },
 {title:'11. Installer l\'appli sur ton telephone',icon:'&#128241;',content:''
 +'<b>Savais-tu que cette appli peut s\'installer sur ton telephone</b> comme une vraie application ? Pas besoin de passer par l\'App Store ou le Play Store !'
@@ -2896,7 +2896,6 @@ function renderOptim(dateStr,errors){
   var html='<div class="card"><div class="stitle">Résultat — '+dateLabel+'</div>';
   // Améliorer button + solution history
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
-  html+='<button class="btn btn-primary btn-sm" onclick="ameliorerOptimisation()" style="display:flex;align-items:center;gap:4px">🔍 Chercher une meilleure solution</button>';
   if(solutionHistory.length>1){
     html+='<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">';
     for(var si=0;si<solutionHistory.length;si++){
@@ -3452,7 +3451,7 @@ async function renderCourrier(){
 }
 
 async function genCourrierPdf(singleKey){
-  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'apercu.','error');return}
+  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
   var map=window._courrierData;
   var keys=singleKey?[singleKey]:Object.keys(map).sort();
   var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -3485,7 +3484,7 @@ async function genCourrierPdf(singleKey){
       var heureRetour=g.dep&&g.dep.heure?g.dep.heure:'--:--';
       var sejour='';
       if(g.arr&&g.dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
-      else if(g.arr) sejour='Arrivee le '+dateAllerStr;
+      else if(g.arr) sejour='Arrivée le '+dateAllerStr;
       else if(g.dep) sejour='Départ le '+dateRetourStr;
       var nomsStr=g.noms.join(', ');
       persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
@@ -3531,7 +3530,7 @@ async function genCourrierPdf(singleKey){
       // Destinataire
       +'<div style="margin-bottom:20px;font-size:14px"><b>Destinataire : '+c.foyer+'</b></div>'
       +'<div style="margin-bottom:20px">Madame, Monsieur,</div>'
-      +'<div style="margin-bottom:20px;line-height:1.6">Suite a l\'inscription d\'une ou plusieurs personnes aux sejours de vacances organises par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
+      +'<div style="margin-bottom:20px;line-height:1.6">Suite à l\'inscription d\'une ou plusieurs personnes aux séjours de vacances organisés par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
       // Lieu RDV - highlighted
       +'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid">'
       +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div>'
@@ -3541,12 +3540,12 @@ async function genCourrierPdf(singleKey){
       // Person cards
       +persCards
       // Pique-nique warning
-      +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique a l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>medicaments du midi</b> (s\'il y a).</div>':'')
+      +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>':'')
       // Footer
       +'<div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#555;line-height:1.6;page-break-inside:avoid">'
-      +'Veillez a bien noter l\'heure du rendez-vous et a etre ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
-      +'<br><br>Nous vous prions de croire, Madame, Monsieur, a l\'expression de nos meilleures salutations.'
-      +'<br><br><b style="color:#222">Severine LANDELLE</b></div>'
+      +'Veuillez bien noter l\'heure du rendez-vous et à être ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
+      +'<br><br>Nous vous prions de croire, Madame, Monsieur, à l\'expression de nos meilleures salutations.'
+      +'<br><br><b style="color:#222">Séverine LANDELLE</b></div>'
       +'</div>';
   });
   var w=window.open('','_blank');
