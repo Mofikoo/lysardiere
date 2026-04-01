@@ -911,6 +911,7 @@ input:focus, select:focus {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--forest)">Foyers (<span id="foyer-count">0</span>)</span>
       <button class="btn btn-sm" onclick="initFoyersFromPersonnes()">🔄 Synchroniser depuis les personnes</button>
+      <button class="btn btn-sm" onclick="syncFoyersInSemaines()" style="background:var(--copper);color:white;border:none">🔄 Mettre à jour les semaines sauvegardées</button>
     </div>
     <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-foyer" placeholder="Rechercher un foyer..." oninput="renderFoyers()">
     <div id="foyers-list"></div>
@@ -1964,6 +1965,41 @@ function initFoyersFromPersonnes(){
   foyers.sort(function(a,b){return a.nom.localeCompare(b.nom)});
   renderFoyers();refreshFoyerSelect();
   lyAlert(added+' nouveau'+(added>1?'x':'')+' foyer'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+'.','success');
+}
+
+async function syncFoyersInSemaines(){
+  var updated=0;
+  var allSem=semaines.concat(archives);
+  for(var si=0;si<allSem.length;si++){
+    var s=allSem[si];
+    var changed=false;
+    s.convois.forEach(function(c){
+      function updatePers(list){
+        if(!list) return;
+        list.forEach(function(p){
+          var current=personnes.find(function(pp){
+            return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
+          });
+          if(current&&current.foyer&&current.foyer!==p.foyer){
+            p.foyer=current.foyer;
+            changed=true;
+          }
+        });
+      }
+      updatePers(c.depart);
+      updatePers(c.arrivee);
+      c.stops.forEach(function(st){
+        updatePers(st.depPers);
+        updatePers(st.arrPers);
+      });
+    });
+    if(changed){
+      var table=semaines.indexOf(s)>=0?'semaines':'archives';
+      await dbUpsert(table,s.id,s);
+      updated++;
+    }
+  }
+  lyAlert(updated+' semaine'+(updated>1?'s':'')+' mise'+(updated>1?'s':'')+' à jour.','success');
 }
 
 function refreshFoyerSelect(){
@@ -3596,8 +3632,16 @@ async function renderCourrier(){
     s.convois.forEach(function(c){
       // For each person in depart or arrivee
       function processPers(p, type){
-        var foyer=p.foyer||'Sans foyer';
-        var mapKey=foyer;
+        // Use CURRENT foyer from personnes DB, not the one frozen in the convoi
+        var currentPers=personnes.find(function(pp){
+          return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
+        });
+        var foyer=currentPers?(currentPers.foyer||'Sans foyer'):(p.foyer||'Sans foyer');
+        
+        // Special case: FAMILLE → one PDF per person
+        var isFamille=foyer.toUpperCase()==='FAMILLE';
+        var mapKey=isFamille?(foyer+'|||'+p.prenom+' '+(p.nom||'')):foyer;
+        
         // Find the actual stop where this person is in this convoi
         var stopLieu=null;
         c.stops.forEach(function(st){
@@ -3607,14 +3651,17 @@ async function renderCourrier(){
             stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
           }
         });
-        if(!stopLieu) stopLieu=getLieu(getPersonLieux(p)[0])||{nom:'Lieu inconnu',adresse:''};
+        if(!stopLieu){
+          var pLieux=currentPers?getPersonLieux(currentPers):[];
+          stopLieu=getLieu(pLieux[0])||{nom:'Lieu inconnu',adresse:''};
+        }
         
+        var displayFoyer=isFamille?('Famille — '+p.prenom+' '+(p.nom||'').toUpperCase()):foyer;
         if(!courrierMap[mapKey]){
-          courrierMap[mapKey]={foyer:foyer,lieu:stopLieu,personnes:{}};
+          courrierMap[mapKey]={foyer:displayFoyer,lieu:stopLieu,personnes:{}};
         }
         var persKey=p.prenom+' '+(p.nom||'');
         if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:p.prenom,nom:p.nom||'',trajets:[],lieu:stopLieu};
-        // Update lieu from stop (actual route, not fiche)
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].lieu=stopLieu;
         // Compute hour for this person at this stop
