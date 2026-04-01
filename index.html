@@ -803,6 +803,7 @@ input:focus, select:focus {
   </div>
   <div class="nav-bar">
     <button class="nb" id="btn-personnes" onclick="show('personnes')">Personnes</button>
+    <button class="nb" id="btn-foyers" onclick="show('foyers')">Foyers</button>
     <button class="nb" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
     <button class="nb" id="btn-saisie" onclick="show('saisie')">Trajets</button>
     <button class="nb" id="btn-manuel" onclick="show('manuel')">Trajet Manuel</button>
@@ -869,7 +870,7 @@ input:focus, select:focus {
     <div class="cols4" style="margin-bottom:12px">
       <div><label>Prénom</label><input id="pp" placeholder="Prénom"></div>
       <div><label>Nom</label><input id="pn" placeholder="Nom"></div>
-      <div><label>Nom du foyer</label><input id="pfoyer" placeholder="Ex : IME Brive"></div>
+      <div><label>Nom du foyer</label><select id="pfoyer" style="width:100%"><option value="">-- Sélectionner un foyer --</option></select></div>
       <div><label>Lieu(x) de RDV</label><div id="pf-container" style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:6px 8px;max-height:120px;overflow-y:auto;font-size:12px"></div></div>
     </div>
     <div class="cols2" style="margin-bottom:12px">
@@ -889,10 +890,30 @@ input:focus, select:focus {
         <button class="sort-btn" id="sort-nom" onclick="setSort('nom')">Nom</button>
         <button class="sort-btn" id="sort-foyer" onclick="setSort('foyer')">Foyer</button>
         <button class="sort-btn" id="sort-lieu" onclick="setSort('lieu')">Lieu RDV</button>
+        <button class="btn btn-sm no-print" onclick="genPdfStructures()" style="font-size:10px;margin-left:8px">📄 PDF Structures</button>
       </div>
     </div>
     <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-pers" placeholder="Rechercher par prénom, nom ou foyer..." oninput="renderPersonnes()">
     <div id="pl"></div>
+  </div>
+</div>
+
+<!-- FOYERS -->
+<div class="tab-pane" id="pane-foyers">
+  <div class="card">
+    <div class="stitle">Ajouter un foyer</div>
+    <div class="cols2" style="margin-bottom:12px">
+      <div><label>Nom du foyer</label><input id="foyer-nom" placeholder="Ex : IME Brive"></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" onclick="addFoyer()">+ Ajouter</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--forest)">Foyers (<span id="foyer-count">0</span>)</span>
+      <button class="btn btn-sm" onclick="initFoyersFromPersonnes()">🔄 Synchroniser depuis les personnes</button>
+    </div>
+    <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-foyer" placeholder="Rechercher un foyer..." oninput="renderFoyers()">
+    <div id="foyers-list"></div>
   </div>
 </div>
 
@@ -1221,14 +1242,14 @@ var guideSections=[
     <div class="stitle">Trajet Manuel</div>
     <div class="cols3" style="margin-bottom:12px">
       <div><label>Date du trajet</label><input type="date" id="man-date" onchange="manUpdateVehicleList()"></div>
-      <div><label>Vehicule</label><select id="man-vehicule"></select></div>
+      <div><label>Véhicule</label><select id="man-vehicule"></select></div>
       <div><label>Conducteur (facultatif)</label><input type="text" id="man-conducteur" placeholder="Nom du conducteur"></div>
     </div>
     <div class="cols2" style="margin-bottom:12px">
       <div><label>Type</label>
         <select id="man-type">
-          <option value="rotation">Rotation (départ + arrivee)</option>
-          <option value="entree">Arrivee uniquement</option>
+          <option value="rotation">Rotation (départ + arrivée)</option>
+          <option value="entree">Arrivée uniquement</option>
           <option value="sortie">Départ uniquement</option>
         </select>
       </div>
@@ -1237,20 +1258,26 @@ var guideSections=[
   </div>
 
   <div class="card">
-    <div class="stitle">Arrêts du trajet</div>
-    <div id="man-stops-list"></div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="manAddStop()">+ Ajouter un arrêt</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="stitle" style="margin:0;border:none;padding:0">Arrêts du trajet</div>
+      <div style="display:flex;gap:6px">
+        <select id="man-lieu-quick" style="font-size:12px;padding:6px 10px;max-width:200px">
+          <option value="">-- Ajouter un lieu --</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="manAddStopFromLieu()">+ Ajouter</button>
+        <button class="btn btn-sm" onclick="manAddStop()">+ Lieu libre</button>
+      </div>
     </div>
+    <div id="man-stops-list"></div>
   </div>
 
   <div class="card" id="man-preview-card" style="display:none">
-    <div class="stitle">Apercu du trajet</div>
+    <div class="stitle">Aperçu du trajet</div>
     <div id="man-preview"></div>
   </div>
 
   <div style="text-align:center;padding:1rem 0 2rem;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-    <button class="btn btn-accent" style="font-size:14px;padding:12px 28px" onclick="manGenPreview()">Apercu du trajet</button>
+    <button class="btn btn-accent" style="font-size:14px;padding:12px 28px" onclick="manGenPreview()">Aperçu du trajet</button>
     <button class="btn btn-success" style="font-size:14px;padding:12px 28px" onclick="manSaveToSemaines()">Sauvegarder dans Semaines</button>
   </div>
 </div>
@@ -1325,7 +1352,7 @@ async function dbDelete(table,id){try{await supaFetch(table+'?id=eq.'+id,'DELETE
 
 var LYS={lat:44.86052584434775,lng:1.361973981464905,nom:'La Lysardiere',adresse:'64 route de Sainte Mondane, 24370 Saint-Julien-de-Lampon'};
 var COLORS=['#18534F','#D6955B','#226D68','#6B3FA0','#0077A8','#C0392B','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
-var lieux=[],personnes=[],semaines=[],archives=[];
+var lieux=[],personnes=[],semaines=[],archives=[],foyers=[];
 var vehicles=[];
 var selDep={},selArr={},selV={};
 var convoisOptimises=[];
@@ -1367,6 +1394,8 @@ async function loadData(){
     initSelV();updatePersistBadge();
   }catch(e){setPersist('Erreur Supabase','err')}
   renderLieux();renderPersonnes();refreshLieuSelect();renderSemaines();renderFlotte();
+  // Initialize foyers from existing personnes data
+  initFoyersFromPersonnes();refreshFoyerSelect();
   // Auto-fetch gazole price for today
   autoFetchGazole();
 }
@@ -1442,7 +1471,8 @@ function show(t){
   document.querySelectorAll('.nb').forEach(function(e){e.classList.remove('active')});
   document.getElementById('pane-'+t).classList.add('active');
   document.getElementById('btn-'+t).classList.add('active');
-  if(t==='personnes'){refreshLieuSelect();renderPersonnes()}
+  if(t==='personnes'){refreshLieuSelect();refreshFoyerSelect();renderPersonnes()}
+  if(t==='foyers'){renderFoyers()}
   if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
   if(t==='semaines'){renderSemaines()}
   if(t==='flotte'){renderFlotte()}
@@ -1881,7 +1911,69 @@ function isDuplicatePersonne(prenom,nom,foyer,excludeId){
   var key=(prenom+' '+nom+' '+foyer).toLowerCase();
   return personnes.some(function(p){return p.id!==excludeId&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase()===key});
 }
-async function addPersonne(){var prenom=normPrenom(document.getElementById('pp').value);var nom=normMaj(document.getElementById('pn').value);var foyer=normMaj(document.getElementById('pfoyer').value);var ll=getSelectedLieux('pf-container');if(!prenom){await lyAlert('Prénom requis.','error');return}if(isDuplicatePersonne(prenom,nom,foyer,null)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}var p={id:'p'+Date.now(),prenom:prenom,nom:nom,foyer:foyer,lieux:ll,lieu:ll[0]||'',besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};await dbUpsert('personnes',p.id,p);personnes.push(p);['pp','pn','pfoyer','pnotes'].forEach(function(id){document.getElementById(id).value=''});document.querySelectorAll('#pf-container input[type=checkbox]').forEach(function(cb){cb.checked=false});document.getElementById('pb').value='';updatePersistBadge();renderPersonnes()}
+// ── FOYERS ─────────────────────────────────
+function renderFoyers(){
+  var q=(document.getElementById('search-foyer')||{value:''}).value.toLowerCase().trim();
+  var filtered=foyers.filter(function(f){return !q||f.nom.toLowerCase().indexOf(q)>=0});
+  filtered.sort(function(a,b){return a.nom.localeCompare(b.nom)});
+  document.getElementById('foyer-count').textContent=foyers.length;
+  var el=document.getElementById('foyers-list');
+  if(!filtered.length){el.innerHTML='<div class="empty">Aucun foyer.'+(foyers.length?'':' Cliquez "Synchroniser depuis les personnes" pour importer.')+'</div>';return}
+  el.innerHTML=filtered.map(function(f){
+    var nbPers=personnes.filter(function(p){return(p.foyer||'').toUpperCase()===f.nom.toUpperCase()}).length;
+    return '<div class="item-row" style="padding:8px 14px"><div style="flex:1;min-width:0">'
+      +'<div style="font-weight:600;font-size:13px">'+f.nom+'</div>'
+      +'<div style="font-size:11px;color:var(--text-light)">'+nbPers+' personne'+(nbPers>1?'s':'')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-danger btn-sm" onclick="delFoyer(\''+f.id+'\')">✕</button></div>';
+  }).join('');
+}
+
+async function addFoyer(){
+  var nom=normMaj(document.getElementById('foyer-nom').value);
+  if(!nom){await lyAlert('Nom requis.','error');return}
+  if(foyers.some(function(f){return f.nom.toUpperCase()===nom.toUpperCase()})){await lyAlert('Ce foyer existe déjà.','error');return}
+  var f={id:'foy'+Date.now(),nom:nom};
+  foyers.push(f);
+  await dbUpsert('lieux',f.id,f); // Store foyers in lieux table with a special prefix or separate
+  document.getElementById('foyer-nom').value='';
+  renderFoyers();refreshFoyerSelect();
+}
+
+async function delFoyer(id){
+  if(!await lyConfirm('Supprimer ce foyer ?')) return;
+  foyers=foyers.filter(function(f){return f.id!==id});
+  await dbDelete('lieux',id);
+  renderFoyers();refreshFoyerSelect();
+}
+
+function initFoyersFromPersonnes(){
+  // Extract unique foyer names from all personnes
+  var foyerNames={};
+  personnes.forEach(function(p){
+    var f=(p.foyer||'').trim();
+    if(f) foyerNames[f.toUpperCase()]=f.toUpperCase();
+  });
+  var existing=foyers.map(function(f){return f.nom.toUpperCase()});
+  var added=0;
+  Object.keys(foyerNames).forEach(function(fn){
+    if(existing.indexOf(fn)<0){
+      foyers.push({id:'foy'+Date.now()+'_'+(added++),nom:fn});
+    }
+  });
+  foyers.sort(function(a,b){return a.nom.localeCompare(b.nom)});
+  renderFoyers();refreshFoyerSelect();
+  lyAlert(added+' nouveau'+(added>1?'x':'')+' foyer'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+'.','success');
+}
+
+function refreshFoyerSelect(){
+  var sorted=foyers.slice().sort(function(a,b){return a.nom.localeCompare(b.nom)});
+  var html='<option value="">-- Sélectionner un foyer --</option>'+sorted.map(function(f){return '<option value="'+f.nom+'">'+f.nom+'</option>'}).join('');
+  var sel=document.getElementById('pfoyer');
+  if(sel) sel.innerHTML=html;
+}
+
+async function addPersonne(){var prenom=normPrenom(document.getElementById('pp').value);var nom=normMaj(document.getElementById('pn').value);var foyer=(document.getElementById('pfoyer').value||'').trim().toUpperCase();var ll=getSelectedLieux('pf-container');if(!prenom){await lyAlert('Prénom requis.','error');return}if(isDuplicatePersonne(prenom,nom,foyer,null)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}var p={id:'p'+Date.now(),prenom:prenom,nom:nom,foyer:foyer,lieux:ll,lieu:ll[0]||'',besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};await dbUpsert('personnes',p.id,p);personnes.push(p);['pp','pn','pnotes'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('pfoyer').value='';document.querySelectorAll('#pf-container input[type=checkbox]').forEach(function(cb){cb.checked=false});document.getElementById('pb').value='';updatePersistBadge();renderPersonnes()}
 async function savePersonne(id){var p=personnes.find(function(x){return x.id===id});if(!p) return;var prenom=normPrenom(document.getElementById('ep-pp-'+id).value)||p.prenom;var nom=normMaj(document.getElementById('ep-pn-'+id).value);var foyer=normMaj(document.getElementById('ep-pfoyer-'+id).value);if(isDuplicatePersonne(prenom,nom,foyer,id)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}p.prenom=prenom;p.nom=nom;p.foyer=foyer;p.lieux=getSelectedLieux('ep-pf-container-'+id);p.lieu=p.lieux[0]||p.lieu||'';p.besoins=document.getElementById('ep-pb-'+id).value;p.notes=document.getElementById('ep-pnotes-'+id).value.trim();await dbUpsert('personnes',id,p);editingPersonneId=null;updatePersistBadge();renderPersonnes()}
 async function delP(id){setPersist('⏳ Suppression...','neutral');await dbDelete('personnes',id);personnes=personnes.filter(function(p){return p.id!==id});updatePersistBadge();renderPersonnes()}
 
@@ -3498,33 +3590,48 @@ async function renderCourrier(){
   var allSem=semaines.concat(archives);
   var filtered=allSem.filter(function(s){return s.date>=debut&&s.date<=fin});
   if(!filtered.length){el.innerHTML='<div class="empty">Aucun trajet dans cette plage de dates.</div>';actions.style.display='none';return}
-  // Group by foyer+lieu: each unique (foyer, lieu RDV) gets one courrier
+  // Group by foyer: each unique foyer gets one courrier
   var courrierMap={};
   filtered.forEach(function(s){
     s.convois.forEach(function(c){
-      var allPers=(c.depart||[]).concat(c.arrivee||[]);
-      allPers.forEach(function(p){
+      // For each person in depart or arrivee
+      function processPers(p, type){
         var foyer=p.foyer||'Sans foyer';
-        var lieuObj=getLieu(getPersonLieux(p)[0])||{nom:'Lieu inconnu',adresse:''};
-        var mapKey=foyer+'|||'+lieuObj.nom;
-        if(!courrierMap[mapKey]) courrierMap[mapKey]={foyer:foyer,lieu:lieuObj,personnes:{}};
-        var persKey=p.prenom+' '+p.nom;
-        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:p.prenom,nom:p.nom||'',trajets:[]};
-        var isDep=(c.depart||[]).some(function(d){return d.prenom===p.prenom&&d.nom===p.nom});
-        var isArr=(c.arrivee||[]).some(function(a){return a.prenom===p.prenom&&a.nom===p.nom});
+        var mapKey=foyer;
+        // Find the actual stop where this person is in this convoi
+        var stopLieu=null;
+        c.stops.forEach(function(st){
+          if(st.action==='depart'||st.action==='retour') return;
+          var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
+          if(names.indexOf(p.prenom+' '+(p.nom||''))>=0 && st.pt && st.pt.nom){
+            stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
+          }
+        });
+        if(!stopLieu) stopLieu=getLieu(getPersonLieux(p)[0])||{nom:'Lieu inconnu',adresse:''};
+        
+        if(!courrierMap[mapKey]){
+          courrierMap[mapKey]={foyer:foyer,lieu:stopLieu,personnes:{}};
+        }
+        var persKey=p.prenom+' '+(p.nom||'');
+        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:p.prenom,nom:p.nom||'',trajets:[],lieu:stopLieu};
+        // Update lieu from stop (actual route, not fiche)
+        if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
+        if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].lieu=stopLieu;
         // Compute hour for this person at this stop
         var hData=computeHeures(c);
         var heure='';
         if(hData.heures.length){
           c.stops.forEach(function(st,si){
-            var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+x.nom});
+            var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
             if(names.indexOf(persKey)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
           });
         }
         courrierMap[mapKey].personnes[persKey].trajets.push({
-          date:s.date,type:isDep?'départ':'arrivee',heure:heure
+          date:s.date,type:type,heure:heure
         });
-      });
+      }
+      (c.depart||[]).forEach(function(p){processPers(p,'depart')});
+      (c.arrivee||[]).forEach(function(p){processPers(p,'arrivee')});
     });
   });
   // Display preview
@@ -3576,15 +3683,37 @@ async function genCourrierPdf(singleKey){
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
       var arrivees=pers.trajets.filter(function(t){return t.type==='arrivee'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
-      var départs=pers.trajets.filter(function(t){return t.type==='depart'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
-      var maxLen=Math.max(arrivees.length,départs.length,1);
-      for(var i=0;i<maxLen;i++){
-        var arr=arrivees[i]||null;
-        var dep=départs[i]||null;
-        var groupKey=(arr?arr.date+'_'+arr.heure:'none')+'||'+(dep?dep.date+'_'+dep.heure:'none');
-        if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:arr,dep:dep,noms:[]};
-        sejourGroups[groupKey].noms.push(pers.prenom+' '+pers.nom.toUpperCase());
-      }
+      var departs=pers.trajets.filter(function(t){return t.type==='depart'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+      
+      // Pair each arrival with the next departure after it
+      var usedDep={};
+      var pairs=[];
+      arrivees.forEach(function(arr){
+        var bestDep=null;
+        for(var di=0;di<departs.length;di++){
+          if(usedDep[di]) continue;
+          if(departs[di].date>=arr.date){bestDep=di;break}
+        }
+        if(bestDep!==null){
+          pairs.push({arr:arr,dep:departs[bestDep]});
+          usedDep[bestDep]=true;
+        } else {
+          pairs.push({arr:arr,dep:null});
+        }
+      });
+      // Remaining departures without matching arrival
+      departs.forEach(function(dep,di){
+        if(!usedDep[di]) pairs.push({arr:null,dep:dep});
+      });
+      // If no pairs at all, create empty
+      if(!pairs.length) pairs.push({arr:null,dep:null});
+      
+      pairs.forEach(function(pair){
+        if(!pair.arr&&!pair.dep) return;
+        var groupKey=(pair.arr?pair.arr.date+'_'+(pair.arr.heure||''):'none')+'||'+(pair.dep?pair.dep.date+'_'+(pair.dep.heure||''):'none');
+        if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:pair.arr,dep:pair.dep,noms:[]};
+        sejourGroups[groupKey].noms.push(pers.prenom+' '+(pers.nom||'').toUpperCase());
+      });
     });
     Object.keys(sejourGroups).forEach(function(gk){
       var g=sejourGroups[gk];
@@ -3664,6 +3793,44 @@ async function genCourrierPdf(singleKey){
   w.print();
 }
 
+function genPdfStructures(){
+  // Group all personnes by foyer
+  var foyerMap={};
+  personnes.forEach(function(p){
+    var f=p.foyer||'Sans foyer';
+    if(!foyerMap[f]) foyerMap[f]=[];
+    foyerMap[f].push(p);
+  });
+  var foyerKeys=Object.keys(foyerMap).sort();
+  
+  var html='<div style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:0 auto;padding:20px">';
+  html+='<div style="text-align:center;margin-bottom:30px;padding-bottom:16px;border-bottom:3px solid #333">'
+    +'<img src="'+LOGO_URL+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:8px"><br>'
+    +'<div style="font-size:20px;font-weight:bold">LA LYSARDIÈRE — Structures et vacanciers</div>'
+    +'<div style="font-size:12px;color:#666;margin-top:4px">'+foyerKeys.length+' structures — '+personnes.length+' personnes — Généré le '+new Date().toLocaleDateString('fr-FR')+'</div>'
+    +'</div>';
+  
+  foyerKeys.forEach(function(f){
+    var pers=foyerMap[f].sort(function(a,b){return(a.prenom||'').localeCompare(b.prenom||'')});
+    html+='<div style="margin-bottom:20px;page-break-inside:avoid">'
+      +'<div style="background:#18534F;color:white;padding:8px 16px;font-weight:bold;font-size:14px;border-radius:4px 4px 0 0">'+f+' <span style="font-weight:normal;font-size:12px;opacity:0.8">('+pers.length+' personne'+(pers.length>1?'s':'')+')</span></div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:#eee"><th style="text-align:left;padding:6px 10px;border:1px solid #ddd">Prénom</th><th style="text-align:left;padding:6px 10px;border:1px solid #ddd">Nom</th><th style="text-align:left;padding:6px 10px;border:1px solid #ddd">Lieu RDV</th><th style="text-align:left;padding:6px 10px;border:1px solid #ddd">Besoins</th></tr>';
+    pers.forEach(function(p,i){
+      var bg=i%2===0?'#fff':'#f9f7f2';
+      var lieuLabel=getPersonLieuLabel(p);
+      html+='<tr style="background:'+bg+'"><td style="padding:5px 10px;border:1px solid #ddd">'+p.prenom+'</td><td style="padding:5px 10px;border:1px solid #ddd">'+(p.nom||'')+'</td><td style="padding:5px 10px;border:1px solid #ddd">'+lieuLabel+'</td><td style="padding:5px 10px;border:1px solid #ddd">'+(p.besoins||'')+'</td></tr>';
+    });
+    html+='</table></div>';
+  });
+  html+='</div>';
+  
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Structures La Lysardière</title><style>@page{margin:15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+html+'</body></html>');
+  w.document.close();
+  w.print();
+}
+
 function fmtDateCourrier(d){
   if(!d) return '';
   try{return new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}
@@ -3682,6 +3849,28 @@ var manStopId=0;
 
 function manRefresh(){
   manUpdateVehicleList();
+  // Populate lieu quick-add dropdown
+  var sel=document.getElementById('man-lieu-quick');
+  if(sel) sel.innerHTML='<option value="">-- Ajouter un lieu --</option>'+lieux.slice().sort(function(a,b){return(a.nom||'').localeCompare(b.nom||'')}).map(function(l){return '<option value="'+l.id+'">'+l.nom+'</option>'}).join('');
+  manRenderStops();
+}
+
+function manAddStopFromLieu(){
+  var sel=document.getElementById('man-lieu-quick');
+  var lieuId=sel.value;
+  if(!lieuId) return;
+  var lieu=getLieu(lieuId);
+  if(!lieu) return;
+  manStopId++;
+  manStops.push({id:'ms'+manStopId,lieuId:lieuId,lieuNom:lieu.nom,lieuAdresse:lieu.adresse||'',lieuLat:lieu.lat||'',lieuLng:lieu.lng||'',action:'pickup',heure:'',depPersonnes:[],arrPersonnes:[],piquenique:false});
+  sel.value='';
+  manRenderStops();
+}
+
+function manInsertStopAfter(afterIdx){
+  manStopId++;
+  var newStop={id:'ms'+manStopId,lieuNom:'',lieuAdresse:'',lieuLat:'',lieuLng:'',action:'pickup',heure:'',depPersonnes:[],arrPersonnes:[],piquenique:false};
+  manStops.splice(afterIdx+1,0,newStop);
   manRenderStops();
 }
 
@@ -3729,12 +3918,24 @@ function manUpdateStop(id,field,val){
   var s=manStops.find(function(x){return x.id===id});
   if(!s) return;
   s[field]=val;
-  // If action changed, reset person assignments
   if(field==='action'){
     if(val==='pickup'){s.depPersonnes=[];s.arrPersonnes=s.arrPersonnes||[]}
     if(val==='depot'){s.arrPersonnes=[];s.depPersonnes=s.depPersonnes||[]}
     manRenderStops();
   }
+}
+
+function manSetLieuFromSelect(stopId,lieuId){
+  var s=manStops.find(function(x){return x.id===stopId});
+  if(!s) return;
+  if(!lieuId){
+    s.lieuId='';s.lieuNom='';s.lieuAdresse='';s.lieuLat='';s.lieuLng='';
+  } else {
+    var lieu=getLieu(lieuId);
+    if(!lieu) return;
+    s.lieuId=lieuId;s.lieuNom=lieu.nom;s.lieuAdresse=lieu.adresse||'';s.lieuLat=lieu.lat||'';s.lieuLng=lieu.lng||'';
+  }
+  manRenderStops();
 }
 
 function manTogglePers(stopId,listName,persId){
@@ -3802,41 +4003,62 @@ function manBuildPersSelector(s,listName,labelText,color,bgColor){
 
 function manRenderStops(){
   var el=document.getElementById('man-stops-list');
-  if(!manStops.length){el.innerHTML='<div class="empty">Aucun arrêt. Cliquez "+ Ajouter un arrêt" pour commencer.</div>';return}
-  el.innerHTML=manStops.map(function(s,i){
+  if(!manStops.length){el.innerHTML='<div class="empty">Aucun arrêt. Sélectionnez un lieu ci-dessus ou cliquez "Lieu libre".</div>';return}
+  var html='';
+  manStops.forEach(function(s,i){
     var isPickup=s.action==='pickup';
     var isDepot=s.action==='depot';
     var isRotation=s.action==='rotation';
     var persHtml='';
-    if(isPickup||isRotation) persHtml+=manBuildPersSelector(s,'arrPersonnes','Personnes en arrivee','var(--green)','var(--green-bg)');
+    if(isPickup||isRotation) persHtml+=manBuildPersSelector(s,'arrPersonnes','Personnes en arrivée','var(--green)','var(--green-bg)');
     if(isDepot||isRotation) persHtml+=manBuildPersSelector(s,'depPersonnes','Personnes en départ','var(--red)','var(--red-bg)');
-    return '<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:8px;border-left:3px solid '+(isDepot?'var(--red)':isPickup?'var(--green)':'var(--copper)')+'">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    
+    // Lieu selector: dropdown from lieux DB or manual input
+    var lieuHtml='<div style="margin-bottom:6px"><div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:150px"><label>Lieu de RDV</label><select onchange="manSetLieuFromSelect(\''+s.id+'\',this.value)" style="width:100%">'
+      +'<option value="">-- Lieu libre --</option>'
+      +lieux.slice().sort(function(a,b){return(a.nom||'').localeCompare(b.nom||'')}).map(function(l){return '<option value="'+l.id+'"'+(s.lieuId===l.id?' selected':'')+'>'+l.nom+'</option>'}).join('')
+      +'</select></div>'
+      +'<div style="flex:1;min-width:100px"><label>Heure RDV</label><input type="time" value="'+s.heure+'" onchange="manUpdateStop(\''+s.id+'\',\'heure\',this.value)"></div>'
+      +'<div><label>Action</label><select onchange="manUpdateStop(\''+s.id+'\',\'action\',this.value)">'
+      +'<option value="pickup"'+(s.action==='pickup'?' selected':'')+'>Arrivée</option>'
+      +'<option value="depot"'+(s.action==='depot'?' selected':'')+'>Départ</option>'
+      +'<option value="rotation"'+(s.action==='rotation'?' selected':'')+'>Rotation</option>'
+      +'</select></div>'
+      +'</div>';
+    if(!s.lieuId){
+      lieuHtml+='<div class="cols2" style="margin-top:4px">'
+        +'<div><input value="'+esc(s.lieuNom)+'" placeholder="Nom du lieu" style="font-size:11px" onchange="manUpdateStop(\''+s.id+'\',\'lieuNom\',this.value)"></div>'
+        +'<div><input value="'+esc(s.lieuAdresse)+'" placeholder="Adresse" style="font-size:11px" onchange="manUpdateStop(\''+s.id+'\',\'lieuAdresse\',this.value)"></div>'
+        +'</div>'
+        +'<div class="cols2" style="margin-top:4px">'
+        +'<div><input type="number" step="0.0001" value="'+(s.lieuLat||'')+'" placeholder="Latitude" style="font-size:11px" onchange="manUpdateStop(\''+s.id+'\',\'lieuLat\',this.value)"></div>'
+        +'<div><input type="number" step="0.0001" value="'+(s.lieuLng||'')+'" placeholder="Longitude" style="font-size:11px" onchange="manUpdateStop(\''+s.id+'\',\'lieuLng\',this.value)"></div>'
+        +'</div>';
+    } else {
+      lieuHtml+='<div style="font-size:11px;color:var(--text-light);margin-top:2px">'+esc(s.lieuNom)+(s.lieuAdresse?' — '+esc(s.lieuAdresse):'')+'</div>';
+    }
+    lieuHtml+='</div>';
+    
+    html+='<div class="item-row" style="flex-direction:column;align-items:stretch;margin-bottom:4px;border-left:3px solid '+(isDepot?'var(--red)':isPickup?'var(--green)':'var(--copper)')+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:28px;height:28px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:700;font-size:12px">'+(i+1)+'</div>'
       +'<span style="font-weight:600;font-size:13px">Arrêt '+(i+1)+'</span>'
       +'<div style="flex:1"></div>'
-      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',-1)" '+(i===0?'disabled':'')+'>&#9650;</button>'
-      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',1)" '+(i===manStops.length-1?'disabled':'')+'>&#9660;</button>'
-      +'<button class="btn btn-danger btn-sm" onclick="manRemoveStop(\''+s.id+'\')">Supprimer</button>'
+      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',-1)" style="font-size:11px;padding:2px 8px" '+(i===0?'disabled':'')+'>▲</button>'
+      +'<button class="btn btn-sm" onclick="manMoveStop(\''+s.id+'\',1)" style="font-size:11px;padding:2px 8px" '+(i===manStops.length-1?'disabled':'')+'>▼</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="manRemoveStop(\''+s.id+'\')" style="font-size:11px;padding:2px 8px">✕</button>'
       +'</div>'
-      +'<div class="cols2" style="margin-bottom:6px">'
-      +'<div><label>Nom du lieu</label><input value="'+esc(s.lieuNom)+'" placeholder="Ex: Gare de Brive" onchange="manUpdateStop(\''+s.id+'\',\'lieuNom\',this.value)"></div>'
-      +'<div><label>Adresse</label><input value="'+esc(s.lieuAdresse)+'" placeholder="Adresse complete" onchange="manUpdateStop(\''+s.id+'\',\'lieuAdresse\',this.value)"></div>'
-      +'</div>'
-      +'<div class="cols4">'
-      +'<div><label>Latitude</label><input type="number" step="0.0001" value="'+(s.lieuLat||'')+'" placeholder="44.891" onchange="manUpdateStop(\''+s.id+'\',\'lieuLat\',this.value)"></div>'
-      +'<div><label>Longitude</label><input type="number" step="0.0001" value="'+(s.lieuLng||'')+'" placeholder="1.481" onchange="manUpdateStop(\''+s.id+'\',\'lieuLng\',this.value)"></div>'
-      +'<div><label>Action</label><select onchange="manUpdateStop(\''+s.id+'\',\'action\',this.value)">'
-      +'<option value="pickup"'+(s.action==='pickup'?' selected':'')+'>Arrivee</option>'
-      +'<option value="depot"'+(s.action==='depot'?' selected':'')+'>Départ</option>'
-      +'<option value="rotation"'+(s.action==='rotation'?' selected':'')+'>Rotation (dep+arr)</option>'
-      +'</select></div>'
-      +'<div><label>Heure RDV</label><input type="time" value="'+s.heure+'" onchange="manUpdateStop(\''+s.id+'\',\'heure\',this.value)"></div>'
-      +'</div>'
+      +lieuHtml
       +persHtml
-      +'<div style="margin-top:6px"><label style="display:inline;cursor:pointer"><input type="checkbox" '+(s.piquenique?'checked':'')+' onchange="manUpdateStop(\''+s.id+'\',\'piquenique\',this.checked)" style="width:auto;margin-right:4px">Pause pique-nique a cet arrêt</label></div>'
+      +'<div style="margin-top:4px"><label style="display:inline;cursor:pointer;font-size:11px"><input type="checkbox" '+(s.piquenique?'checked':'')+' onchange="manUpdateStop(\''+s.id+'\',\'piquenique\',this.checked)" style="width:auto;margin-right:4px">Pause pique-nique</label></div>'
       +'</div>';
-  }).join('');
+    // Insert between button
+    if(i<manStops.length-1){
+      html+='<div style="text-align:center;margin:2px 0"><button class="btn btn-sm" onclick="manInsertStopAfter('+i+')" style="font-size:9px;padding:2px 10px;opacity:0.5" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">+ Insérer un arrêt ici</button></div>';
+    }
+  });
+  el.innerHTML=html;
 }
 
 function manGetPers(id){return personnes.find(function(p){return p.id===id})||{prenom:'?',nom:'',foyer:''}}
