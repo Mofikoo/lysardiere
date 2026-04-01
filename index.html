@@ -910,7 +910,7 @@ input:focus, select:focus {
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--forest)">Foyers (<span id="foyer-count">0</span>)</span>
-      <button class="btn btn-sm" onclick="initFoyersFromPersonnes()">🔄 Synchroniser depuis les personnes</button>
+      <button class="btn btn-sm" onclick="initFoyersFromPersonnes(true)">🔄 Synchroniser depuis les personnes</button>
       <button class="btn btn-sm" onclick="syncFoyersInSemaines()" style="background:var(--copper);color:white;border:none">🔄 Mettre à jour les semaines sauvegardées</button>
     </div>
     <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-foyer" placeholder="Rechercher un foyer..." oninput="renderFoyers()">
@@ -1969,7 +1969,7 @@ async function delFoyer(id){
   renderFoyers();refreshFoyerSelect();
 }
 
-function initFoyersFromPersonnes(){
+function initFoyersFromPersonnes(showAlert){
   // Extract unique foyer names from all personnes
   var foyerNames={};
   personnes.forEach(function(p){
@@ -1985,7 +1985,7 @@ function initFoyersFromPersonnes(){
   });
   foyers.sort(function(a,b){return a.nom.localeCompare(b.nom)});
   renderFoyers();refreshFoyerSelect();
-  lyAlert(added+' nouveau'+(added>1?'x':'')+' foyer'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+'.','success');
+  if(showAlert) lyAlert(added+' nouveau'+(added>1?'x':'')+' foyer'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+'.','success');
 }
 
 async function syncFoyersInSemaines(){
