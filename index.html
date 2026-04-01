@@ -1908,6 +1908,27 @@ function renderPersonnes(){
 }
 function normPrenom(s){s=s.trim();if(!s)return '';return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
 function normMaj(s){return s.trim().toUpperCase()}
+function findMatchingPersonne(p){
+  var pNom=(p.nom||'').toLowerCase().trim();
+  var pPrenom=(p.prenom||'').toLowerCase().trim();
+  // Exact match first
+  var exact=personnes.find(function(pp){
+    return pp.prenom.toLowerCase()===pPrenom&&(pp.nom||'').toLowerCase()===pNom;
+  });
+  if(exact) return exact;
+  // Match by nom only (handles prenom changes like Jp→Jean-pierre)
+  if(pNom.length>1){
+    var nomMatches=personnes.filter(function(pp){return(pp.nom||'').toLowerCase()===pNom});
+    if(nomMatches.length===1) return nomMatches[0]; // unique nom match
+    // If multiple, try first letter of prenom
+    if(pPrenom.length>0){
+      var firstLetter=pPrenom[0];
+      var letterMatch=nomMatches.find(function(pp){return pp.prenom.toLowerCase()[0]===firstLetter});
+      if(letterMatch) return letterMatch;
+    }
+  }
+  return null;
+}
 function isDuplicatePersonne(prenom,nom,foyer,excludeId){
   var key=(prenom+' '+nom+' '+foyer).toLowerCase();
   return personnes.some(function(p){return p.id!==excludeId&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase()===key});
@@ -1977,9 +1998,7 @@ async function syncFoyersInSemaines(){
       function updatePers(list){
         if(!list) return;
         list.forEach(function(p){
-          var current=personnes.find(function(pp){
-            return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
-          });
+          var current=findMatchingPersonne(p);
           if(current&&current.foyer&&current.foyer!==p.foyer){
             p.foyer=current.foyer;
             changed=true;
@@ -2060,9 +2079,7 @@ function chargerDepuisSemaine(semId){
   
   sem.convois.forEach(function(c){
     (c.arrivee||[]).forEach(function(p){
-      var match=personnes.find(function(pp){
-        return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
-      });
+      var match=findMatchingPersonne(p);
       if(match) newDep[match.id]=true;
     });
   });
@@ -3633,9 +3650,7 @@ async function renderCourrier(){
       // For each person in depart or arrivee
       function processPers(p, type){
         // Use CURRENT foyer from personnes DB, not the one frozen in the convoi
-        var currentPers=personnes.find(function(pp){
-          return pp.prenom.toLowerCase()===p.prenom.toLowerCase()&&(pp.nom||'').toLowerCase()===(p.nom||'').toLowerCase();
-        });
+        var currentPers=findMatchingPersonne(p);
         var foyer=currentPers?(currentPers.foyer||'Sans foyer'):(p.foyer||'Sans foyer');
         
         // Special case: FAMILLE → one PDF per person
