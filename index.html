@@ -3688,9 +3688,14 @@ async function renderCourrier(){
             if(names.indexOf(persKey)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
           });
         }
-        courrierMap[mapKey].personnes[persKey].trajets.push({
-          date:s.date,type:type,heure:heure
-        });
+        // Avoid duplicate: check if same date+type already exists
+        var existingTrajets=courrierMap[mapKey].personnes[persKey].trajets;
+        var isDupe=existingTrajets.some(function(t){return t.date===s.date&&t.type===type});
+        if(!isDupe){
+          courrierMap[mapKey].personnes[persKey].trajets.push({
+            date:s.date,type:type,heure:heure
+          });
+        }
       }
       (c.depart||[]).forEach(function(p){processPers(p,'depart')});
       (c.arrivee||[]).forEach(function(p){processPers(p,'arrivee')});
