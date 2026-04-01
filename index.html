@@ -825,6 +825,7 @@ input:focus, select:focus {
       <span style="font-size:13px;color:var(--text-mid)"><strong id="sem-count">0</strong> semaine(s) active(s)</span>
     </div>
   </div>
+  <div id="semaines-calendar" class="card no-print" style="padding:14px 18px;margin-bottom:12px"></div>
   <div id="semaines-list"><div class="empty">Aucune semaine. Lancez une optimisation puis sauvegardez-la.</div></div>
   <div class="archive-section no-print" id="archive-section" style="display:none">
     <div class="archive-header" onclick="toggleArchive()">
@@ -1560,10 +1561,82 @@ function renderTimeDetail(si,rawArrivals,heures,piqueniqueIdx){
 var PIQUENIQUE_HTML='<div style="background:var(--red);color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
 
 // ── SEMAINES ──────────────────────────────────
+var calendarMonth=new Date();
+
+function renderSemainesCalendar(allSem){
+  var el=document.getElementById('semaines-calendar');
+  if(!el) return;
+  var year=calendarMonth.getFullYear(),month=calendarMonth.getMonth();
+  var monthName=new Date(year,month,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  
+  // Build date lookup
+  var dateMap={};
+  allSem.forEach(function(s){
+    if(!s.date) return;
+    var isArchive=archives.indexOf(s)>=0;
+    if(!dateMap[s.date]) dateMap[s.date]={convois:0,dep:0,arr:0,isArchive:isArchive};
+    dateMap[s.date].convois+=s.convois.length;
+    dateMap[s.date].dep+=s.convois.reduce(function(a,c){return a+(c.depart||[]).length},0);
+    dateMap[s.date].arr+=s.convois.reduce(function(a,c){return a+(c.arrivee||[]).length},0);
+  });
+  
+  var firstDay=new Date(year,month,1).getDay();
+  firstDay=firstDay===0?6:firstDay-1; // Monday=0
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var today=new Date();var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<button class="btn btn-sm" onclick="calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1);renderSemaines()" style="font-size:14px;padding:4px 10px">◀</button>'
+    +'<div style="font-family:Fraunces,serif;font-size:15px;font-weight:600;color:var(--forest);text-transform:capitalize">'+monthName+'</div>'
+    +'<button class="btn btn-sm" onclick="calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1);renderSemaines()" style="font-size:14px;padding:4px 10px">▶</button></div>';
+  
+  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center">';
+  ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].forEach(function(d){
+    html+='<div style="font-size:10px;font-weight:600;color:var(--text-light);padding:4px 0">'+d+'</div>';
+  });
+  
+  // Empty cells before first day
+  for(var e=0;e<firstDay;e++) html+='<div></div>';
+  
+  for(var d=1;d<=daysInMonth;d++){
+    var dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var data=dateMap[dateStr];
+    var isToday=dateStr===todayStr;
+    var bg=data?(data.isArchive?'var(--purple)':'var(--forest)'):'transparent';
+    var color=data?'white':'var(--text-mid)';
+    var border=isToday?'2px solid var(--copper)':'2px solid transparent';
+    var tooltip=data?(data.convois+' convoi'+(data.convois>1?'s':'')+', '+data.dep+' dép, '+data.arr+' arr'):'';
+    var onclick=data?'onclick="scrollToSemaine(\''+dateStr+'\')"':'';
+    html+='<div '+onclick+' title="'+tooltip+'" style="'
+      +'padding:6px 2px;border-radius:6px;font-size:12px;font-weight:'+(data?'700':'400')+';'
+      +'background:'+bg+';color:'+color+';border:'+border+';'
+      +(data?'cursor:pointer;':'')
+      +'transition:transform 0.1s;'
+      +'"'+(data?' onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'scale(1)\'"':'')+'>'+d+'</div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function scrollToSemaine(dateStr){
+  var target=semaines.find(function(s){return s.date===dateStr})||archives.find(function(s){return s.date===dateStr});
+  if(!target) return;
+  var card=document.getElementById('semcard-'+target.id);
+  if(card){
+    card.scrollIntoView({behavior:'smooth',block:'center'});
+    card.style.boxShadow='0 0 0 3px var(--copper)';
+    setTimeout(function(){card.style.boxShadow=''},2000);
+  }
+}
+
 function renderSemaines(){
   var actives=semaines,archs=archives;
   document.getElementById('sem-count').textContent=actives.length;
   document.getElementById('archive-count').textContent=archs.length;
+  
+  // Calendar view
+  renderSemainesCalendar(actives.concat(archs));
+  
   var el=document.getElementById('semaines-list');
   if(!actives.length){el.innerHTML='<div class="empty">Aucune semaine. Lancez une optimisation puis sauvegardez-la.</div>';}
   else{el.innerHTML=actives.map(function(s,idx){return renderSemaineCard(s,idx,false)}).join('')}
@@ -2525,6 +2598,18 @@ function deplacerStop(convoiIdx,stopIdx){
     });
   }
   
+  // Intra-convoi reorder section
+  var otherStops=c.stops.filter(function(s,si){return si!==stopIdx&&s.action!=='depart'&&s.action!=='retour'&&s.fid});
+  if(otherStops.length){
+    html+='<div style="font-size:12px;font-weight:600;margin-top:14px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px">Inverser l\'ordre dans ce convoi :</div>';
+    otherStops.forEach(function(other){
+      var otherIdx=c.stops.indexOf(other);
+      html+='<button class="btn btn-sm" style="margin:2px;font-size:10px;padding:3px 8px" '
+        +'onclick="execReorderStops('+convoiIdx+','+stopIdx+','+otherIdx+')">'
+        +'⇅ '+other.pt.nom+'</button> ';
+    });
+  }
+  
   html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
   
   var overlay=document.createElement('div');
@@ -2830,6 +2915,31 @@ function addToConvoi(convoi,node,p){
   convoi.remplissage=Math.round(convoi.peakSeats/convoi.vehicule.cap*100);
   convoi.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
   convoi.mapsEnrichi=false;
+}
+
+function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
+  document.querySelector('.ly-modal-overlay').remove();
+  var c=convoisOptimises[convoiIdx];
+  // Swap the two stops
+  var tmp=c.stops[stopIdxA];
+  c.stops[stopIdxA]=c.stops[stopIdxB];
+  c.stops[stopIdxB]=tmp;
+  // Recalculate seats
+  var seats=c.stops[0].seats;
+  for(var i=1;i<c.stops.length-1;i++){
+    seats=seats-(c.stops[i].depPers||[]).length+(c.stops[i].arrPers||[]).length;
+    c.stops[i].seats=seats;
+  }
+  c.stops[c.stops.length-1].seats=seats;
+  c.peakSeats=peakSeatsStops(c.stops);
+  c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+  // Recalculate km
+  c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
+  c.dureeMin=Math.round(c.km/getParams().vitesse*60);
+  c.mapsEnrichi=false;
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert('Ordre des arrêts modifié dans le convoi '+(convoiIdx+1)+'.','success');
 }
 
 function execIsolerStop(fromIdx,stopIdx,vehId){
