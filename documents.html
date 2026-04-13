@@ -562,7 +562,9 @@ async function fetchData() {
     api('/rest/v1/personnes?select=id,data&order=id.asc'),
     api('/rest/v1/documents?select=*&order=email_date.desc'),
     api('/rest/v1/sejours?select=*&order=date_debut.asc'),
-    api('/rest/v1/sejours_personnes?select=*')
+    api('/rest/v1/sejours_personnes?select=*'),
+    api('/rest/v1/sejours?archived=eq.false&select=*&order=date_debut.asc'),
+    api('/rest/v1/documents?archived=eq.false&select=*&order=email_date.desc')
   ]);
   allPersonnes = (pRaw || []).map(p => ({
     id: p.id,
@@ -733,12 +735,22 @@ function buildSejoursSection(personnesFiltered) {
     const options   = others.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
     const cards     = personnes.length ? personnes.map(p => buildPersonCard(p, s.id)).join('') : `<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
     const uid = `sejour-${s.id}`;
+
+    const estPasse = new Date(s.date_fin) < new Date();
+    const btnArchiver = estPasse ? `
+      <button class="btn btn-archive btn-sm"
+        onclick="event.stopPropagation(); archiverSejour('${s.id}')"
+        title="Archiver ce séjour">
+        📦 Archiver
+      </button>` : '';
+
     return `
       <div class="sejour-block">
         <div class="sejour-header" onclick="toggleSejour('${uid}')">
           <h3>✈️ ${s.nom}</h3>
           <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
           <span class="sejour-count">${personnes.length} vacancier(s)</span>
+          ${btnArchiver}
           <span class="sejour-chevron" id="schev-${uid}">▶</span>
         </div>
         <div class="sejour-body" id="${uid}">
@@ -763,6 +775,25 @@ function buildSejoursSection(personnesFiltered) {
     <div id="sejours-container" style="display:none">
       ${sejoursContent}
     </div>`;
+}
+
+async function archiverSejour(sejourId) {
+  const sejour = allSejours.find(s => s.id === sejourId);
+  if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
+
+  // Archiver le séjour
+  await api(`/rest/v1/sejours?id=eq.${sejourId}`, 'PATCH', { archived: true });
+
+  // Archiver tous les documents des vacanciers de ce séjour
+  const personneIds = allSejoursPersonnes
+    .filter(sp => sp.sejour_id === sejourId)
+    .map(sp => sp.personne_id);
+
+  for (const pid of personneIds) {
+    await api(`/rest/v1/documents?personne_id=eq.${pid}`, 'PATCH', { archived: true });
+  }
+
+  await init();
 }
 
 function toggleSejoursContainer() {
