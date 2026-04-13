@@ -1,52 +1,30 @@
-var CACHE_NAME = 'lysardiere-v114';
-var urlsToCache = [
-  '/lysardiere/index.html',
-  '/lysardiere/manifest.json',
-  '/lysardiere/icon-192.png',
-  '/lysardiere/icon-512.png'
+const CACHE_NAME = 'lysardiere-' + new Date().toISOString().slice(0, 10);
+
+const URLS_TO_CACHE = [
+  '/transport.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
-// Install: cache core files
-self.addEventListener('install', function(event) {
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(URLS_TO_CACHE))
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
-self.addEventListener('activate', function(event) {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(function(names) {
-      return Promise.all(
-        names.filter(function(name) { return name !== CACHE_NAME; })
-             .map(function(name) { return caches.delete(name); })
-      );
-    })
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
   );
   self.clients.claim();
 });
 
-// Fetch: network first, fallback to cache
-self.addEventListener('fetch', function(event) {
-  // Don't cache API calls
-  if (event.request.url.indexOf('supabase.co') >= 0 ||
-      event.request.url.indexOf('googleapis.com') >= 0 ||
-      event.request.url.indexOf('economie.gouv.fr') >= 0 ||
-      event.request.url.indexOf('qrserver.com') >= 0) {
-    return;
-  }
+self.addEventListener('fetch', event => {
   event.respondWith(
-    fetch(event.request).then(function(response) {
-      var clone = response.clone();
-      caches.open(CACHE_NAME).then(function(cache) {
-        cache.put(event.request, clone);
-      });
-      return response;
-    }).catch(function() {
-      return caches.match(event.request);
-    })
+    caches.match(event.request).then(cached => cached || fetch(event.request))
   );
 });
