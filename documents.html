@@ -695,27 +695,34 @@ async function supabaseStorageDelete(path) {
   });
 }
 
-async function previewDoc(docId) {
-  const doc = allDocuments.find(d => d.id === docId);
-  if (!doc) return;
+function checkNewDocsSinceLastVisit() {
+  const lastVisit = localStorage.getItem('lysardiere_last_visit');
+  const now = new Date().toISOString();
+  localStorage.setItem('lysardiere_last_visit', now);
 
-  const personne = allPersonnes.find(p => p.id === doc.personne_id);
-  const sejours = allSejoursPersonnes
-    .filter(sp => sp.personne_id === doc.personne_id)
-    .map(sp => allSejours.find(s => s.id === sp.sejour_id))
-    .filter(Boolean);
+  if (!lastVisit) return; // Première visite, pas de pop-up
 
-  const url = await getSignedUrl(doc.storage_path);
+  const newDocs = allDocuments.filter(d => d.created_at > lastVisit);
+  if (!newDocs.length) return;
 
-  document.getElementById('preview-filename').textContent = doc.filename;
-  document.getElementById('preview-from').textContent = doc.email_from || '—';
-  document.getElementById('preview-date').textContent = fmtDate(doc.email_date);
-  document.getElementById('preview-type').textContent = doc.type === 'dossier_complet' ? '📁 Dossier complet' : doc.type === 'inscription' ? '📝 Inscription' : doc.type === 'confidentiel' ? '🔒 Confidentiel' : '📎 Non classé';
-  document.getElementById('preview-personne').textContent = personne ? `${personne.prenom} ${personne.nom}` : '— Non lié';
-  document.getElementById('preview-sejours').textContent = sejours.length ? sejours.map(s => s.nom).join(', ') : '— Aucun séjour';
-  document.getElementById('preview-open').onclick = () => window.open(url, '_blank');
-  document.getElementById('preview-delete').onclick = () => { closePreview(); deleteDoc(doc.id, doc.storage_path); };
-  document.getElementById('previewOverlay').classList.add('show');
+  // Grouper par personne
+  const byPersonne = {};
+  newDocs.forEach(doc => {
+    const key = doc.personne_nom || 'Non classé';
+    if (!byPersonne[key]) byPersonne[key] = [];
+    byPersonne[key].push(doc.filename);
+  });
+
+  const lines = Object.entries(byPersonne).map(([nom, files]) =>
+    `<tr style="border-bottom:1px solid var(--border-light)">
+      <td style="padding:8px 0;font-weight:600;width:180px">${nom}</td>
+      <td style="padding:8px 0;color:var(--text-mid)">${files.join(', ')}</td>
+    </tr>`
+  ).join('');
+
+  document.getElementById('newdocs-count').textContent = newDocs.length;
+  document.getElementById('newdocs-list').innerHTML = lines;
+  document.getElementById('newdocsOverlay').classList.add('show');
 }
 
 function closePreview() {
@@ -738,7 +745,7 @@ function buildPersonCard(p, sejourId = null) {
         <span class="doc-type-label">📁 Dossier complet</span>
         <span class="doc-filename">${docs.find(d => d.type === 'dossier_complet').filename}</span>
         <span class="doc-date">${fmtDate(docs.find(d => d.type === 'dossier_complet').email_date)}</span>
-        <button class="btn btn-info btn-sm" onclick="previewDoc('${doc.id}')">Voir PDF</button>
+        <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
       </div>`
     : REQUIRED_TYPES.map(t => {
         const doc = docs.find(d => d.type === t);
@@ -747,7 +754,7 @@ function buildPersonCard(p, sejourId = null) {
             <span class="doc-type-label">${TYPE_LABELS[t]}</span>
             <span class="doc-filename">${doc.filename}</span>
             <span class="doc-date">${fmtDate(doc.email_date)}</span>
-            <button class="btn btn-info btn-sm" onclick="previewDoc('${doc.id}')">Voir PDF</button>
+            <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
           </div>`;
         return `
           <div class="doc-row">
@@ -763,7 +770,7 @@ function buildPersonCard(p, sejourId = null) {
       <span class="doc-type-label" style="color:var(--orange)">📎 Non classé</span>
       <span class="doc-filename">${doc.filename}</span>
       <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="previewDoc('${doc.id}')">Voir PDF</button>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
       <select class="link-select" onchange="classifyDoc('${doc.id}', this.value)">
         <option value="">— Classer comme...</option>
         <option value="inscription">📝 Inscription</option>
@@ -889,7 +896,7 @@ function buildUnlinked() {
         <strong>${doc.filename}</strong>
         <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
       </div>
-      <button class="btn btn-info btn-sm" onclick="previewDoc('${doc.id}')">Voir PDF</button>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
       <select class="link-select" id="sel-${doc.id}">
         <option value="">— Choisir un vacancier</option>
         ${options}
@@ -966,6 +973,7 @@ async function init() {
   buildStats();
   checkAlerts();
   renderAll();
+  checkNewDocsSinceLastVisit();
 
   if (!listenersAdded) {
     document.getElementById('searchInput').addEventListener('input', renderAll);
@@ -978,45 +986,28 @@ async function init() {
 
 init();
 </script>
-
-<!-- MODAL PREVIEW DOCUMENT -->
-<div class="modal-overlay" id="previewOverlay">
-  <div class="modal-box" style="max-width:500px">
+<!-- MODAL NOUVEAUX DOCUMENTS -->
+<div class="modal-overlay" id="newdocsOverlay">
+  <div class="modal-box" style="max-width:520px">
     <div class="modal-header">
-      <span style="font-size:20px">📄</span>
-      <span class="modal-header-text" id="preview-filename">Document</span>
+      <span style="font-size:20px">🔔</span>
+      <span class="modal-header-text"><span id="newdocs-count"></span> nouveau(x) document(s) depuis votre dernière visite</span>
     </div>
     <div class="modal-body">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <tr style="border-bottom:1px solid var(--border-light)">
-          <td style="padding:8px 0;color:var(--text-light);width:120px">Expéditeur</td>
-          <td style="padding:8px 0;font-weight:500" id="preview-from"></td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--border-light)">
-          <td style="padding:8px 0;color:var(--text-light)">Date</td>
-          <td style="padding:8px 0;font-weight:500" id="preview-date"></td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--border-light)">
-          <td style="padding:8px 0;color:var(--text-light)">Type</td>
-          <td style="padding:8px 0;font-weight:500" id="preview-type"></td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--border-light)">
-          <td style="padding:8px 0;color:var(--text-light)">Vacancier</td>
-          <td style="padding:8px 0;font-weight:500" id="preview-personne"></td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:var(--text-light)">Séjour(s)</td>
-          <td style="padding:8px 0;font-weight:500" id="preview-sejours"></td>
-        </tr>
+        <thead>
+          <tr style="border-bottom:2px solid var(--gold)">
+            <th style="padding:6px 0;text-align:left;color:var(--forest);font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Vacancier</th>
+            <th style="padding:6px 0;text-align:left;color:var(--forest);font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Fichier(s)</th>
+          </tr>
+        </thead>
+        <tbody id="newdocs-list"></tbody>
       </table>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-danger btn-sm" id="preview-delete">🗑️ Supprimer</button>
-      <button class="btn" onclick="closePreview()">Fermer</button>
-      <button class="btn btn-primary" id="preview-open">Ouvrir le PDF</button>
+      <button class="btn btn-primary" onclick="document.getElementById('newdocsOverlay').classList.remove('show')">OK, compris</button>
     </div>
   </div>
 </div>
-
 </body>
 </html>
