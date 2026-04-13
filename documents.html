@@ -929,6 +929,7 @@ function buildUnlinked() {
         ${options}
       </select>
       <button class="btn btn-success btn-sm" onclick="confirmLink('${doc.id}')">Lier</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
     </div>`).join('');
   return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
 }
