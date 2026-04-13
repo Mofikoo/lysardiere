@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Lysardière</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F7F3EC;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    header img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid #FEEAA1;
+      margin-bottom: 16px;
+      object-fit: cover;
+    }
+    header h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem;
+      color: #18534F;
+    }
+    header p {
+      color: #7A8E8C;
+      margin-top: 6px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 11px;
+    }
+    .cards {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 0 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 36px 32px;
+      width: 260px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 4px 20px rgba(24,83,79,0.08);
+      border: 1px solid #E8EEEC;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 32px rgba(24,83,79,0.14);
+      border-color: #2A847E;
+    }
+    .card .icon { font-size: 2.8rem; margin-bottom: 18px; }
+    .card h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.15rem;
+      color: #18534F;
+      margin-bottom: 8px;
+    }
+    .card p { font-size: 0.88rem; color: #7A8E8C; line-height: 1.5; }
+    footer {
+      margin-top: 60px;
+      color: #B0BDB9;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon-192.png" alt="La Lysardière">
+    <h1>La Lysardière</h1>
+    <p>Espace de gestion interne</p>
+  </header>
+  <div class="cards">
+    <a class="card" href="transport.html">
+      <div class="icon">🚌</div>
+      <h2>Gestion du transport</h2>
+      <p>Planification des itinéraires, véhicules et semaines de transport</p>
+    </a>
+    <a class="card" href="documents.html">
+      <div class="icon">📄</div>
+      <h2>Documents d'inscription</h2>
+      <p>Consultation et gestion des fiches reçues par mail</p>
+    </a>
+  </div>
+  <footer>La Lysardière — Gestion interne</footer>
+</body>
+</html>
