@@ -727,7 +727,7 @@ function buildSejoursSection(personnesFiltered) {
     <div class="section-title">✈️ Séjours</div>
     <p class="empty">Aucun séjour créé. Cliquez sur "+ Nouveau séjour".</p>`;
 
-  return allSejours.map(s => {
+  const sejoursContent = allSejours.map(s => {
     const personnes = getSejourPersonnes(s.id).filter(p => personnesFiltered.some(pf => pf.id === p.id));
     const others    = personnesFiltered.filter(p => !allSejoursPersonnes.some(sp => sp.sejour_id === s.id && sp.personne_id === p.id));
     const options   = others.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
@@ -754,6 +754,22 @@ function buildSejoursSection(personnesFiltered) {
         </div>
       </div>`;
   }).join('');
+
+  return `
+    <div class="section-title" onclick="toggleSejoursContainer()" style="cursor:pointer;user-select:none">
+      ✈️ Séjours <span class="count">${allSejours.length}</span>
+      <span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span>
+    </div>
+    <div id="sejours-container" style="display:none">
+      ${sejoursContent}
+    </div>`;
+}
+
+function toggleSejoursContainer() {
+  const container = document.getElementById('sejours-container');
+  const chevron = document.getElementById('sejours-chevron');
+  container.style.display = container.style.display === 'none' ? 'block' : 'none';
+  chevron.classList.toggle('open');
 }
 
 function buildUnlinked() {
@@ -828,7 +844,9 @@ function renderAll() {
   const personnes = getFilteredPersonnes();
   const fSejour   = document.getElementById('filterSejour').value;
   let html = buildUnlinked();
-  if (!fSejour || fSejour === 'none') html += buildSejoursSection(personnes);
+  if (!fSejour || fSejour === 'none') {
+  const sejoursHtml = buildSejoursSection(personnes);
+  html += sejoursHtml;}
   html += `<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
   html += personnes.map(p => buildPersonCard(p)).join('') || '<p class="empty">Aucun vacancier trouvé.</p>';
   document.getElementById('mainContent').innerHTML = html;
