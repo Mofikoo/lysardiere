@@ -826,16 +826,22 @@ function renderAll() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
+let listenersAdded = false;
+
 async function init() {
   await fetchData();
   buildFilters();
   buildStats();
   checkAlerts();
   renderAll();
-  document.getElementById('searchInput').addEventListener('input', renderAll);
-  document.getElementById('filterStatus').addEventListener('change', renderAll);
-  document.getElementById('filterFoyer').addEventListener('change', renderAll);
-  document.getElementById('filterSejour').addEventListener('change', renderAll);
+
+  if (!listenersAdded) {
+    document.getElementById('searchInput').addEventListener('input', renderAll);
+    document.getElementById('filterStatus').addEventListener('change', renderAll);
+    document.getElementById('filterFoyer').addEventListener('change', renderAll);
+    document.getElementById('filterSejour').addEventListener('change', renderAll);
+    listenersAdded = true;
+  }
 }
 
 init();
