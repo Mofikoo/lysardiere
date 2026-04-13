@@ -4,7 +4,180 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Documents — La Lysardière</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a2e4a; }
+
+    header {
+      background: #1a2e4a; color: white;
+      padding: 16px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    header a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
+    header h1 { font-size: 1.2rem; flex: 1; }
+    .btn-add-sejour {
+      background: #3b82f6; color: white; border: none;
+      border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 0.9rem;
+    }
+
+    .alert-banner {
+      background: #fef3c7; border-left: 4px solid #f59e0b;
+      padding: 12px 24px; display: none; align-items: center; gap: 12px;
+      font-size: 0.95rem; color: #92400e;
+    }
+    .alert-banner.show { display: flex; }
+
+    .toolbar {
+      padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: center; background: white; border-bottom: 1px solid #e2e8f0;
+    }
+    .toolbar input, .toolbar select {
+      padding: 8px 12px; border: 1px solid #cbd5e1;
+      border-radius: 8px; font-size: 0.9rem; outline: none;
+    }
+    .toolbar input { width: 220px; }
+    .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; }
+
+    .stats {
+      display: flex; gap: 12px; padding: 16px 24px; flex-wrap: wrap;
+    }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 12px 20px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06); font-size: 0.9rem;
+    }
+    .stat-card .num { font-size: 1.4rem; font-weight: 700; }
+    .stat-card.warning .num { color: #f59e0b; }
+    .stat-card.danger .num { color: #ef4444; }
+    .stat-card.ok .num { color: #10b981; }
+
+    .main { padding: 16px 24px; }
+
+    .section-title {
+      font-size: 1rem; font-weight: 600; color: #475569;
+      margin: 24px 0 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .count {
+      background: #e2e8f0; border-radius: 20px;
+      padding: 2px 10px; font-size: 0.8rem; color: #64748b;
+    }
+
+    /* Séjours */
+    .sejour-block {
+      background: white; border-radius: 16px; margin-bottom: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08); overflow: hidden;
+    }
+    .sejour-header {
+      padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+      background: #1a2e4a; color: white; cursor: pointer;
+    }
+    .sejour-header h3 { flex: 1; font-size: 1rem; }
+    .sejour-dates { font-size: 0.85rem; color: #94a3b8; }
+    .sejour-body { padding: 12px 20px; }
+
+    .person-card {
+      background: #f8fafc; border-radius: 10px; margin-bottom: 6px; overflow: hidden;
+    }
+    .person-header {
+      padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer;
+    }
+    .person-header:hover { background: #f1f5f9; }
+    .person-name { font-weight: 600; flex: 1; font-size: 0.95rem; }
+    .person-foyer { font-size: 0.82rem; color: #64748b; }
+
+    .doc-badges { display: flex; gap: 6px; }
+    .badge {
+      padding: 3px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+    }
+    .badge.ok { background: #d1fae5; color: #065f46; }
+    .badge.missing { background: #fee2e2; color: #991b1b; }
+
+    .chevron { color: #94a3b8; transition: transform 0.2s; font-size: 0.8rem; }
+    .chevron.open { transform: rotate(90deg); }
+
+    .person-docs { display: none; padding: 0 16px 12px; }
+    .person-docs.open { display: block; }
+
+    .doc-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem;
+    }
+    .doc-row:last-child { border-bottom: none; }
+    .doc-type-label { width: 120px; font-weight: 500; color: #475569; }
+    .doc-filename { flex: 1; color: #1a2e4a; }
+    .doc-date { color: #94a3b8; font-size: 0.78rem; width: 90px; }
+    .doc-missing { color: #ef4444; font-style: italic; flex: 1; font-size: 0.83rem; }
+
+    .btn-view {
+      background: #3b82f6; color: white; border: none;
+      border-radius: 7px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer;
+    }
+    .btn-view:hover { background: #2563eb; }
+
+    /* À classer */
+    .unlinked-card {
+      background: white; border-radius: 12px; padding: 14px 20px;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06); font-size: 0.9rem;
+    }
+    .unlinked-info { flex: 1; }
+    .unlinked-info strong { display: block; }
+    .unlinked-info span { color: #64748b; font-size: 0.82rem; }
+    select.link-select {
+      padding: 6px 10px; border: 1px solid #cbd5e1;
+      border-radius: 8px; font-size: 0.85rem;
+    }
+    .btn-confirm {
+      background: #10b981; color: white; border: none;
+      border-radius: 8px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; padding: 32px;
+      width: 420px; max-width: 90vw;
+    }
+    .modal h2 { margin-bottom: 20px; font-size: 1.1rem; }
+    .modal label { display: block; margin-bottom: 4px; font-size: 0.9rem; color: #475569; }
+    .modal input {
+      width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1;
+      border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem;
+    }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel {
+      background: #f1f5f9; color: #475569; border: none;
+      border-radius: 8px; padding: 8px 16px; cursor: pointer;
+    }
+    .btn-save {
+      background: #1a2e4a; color: white; border: none;
+      border-radius: 8px; padding: 8px 16px; cursor: pointer;
+    }
+
+    /* Confirmation séjour */
+    .confirm-banner {
+      background: #eff6ff; border-left: 4px solid #3b82f6;
+      padding: 12px 24px; display: none; align-items: center; gap: 12px;
+      font-size: 0.9rem; color: #1e40af;
+    }
+    .confirm-banner.show { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn-confirm-small {
+      background: #3b82f6; color: white; border: none;
+      border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 0.85rem;
+    }
+    .btn-reject-small {
+      background: #fee2e2; color: #991b1b; border: none;
+      border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 0.85rem;
+    }
+
+    .loading { text-align: center; padding: 48px; color: #94a3b8; }
+    .empty-sejour { color: #94a3b8; font-size: 0.9rem; padding: 12px 0; }
+  </style>
 </head>
 <body>
 
