@@ -580,13 +580,24 @@ async function fetchData() {
 function getPersonDocs(id)    { return allDocuments.filter(d => d.personne_id === id); }
 function getUnlinked()        { return allDocuments.filter(d => !d.personne_id); }
 function getMissingTypes(id)  { const t = getPersonDocs(id).map(d => d.type); return REQUIRED_TYPES.filter(x => !t.includes(x)); }
+
 function getStatus(id) {
   const docs = getPersonDocs(id);
   if (!docs.length) return 'empty';
-  // Dossier complet = un seul PDF qui contient tout
-  if (docs.find(d => d.type === 'dossier_complet')) return 'complete';
-  // Ou les deux types présents
-  if (docs.find(d => d.type === 'inscription') && docs.find(d => d.type === 'confidentiel')) return 'complete';
+  
+  // Dossier complet vérifié
+  const dossierComplet = docs.find(d => d.type === 'dossier_complet' && d.verified);
+  if (dossierComplet) return 'complete';
+  
+  // Dossier complet non vérifié
+  const dossierNonVerif = docs.find(d => d.type === 'dossier_complet' && !d.verified);
+  if (dossierNonVerif) return 'pending';
+
+  // Inscription + confidentiel tous deux présents mais non vérifiés
+  const hasInscription = docs.find(d => d.type === 'inscription');
+  const hasConfidentiel = docs.find(d => d.type === 'confidentiel');
+  if (hasInscription && hasConfidentiel) return 'pending';
+
   return 'incomplete';
 }
 function getSejourPersonnes(sid) {
@@ -666,11 +677,13 @@ function buildFilters() {
 
 function buildStats() {
   const complets  = allPersonnes.filter(p => getStatus(p.id) === 'complete').length;
+  const pending   = allPersonnes.filter(p => getStatus(p.id) === 'pending').length;
   const incomplets= allPersonnes.filter(p => getStatus(p.id) === 'incomplete').length;
   const vides     = allPersonnes.filter(p => getStatus(p.id) === 'empty').length;
   const aClasser  = getUnlinked().length;
   document.getElementById('statsBar').innerHTML = `
     <div class="stat-chip ok"><span class="num">${complets}</span> complets</div>
+    <div class="stat-chip warn"><span class="num">${pending}</span> à vérifier</div>
     <div class="stat-chip warn"><span class="num">${incomplets}</span> incomplets</div>
     <div class="stat-chip danger"><span class="num">${vides}</span> sans document</div>
     <div class="stat-chip warn"><span class="num">${aClasser}</span> à classer</div>
@@ -735,29 +748,32 @@ function buildPersonCard(p, sejourId = null) {
 
   const badges = status === 'complete'
     ? `<span class="badge ok">✅ Dossier complet</span>`
+    : status === 'pending'
+    ? `<span class="badge pending">⏳ En attente de vérif</span>`
     : REQUIRED_TYPES.map(t => {
         const has = docs.find(d => d.type === t);
         return `<span class="badge ${has ? 'ok' : 'missing'}">${TYPE_LABELS[t]}</span>`;
       }).join('');
 
+  // ← ICI le bloc docRows
   const docRows = REQUIRED_TYPES.map(t => {
-  const typeDocs = docs.filter(d => d.type === t);
-  if (typeDocs.length === 0) return `
-    <div class="doc-row">
-      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-      <span class="doc-missing">— Document manquant</span>
-    </div>`;
-  return typeDocs.map(doc => `
-    <div class="doc-row">
-      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-      <span class="doc-filename">${doc.filename}</span>
-      <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-    </div>`).join('');
+    const typeDocs = docs.filter(d => d.type === t);
+    if (typeDocs.length === 0) return `
+      <div class="doc-row">
+        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+        <span class="doc-missing">— Document manquant</span>
+      </div>`;
+    return typeDocs.map(doc => `
+      <div class="doc-row">
+        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+        <span class="doc-filename">${doc.filename}</span>
+        <span class="doc-date">${fmtDate(doc.email_date)}</span>
+        <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
+      </div>`).join('');
   }).join('');
 
-  // Documents non classés avec sélecteur de type
+  // Docs non classés
   const unclassified = docs.filter(d => !REQUIRED_TYPES.includes(d.type) && d.type !== 'dossier_complet');
   const unclassifiedRows = unclassified.map(doc => `
     <div class="doc-row">
@@ -765,6 +781,7 @@ function buildPersonCard(p, sejourId = null) {
       <span class="doc-filename">${doc.filename}</span>
       <span class="doc-date">${fmtDate(doc.email_date)}</span>
       <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
       <select class="link-select" onchange="classifyDoc('${doc.id}', this.value)">
         <option value="">— Classer comme...</option>
         <option value="inscription">📝 Inscription</option>
@@ -772,6 +789,14 @@ function buildPersonCard(p, sejourId = null) {
         <option value="dossier_complet">📁 Dossier complet</option>
       </select>
     </div>`).join('');
+
+  // Bouton valider si pending
+  const btnValider = status === 'pending' ? `
+    <div style="padding:10px 0;border-top:1px solid var(--border-light);margin-top:4px">
+      <button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">
+        ✅ Valider le dossier comme complet
+      </button>
+    </div>` : '';
 
   const removeBtn = sejourId
     ? `<button class="btn btn-danger btn-sm" onclick="removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`
@@ -790,8 +815,16 @@ function buildPersonCard(p, sejourId = null) {
       <div class="person-docs" id="docs-${uid}">
         ${docRows}
         ${unclassifiedRows}
+        ${btnValider}
       </div>
     </div>`;
+}
+
+async function validerDossier(personneId) {
+  if (!confirm('Confirmer que le dossier est complet ?')) return;
+  // Marquer tous les docs de cette personne comme vérifiés
+  await api(`/rest/v1/documents?personne_id=eq.${personneId}`, 'PATCH', { verified: true });
+  await init();
 }
 
 async function classifyDoc(docId, type) {
