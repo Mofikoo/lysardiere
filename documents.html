@@ -4,226 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Documents — La Lysardière</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a2e4a; }
-
-    header {
-      background: #1a2e4a;
-      color: white;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    header a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
-    header h1 { font-size: 1.2rem; }
-
-    .alert-banner {
-      background: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 12px 24px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      font-size: 0.95rem;
-      color: #92400e;
-    }
-    .alert-banner.show { display: flex; }
-
-    .toolbar {
-      padding: 16px 24px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-      background: white;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .toolbar input, .toolbar select {
-      padding: 8px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      outline: none;
-    }
-    .toolbar input { width: 240px; }
-    .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; }
-
-    .stats {
-      display: flex;
-      gap: 12px;
-      padding: 16px 24px;
-      flex-wrap: wrap;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 12px;
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      font-size: 0.9rem;
-    }
-    .stat-card .num { font-size: 1.4rem; font-weight: 700; }
-    .stat-card.warning .num { color: #f59e0b; }
-    .stat-card.danger .num { color: #ef4444; }
-    .stat-card.ok .num { color: #10b981; }
-
-    .main { padding: 16px 24px; }
-
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #475569;
-      margin: 24px 0 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-title .count {
-      background: #e2e8f0;
-      border-radius: 20px;
-      padding: 2px 10px;
-      font-size: 0.8rem;
-      color: #64748b;
-    }
-
-    .person-card {
-      background: white;
-      border-radius: 12px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      overflow: hidden;
-    }
-    .person-header {
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .person-header:hover { background: #f8fafc; }
-    .person-name { font-weight: 600; flex: 1; }
-    .person-foyer { font-size: 0.85rem; color: #64748b; }
-
-    .doc-badges { display: flex; gap: 6px; }
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .badge.ok { background: #d1fae5; color: #065f46; }
-    .badge.missing { background: #fee2e2; color: #991b1b; }
-    .badge.pending { background: #fef3c7; color: #92400e; }
-
-    .chevron { color: #94a3b8; transition: transform 0.2s; }
-    .chevron.open { transform: rotate(90deg); }
-
-    .person-docs {
-      display: none;
-      padding: 0 20px 16px;
-      border-top: 1px solid #f1f5f9;
-    }
-    .person-docs.open { display: block; }
-
-    .doc-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 0.9rem;
-    }
-    .doc-row:last-child { border-bottom: none; }
-    .doc-type-label {
-      width: 120px;
-      font-weight: 500;
-      color: #475569;
-    }
-    .doc-filename { flex: 1; color: #1a2e4a; }
-    .doc-date { color: #94a3b8; font-size: 0.8rem; width: 100px; }
-    .doc-missing { color: #ef4444; font-style: italic; flex: 1; font-size: 0.85rem; }
-
-    .btn-view {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 14px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-    }
-    .btn-view:hover { background: #2563eb; }
-
-    .btn-link {
-      background: #f1f5f9;
-      color: #475569;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 14px;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-    .btn-link:hover { background: #e2e8f0; }
-
-    /* Section à classer */
-    .unlinked-card {
-      background: white;
-      border-radius: 12px;
-      padding: 14px 20px;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      font-size: 0.9rem;
-    }
-    .unlinked-icon { font-size: 1.5rem; }
-    .unlinked-info { flex: 1; }
-    .unlinked-info strong { display: block; }
-    .unlinked-info span { color: #64748b; font-size: 0.82rem; }
-
-    select.link-select {
-      padding: 6px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.85rem;
-    }
-
-    .btn-confirm {
-      background: #10b981;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 14px;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-    .btn-confirm:hover { background: #059669; }
-
-    .loading { text-align: center; padding: 48px; color: #94a3b8; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
   <a href="index.html">← Accueil</a>
   <h1>📄 Documents d'inscription</h1>
+  <button class="btn-add-sejour" onclick="openModal()">+ Nouveau séjour</button>
 </header>
 
 <div class="alert-banner" id="alertBanner">
-  <span>🔔</span>
-  <span id="alertText"></span>
+  🔔 <span id="alertText"></span>
 </div>
+
+<div class="confirm-banner" id="confirmBanner"></div>
 
 <div class="toolbar">
   <input type="text" id="searchInput" placeholder="🔍 Rechercher un vacancier...">
+  <select id="filterSejour">
+    <option value="">Tous les séjours</option>
+    <option value="none">Sans séjour</option>
+  </select>
   <select id="filterStatus">
     <option value="">Tous les statuts</option>
     <option value="complete">Complets ✅</option>
@@ -236,40 +38,67 @@
 </div>
 
 <div class="stats" id="statsBar"></div>
+<div class="main" id="mainContent"><div class="loading">Chargement...</div></div>
 
-<div class="main" id="mainContent">
-  <div class="loading">Chargement...</div>
+<!-- Modal nouveau séjour -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>✈️ Nouveau séjour</h2>
+    <label>Nom du séjour</label>
+    <input type="text" id="sejourNom" placeholder="Ex: Séjour été 2026">
+    <label>Date de début</label>
+    <input type="date" id="sejourDebut">
+    <label>Date de fin</label>
+    <input type="date" id="sejourFin">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" onclick="saveSejour()">Créer</button>
+    </div>
+  </div>
 </div>
 
 <script>
 const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+const SUPABASE_ANON_KEY = 'REMPLACE_PAR_TA_ANON_KEY';
 const REQUIRED_TYPES = ['inscription', 'medical', 'confidentiel'];
 const TYPE_LABELS = { inscription: '📝 Inscription', medical: '🏥 Médical', confidentiel: '🔒 Confidentiel' };
 
-let allPersonnes = [];
-let allDocuments = [];
-let personnesSelect = [];
+let allPersonnes = [], allDocuments = [], allSejours = [], allSejoursPersonnes = [];
+
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + path, opts);
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
 
 async function fetchData() {
-  const [pRes, dRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/personnes?select=id,data&order=id.asc`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-    }),
-    fetch(`${SUPABASE_URL}/rest/v1/documents?select=*&order=email_date.desc`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-    })
+  const [pRaw, docs, sejours, sp] = await Promise.all([
+    api('/rest/v1/personnes?select=id,data&order=id.asc'),
+    api('/rest/v1/documents?select=*&order=email_date.desc'),
+    api('/rest/v1/sejours?select=*&order=date_debut.asc'),
+    api('/rest/v1/sejours_personnes?select=*')
   ]);
-  const rawPersonnes = await pRes.json();
-  allDocuments = await dRes.json();
 
-  // Aplatir les données jsonb
-  allPersonnes = rawPersonnes.map(p => ({
+  allPersonnes = (pRaw || []).map(p => ({
     id: p.id,
     prenom: p.data?.prenom || '',
     nom: p.data?.nom || '',
     foyer: p.data?.foyer || ''
   }));
+  allDocuments = docs || [];
+  allSejours = sejours || [];
+  allSejoursPersonnes = sp || [];
 }
 
 function getPersonDocs(personneId) {
@@ -281,84 +110,112 @@ function getUnlinked() {
 }
 
 function getMissingTypes(personneId) {
-  const docs = getPersonDocs(personneId);
-  const presentTypes = docs.map(d => d.type);
-  return REQUIRED_TYPES.filter(t => !presentTypes.includes(t));
+  const types = getPersonDocs(personneId).map(d => d.type);
+  return REQUIRED_TYPES.filter(t => !types.includes(t));
 }
 
 function getStatus(personneId) {
-  const missing = getMissingTypes(personneId);
   const docs = getPersonDocs(personneId);
   if (docs.length === 0) return 'empty';
-  if (missing.length === 0) return 'complete';
+  if (getMissingTypes(personneId).length === 0) return 'complete';
   return 'incomplete';
 }
 
+function getPersonSejours(personneId) {
+  return allSejoursPersonnes.filter(sp => sp.personne_id === personneId);
+}
+
+function getSejourPersonnes(sejourId) {
+  return allSejoursPersonnes
+    .filter(sp => sp.sejour_id === sejourId)
+    .map(sp => allPersonnes.find(p => p.id === sp.personne_id))
+    .filter(Boolean);
+}
+
 async function getSignedUrl(path) {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/documents/${path}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ expiresIn: 60 })
-  });
-  const data = await res.json();
-  return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+  const data = await api(`/storage/v1/object/sign/documents/${path}`, 'POST', { expiresIn: 60 });
+  return data ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : null;
+}
+
+async function openDoc(path) {
+  const url = await getSignedUrl(path);
+  if (url) window.open(url, '_blank');
 }
 
 async function linkDocument(docId, personneId) {
-  const personne = allPersonnes.find(p => p.id === personneId);
-  await fetch(`${SUPABASE_URL}/rest/v1/documents?id=eq.${docId}`, {
-    method: 'PATCH',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal'
-    },
-    body: JSON.stringify({
-      personne_id: personneId,
-      personne_nom: `${personne.prenom} ${personne.nom}`,
-      status: 'linked'
-    })
+  const p = allPersonnes.find(x => x.id === personneId);
+  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', {
+    personne_id: personneId,
+    personne_nom: `${p.prenom} ${p.nom}`,
+    status: 'linked'
   });
   await init();
 }
 
+async function saveSejour() {
+  const nom = document.getElementById('sejourNom').value.trim();
+  const debut = document.getElementById('sejourDebut').value;
+  const fin = document.getElementById('sejourFin').value;
+  if (!nom || !debut || !fin) return alert('Remplis tous les champs.');
+  await api('/rest/v1/sejours', 'POST', { nom, date_debut: debut, date_fin: fin });
+  closeModal();
+  await init();
+}
+
+async function addToSejour(sejourId, personneId) {
+  await api('/rest/v1/sejours_personnes', 'POST', {
+    sejour_id: sejourId, personne_id: personneId, confirmed: true
+  });
+  await init();
+}
+
+async function removeFromSejour(sejourId, personneId) {
+  await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sejourId}&personne_id=eq.${personneId}`, 'DELETE');
+  await init();
+}
+
+function openModal() { document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
 function buildFilters() {
   const foyers = [...new Set(allPersonnes.map(p => p.foyer).filter(Boolean))].sort();
-  const sel = document.getElementById('filterFoyer');
+  const selFoyer = document.getElementById('filterFoyer');
+  selFoyer.innerHTML = '<option value="">Tous les foyers</option>';
   foyers.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f;
-    opt.textContent = f;
-    sel.appendChild(opt);
+    const o = document.createElement('option'); o.value = f; o.textContent = f;
+    selFoyer.appendChild(o);
+  });
+
+  const selSejour = document.getElementById('filterSejour');
+  selSejour.innerHTML = '<option value="">Tous les séjours</option><option value="none">Sans séjour</option>';
+  allSejours.forEach(s => {
+    const o = document.createElement('option'); o.value = s.id;
+    o.textContent = `${s.nom} (${fmtDate(s.date_debut)})`;
+    selSejour.appendChild(o);
   });
 }
 
 function buildStats() {
-  const total = allPersonnes.length;
   const complets = allPersonnes.filter(p => getStatus(p.id) === 'complete').length;
   const incomplets = allPersonnes.filter(p => getStatus(p.id) === 'incomplete').length;
   const vides = allPersonnes.filter(p => getStatus(p.id) === 'empty').length;
   const aClasser = getUnlinked().length;
-
   document.getElementById('statsBar').innerHTML = `
     <div class="stat-card ok"><span class="num">${complets}</span> complets</div>
     <div class="stat-card warning"><span class="num">${incomplets}</span> incomplets</div>
     <div class="stat-card danger"><span class="num">${vides}</span> sans document</div>
     <div class="stat-card warning"><span class="num">${aClasser}</span> à classer</div>
-    <div class="stat-card"><span class="num">${total}</span> vacanciers</div>
+    <div class="stat-card"><span class="num">${allPersonnes.length}</span> vacanciers</div>
   `;
 }
 
-function buildPersonneCard(p) {
-  const docs = getPersonDocs(p.id);
-  const missing = getMissingTypes(p.id);
-  const status = getStatus(p.id);
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('fr-FR');
+}
 
+function buildPersonCard(p, sejourId = null) {
+  const docs = getPersonDocs(p.id);
   const badges = REQUIRED_TYPES.map(t => {
     const has = docs.find(d => d.type === t);
     return `<span class="badge ${has ? 'ok' : 'missing'}">${TYPE_LABELS[t]}</span>`;
@@ -366,52 +223,102 @@ function buildPersonneCard(p) {
 
   const docRows = REQUIRED_TYPES.map(t => {
     const doc = docs.find(d => d.type === t);
-    if (doc) {
-      const date = new Date(doc.email_date).toLocaleDateString('fr-FR');
-      return `
-        <div class="doc-row">
-          <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-          <span class="doc-filename">${doc.filename}</span>
-          <span class="doc-date">${date}</span>
-          <button class="btn-view" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-        </div>`;
-    } else {
-      return `
-        <div class="doc-row">
-          <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-          <span class="doc-missing">— Document manquant</span>
-        </div>`;
-    }
+    if (doc) return `
+      <div class="doc-row">
+        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+        <span class="doc-filename">${doc.filename}</span>
+        <span class="doc-date">${fmtDate(doc.email_date)}</span>
+        <button class="btn-view" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      </div>`;
+    return `
+      <div class="doc-row">
+        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+        <span class="doc-missing">— Document manquant</span>
+      </div>`;
   }).join('');
 
+  const removeBtn = sejourId
+    ? `<button class="btn-view" style="background:#ef4444" onclick="removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`
+    : '';
+
+  const uid = `${p.id}-${sejourId || 'all'}`;
   return `
-    <div class="person-card" data-id="${p.id}" data-foyer="${p.foyer || ''}" data-status="${status}">
-      <div class="person-header" onclick="toggleCard('${p.id}')">
+    <div class="person-card">
+      <div class="person-header" onclick="toggleCard('${uid}')">
         <span class="person-name">${p.prenom} ${p.nom}</span>
-        <span class="person-foyer">${p.foyer || ''}</span>
+        <span class="person-foyer">${p.foyer}</span>
         <div class="doc-badges">${badges}</div>
-        <span class="chevron" id="chev-${p.id}">▶</span>
+        ${removeBtn}
+        <span class="chevron" id="chev-${uid}">▶</span>
       </div>
-      <div class="person-docs" id="docs-${p.id}">
-        ${docRows}
-      </div>
+      <div class="person-docs" id="docs-${uid}">${docRows}</div>
     </div>`;
+}
+
+function buildSejoursSection(personnesFiltered) {
+  if (allSejours.length === 0) return `
+    <div class="section-title">✈️ Séjours</div>
+    <p style="color:#94a3b8;font-size:0.9rem;padding:12px 0">Aucun séjour créé. Cliquez sur "+ Nouveau séjour".</p>`;
+
+  return allSejours.map(s => {
+    const personnes = getSejourPersonnes(s.id)
+      .filter(p => personnesFiltered.some(pf => pf.id === p.id));
+
+    const otherPersonnes = personnesFiltered.filter(p =>
+      !allSejoursPersonnes.some(sp => sp.sejour_id === s.id && sp.personne_id === p.id)
+    );
+
+    const options = otherPersonnes.map(p =>
+      `<option value="${p.id}">${p.prenom} ${p.nom}</option>`
+    ).join('');
+
+    const cards = personnes.length > 0
+      ? personnes.map(p => buildPersonCard(p, s.id)).join('')
+      : `<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
+
+    return `
+      <div class="sejour-block">
+        <div class="sejour-header" onclick="toggleSejour('sejour-${s.id}')">
+          <h3>✈️ ${s.nom}</h3>
+          <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
+          <span class="count" style="background:rgba(255,255,255,0.2);color:white;border-radius:20px;padding:2px 10px;font-size:0.8rem;margin-left:8px">${personnes.length} vacancier(s)</span>
+          <span style="color:#94a3b8;margin-left:8px">▶</span>
+        </div>
+        <div id="sejour-${s.id}" style="display:none">
+          <div class="sejour-body">
+            ${cards}
+            ${options ? `
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+              <select class="link-select" id="add-sel-${s.id}">
+                <option value="">+ Ajouter un vacancier</option>
+                ${options}
+              </select>
+              <button class="btn-confirm" onclick="addPersonToSejour('${s.id}')">Ajouter</button>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function addPersonToSejour(sejourId) {
+  const sel = document.getElementById(`add-sel-${sejourId}`);
+  if (!sel.value) return;
+  await addToSejour(sejourId, sel.value);
 }
 
 function buildUnlinked() {
   const unlinked = getUnlinked();
   if (unlinked.length === 0) return '';
-
   const options = allPersonnes.map(p =>
     `<option value="${p.id}">${p.prenom} ${p.nom}</option>`
   ).join('');
-
   const rows = unlinked.map(doc => `
-    <div class="unlinked-card" id="unlinked-${doc.id}">
-      <span class="unlinked-icon">📄</span>
+    <div class="unlinked-card">
+      <span style="font-size:1.5rem">📄</span>
       <div class="unlinked-info">
         <strong>${doc.filename}</strong>
-        <span>De : ${doc.email_from} — ${new Date(doc.email_date).toLocaleDateString('fr-FR')}</span>
+        <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
       </div>
       <button class="btn-view" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
       <select class="link-select" id="sel-${doc.id}">
@@ -419,46 +326,8 @@ function buildUnlinked() {
         ${options}
       </select>
       <button class="btn-confirm" onclick="confirmLink('${doc.id}')">Lier</button>
-    </div>
-  `).join('');
-
-  return `
-    <div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>
-    ${rows}
-  `;
-}
-
-function renderAll() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const filterStatus = document.getElementById('filterStatus').value;
-  const filterFoyer = document.getElementById('filterFoyer').value;
-
-  let personnes = allPersonnes.filter(p => {
-    const name = `${p.prenom} ${p.nom}`.toLowerCase();
-    const foyer = (p.foyer || '').toLowerCase();
-    if (search && !name.includes(search) && !foyer.includes(search)) return false;
-    if (filterStatus && getStatus(p.id) !== filterStatus) return false;
-    if (filterFoyer && p.foyer !== filterFoyer) return false;
-    return true;
-  });
-
-  const html = buildUnlinked() +
-    `<div class="section-title">👥 Vacanciers <span class="count">${personnes.length}</span></div>` +
-    personnes.map(buildPersonneCard).join('');
-
-  document.getElementById('mainContent').innerHTML = html;
-}
-
-function toggleCard(id) {
-  const docs = document.getElementById(`docs-${id}`);
-  const chev = document.getElementById(`chev-${id}`);
-  docs.classList.toggle('open');
-  chev.classList.toggle('open');
-}
-
-async function openDoc(path) {
-  const url = await getSignedUrl(path);
-  window.open(url, '_blank');
+    </div>`).join('');
+  return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
 }
 
 async function confirmLink(docId) {
@@ -467,25 +336,96 @@ async function confirmLink(docId) {
   await linkDocument(docId, sel.value);
 }
 
-function checkAlert() {
+function checkAlerts() {
   const newDocs = allDocuments.filter(d => d.status === 'new');
   if (newDocs.length > 0) {
     document.getElementById('alertText').textContent =
       `${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`;
     document.getElementById('alertBanner').classList.add('show');
   }
+
+  // Liaisons séjour à confirmer
+  const toConfirm = allSejoursPersonnes.filter(sp => sp.confirmed === false);
+  if (toConfirm.length > 0) {
+    const banner = document.getElementById('confirmBanner');
+    banner.classList.add('show');
+    banner.innerHTML = `<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>` +
+      toConfirm.map(sp => {
+        const p = allPersonnes.find(x => x.id === sp.personne_id);
+        const s = allSejours.find(x => x.id === sp.sejour_id);
+        if (!p || !s) return '';
+        return `
+          <span><strong>${p.prenom} ${p.nom}</strong> → ${s.nom}</span>
+          <button class="btn-confirm-small" onclick="confirmSejour('${sp.id}')">Confirmer</button>
+          <button class="btn-reject-small" onclick="rejectSejour('${sp.id}')">Rejeter</button>`;
+      }).join('');
+  }
+}
+
+async function confirmSejour(spId) {
+  await api(`/rest/v1/sejours_personnes?id=eq.${spId}`, 'PATCH', { confirmed: true });
+  await init();
+}
+
+async function rejectSejour(spId) {
+  await api(`/rest/v1/sejours_personnes?id=eq.${spId}`, 'DELETE');
+  await init();
+}
+
+function toggleCard(uid) {
+  document.getElementById(`docs-${uid}`)?.classList.toggle('open');
+  document.getElementById(`chev-${uid}`)?.classList.toggle('open');
+}
+
+function toggleSejour(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function getFilteredPersonnes() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filterStatus = document.getElementById('filterStatus').value;
+  const filterFoyer = document.getElementById('filterFoyer').value;
+  const filterSejour = document.getElementById('filterSejour').value;
+
+  return allPersonnes.filter(p => {
+    const name = `${p.prenom} ${p.nom}`.toLowerCase();
+    if (search && !name.includes(search) && !(p.foyer||'').toLowerCase().includes(search)) return false;
+    if (filterStatus && getStatus(p.id) !== filterStatus) return false;
+    if (filterFoyer && p.foyer !== filterFoyer) return false;
+    if (filterSejour === 'none' && allSejoursPersonnes.some(sp => sp.personne_id === p.id)) return false;
+    if (filterSejour && filterSejour !== 'none' && !allSejoursPersonnes.some(sp => sp.sejour_id === filterSejour && sp.personne_id === p.id)) return false;
+    return true;
+  });
+}
+
+function renderAll() {
+  const personnes = getFilteredPersonnes();
+  const filterSejour = document.getElementById('filterSejour').value;
+
+  let html = buildUnlinked();
+
+  if (!filterSejour || filterSejour === 'none') {
+    html += buildSejoursSection(personnes);
+  }
+
+  html += `<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
+  html += personnes.map(p => buildPersonCard(p)).join('');
+
+  document.getElementById('mainContent').innerHTML = html;
 }
 
 async function init() {
   await fetchData();
   buildFilters();
   buildStats();
-  checkAlert();
+  checkAlerts();
   renderAll();
 
   document.getElementById('searchInput').addEventListener('input', renderAll);
   document.getElementById('filterStatus').addEventListener('change', renderAll);
   document.getElementById('filterFoyer').addEventListener('change', renderAll);
+  document.getElementById('filterSejour').addEventListener('change', renderAll);
 }
 
 init();
