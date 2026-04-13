@@ -680,21 +680,29 @@ function buildPersonCard(p, sejourId = null) {
     return `<span class="badge ${has ? 'ok' : 'missing'}">${TYPE_LABELS[t]}</span>`;
   }).join('');
 
-  const docRows = REQUIRED_TYPES.map(t => {
-    const doc = docs.find(d => d.type === t);
-    if (doc) return `
-      <div class="doc-row">
-        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-        <span class="doc-filename">${doc.filename}</span>
-        <span class="doc-date">${fmtDate(doc.email_date)}</span>
-        <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-      </div>`;
-    return `
-      <div class="doc-row">
-        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-        <span class="doc-missing">— Document manquant</span>
-      </div>`;
-  }).join('');
+const docRows = REQUIRED_TYPES.map(t => {
+  const doc = docs.find(d => d.type === t);
+  if (doc) return `
+    <div class="doc-row">
+      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+      <span class="doc-filename">${doc.filename}</span>
+      <span class="doc-date">${fmtDate(doc.email_date)}</span>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+    </div>`;
+  return `
+    <div class="doc-row">
+      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+      <span class="doc-missing">— Document manquant</span>
+    </div>`;
+}).join('') +
+// Afficher aussi les docs non classifiés
+docs.filter(d => !REQUIRED_TYPES.includes(d.type)).map(doc => `
+  <div class="doc-row">
+    <span class="doc-type-label" style="color:var(--orange)">📎 Non classé</span>
+    <span class="doc-filename">${doc.filename}</span>
+    <span class="doc-date">${fmtDate(doc.email_date)}</span>
+    <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+  </div>`).join('');
 
   const removeBtn = sejourId
     ? `<button class="btn btn-danger btn-sm" onclick="removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`
