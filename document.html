@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documents — La Lysardière</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a2e4a; }
+
+    header {
+      background: #1a2e4a;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
+    header h1 { font-size: 1.2rem; }
+
+    .alert-banner {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 24px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      color: #92400e;
+    }
+    .alert-banner.show { display: flex; }
+
+    .toolbar {
+      padding: 16px 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .toolbar input, .toolbar select {
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .toolbar input { width: 240px; }
+    .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      padding: 16px 24px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 0.9rem;
+    }
+    .stat-card .num { font-size: 1.4rem; font-weight: 700; }
+    .stat-card.warning .num { color: #f59e0b; }
+    .stat-card.danger .num { color: #ef4444; }
+    .stat-card.ok .num { color: #10b981; }
+
+    .main { padding: 16px 24px; }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #475569;
+      margin: 24px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .count {
+      background: #e2e8f0;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .person-card {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .person-header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .person-header:hover { background: #f8fafc; }
+    .person-name { font-weight: 600; flex: 1; }
+    .person-foyer { font-size: 0.85rem; color: #64748b; }
+
+    .doc-badges { display: flex; gap: 6px; }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.ok { background: #d1fae5; color: #065f46; }
+    .badge.missing { background: #fee2e2; color: #991b1b; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+
+    .chevron { color: #94a3b8; transition: transform 0.2s; }
+    .chevron.open { transform: rotate(90deg); }
+
+    .person-docs {
+      display: none;
+      padding: 0 20px 16px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .person-docs.open { display: block; }
+
+    .doc-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.9rem;
+    }
+    .doc-row:last-child { border-bottom: none; }
+    .doc-type-label {
+      width: 120px;
+      font-weight: 500;
+      color: #475569;
+    }
+    .doc-filename { flex: 1; color: #1a2e4a; }
+    .doc-date { color: #94a3b8; font-size: 0.8rem; width: 100px; }
+    .doc-missing { color: #ef4444; font-style: italic; flex: 1; font-size: 0.85rem; }
+
+    .btn-view {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-view:hover { background: #2563eb; }
+
+    .btn-link {
+      background: #f1f5f9;
+      color: #475569;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-link:hover { background: #e2e8f0; }
+
+    /* Section à classer */
+    .unlinked-card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 0.9rem;
+    }
+    .unlinked-icon { font-size: 1.5rem; }
+    .unlinked-info { flex: 1; }
+    .unlinked-info strong { display: block; }
+    .unlinked-info span { color: #64748b; font-size: 0.82rem; }
+
+    select.link-select {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .btn-confirm {
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-confirm:hover { background: #059669; }
+
+    .loading { text-align: center; padding: 48px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="index.html">← Accueil</a>
+  <h1>📄 Documents d'inscription</h1>
+</header>
+
+<div class="alert-banner" id="alertBanner">
+  <span>🔔</span>
+  <span id="alertText"></span>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍 Rechercher un vacancier...">
+  <select id="filterStatus">
+    <option value="">Tous les statuts</option>
+    <option value="complete">Complets ✅</option>
+    <option value="incomplete">Incomplets ⚠️</option>
+    <option value="empty">Aucun document 🔴</option>
+  </select>
+  <select id="filterFoyer">
+    <option value="">Tous les foyers</option>
+  </select>
+</div>
+
+<div class="stats" id="statsBar"></div>
+
+<div class="main" id="mainContent">
+  <div class="loading">Chargement...</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+const REQUIRED_TYPES = ['inscription', 'medical', 'confidentiel'];
+const TYPE_LABELS = { inscription: '📝 Inscription', medical: '🏥 Médical', confidentiel: '🔒 Confidentiel' };
+
+let allPersonnes = [];
+let allDocuments = [];
+let personnesSelect = [];
+
+async function fetchData() {
+  const [pRes, dRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/personnes?select=id,prenom,nom,foyer&order=nom.asc`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+    }),
+    fetch(`${SUPABASE_URL}/rest/v1/documents?select=*&order=email_date.desc`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+    })
+  ]);
+  allPersonnes = await pRes.json();
+  allDocuments = await dRes.json();
+}
+
+function getPersonDocs(personneId) {
+  return allDocuments.filter(d => d.personne_id === personneId);
+}
+
+function getUnlinked() {
+  return allDocuments.filter(d => !d.personne_id);
+}
+
+function getMissingTypes(personneId) {
+  const docs = getPersonDocs(personneId);
+  const presentTypes = docs.map(d => d.type);
+  return REQUIRED_TYPES.filter(t => !presentTypes.includes(t));
+}
+
+function getStatus(personneId) {
+  const missing = getMissingTypes(personneId);
+  const docs = getPersonDocs(personneId);
+  if (docs.length === 0) return 'empty';
+  if (missing.length === 0) return 'complete';
+  return 'incomplete';
+}
+
+async function getSignedUrl(path) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/documents/${path}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiresIn: 60 })
+  });
+  const data = await res.json();
+  return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+}
+
+async function linkDocument(docId, personneId) {
+  const personne = allPersonnes.find(p => p.id === personneId);
+  await fetch(`${SUPABASE_URL}/rest/v1/documents?id=eq.${docId}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify({
+      personne_id: personneId,
+      personne_nom: `${personne.prenom} ${personne.nom}`,
+      status: 'linked'
+    })
+  });
+  await init();
+}
+
+function buildFilters() {
+  const foyers = [...new Set(allPersonnes.map(p => p.foyer).filter(Boolean))].sort();
+  const sel = document.getElementById('filterFoyer');
+  foyers.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    sel.appendChild(opt);
+  });
+}
+
+function buildStats() {
+  const total = allPersonnes.length;
+  const complets = allPersonnes.filter(p => getStatus(p.id) === 'complete').length;
+  const incomplets = allPersonnes.filter(p => getStatus(p.id) === 'incomplete').length;
+  const vides = allPersonnes.filter(p => getStatus(p.id) === 'empty').length;
+  const aClasser = getUnlinked().length;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card ok"><span class="num">${complets}</span> complets</div>
+    <div class="stat-card warning"><span class="num">${incomplets}</span> incomplets</div>
+    <div class="stat-card danger"><span class="num">${vides}</span> sans document</div>
+    <div class="stat-card warning"><span class="num">${aClasser}</span> à classer</div>
+    <div class="stat-card"><span class="num">${total}</span> vacanciers</div>
+  `;
+}
+
+function buildPersonneCard(p) {
+  const docs = getPersonDocs(p.id);
+  const missing = getMissingTypes(p.id);
+  const status = getStatus(p.id);
+
+  const badges = REQUIRED_TYPES.map(t => {
+    const has = docs.find(d => d.type === t);
+    return `<span class="badge ${has ? 'ok' : 'missing'}">${TYPE_LABELS[t]}</span>`;
+  }).join('');
+
+  const docRows = REQUIRED_TYPES.map(t => {
+    const doc = docs.find(d => d.type === t);
+    if (doc) {
+      const date = new Date(doc.email_date).toLocaleDateString('fr-FR');
+      return `
+        <div class="doc-row">
+          <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+          <span class="doc-filename">${doc.filename}</span>
+          <span class="doc-date">${date}</span>
+          <button class="btn-view" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+        </div>`;
+    } else {
+      return `
+        <div class="doc-row">
+          <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+          <span class="doc-missing">— Document manquant</span>
+        </div>`;
+    }
+  }).join('');
+
+  return `
+    <div class="person-card" data-id="${p.id}" data-foyer="${p.foyer || ''}" data-status="${status}">
+      <div class="person-header" onclick="toggleCard('${p.id}')">
+        <span class="person-name">${p.prenom} ${p.nom}</span>
+        <span class="person-foyer">${p.foyer || ''}</span>
+        <div class="doc-badges">${badges}</div>
+        <span class="chevron" id="chev-${p.id}">▶</span>
+      </div>
+      <div class="person-docs" id="docs-${p.id}">
+        ${docRows}
+      </div>
+    </div>`;
+}
+
+function buildUnlinked() {
+  const unlinked = getUnlinked();
+  if (unlinked.length === 0) return '';
+
+  const options = allPersonnes.map(p =>
+    `<option value="${p.id}">${p.prenom} ${p.nom}</option>`
+  ).join('');
+
+  const rows = unlinked.map(doc => `
+    <div class="unlinked-card" id="unlinked-${doc.id}">
+      <span class="unlinked-icon">📄</span>
+      <div class="unlinked-info">
+        <strong>${doc.filename}</strong>
+        <span>De : ${doc.email_from} — ${new Date(doc.email_date).toLocaleDateString('fr-FR')}</span>
+      </div>
+      <button class="btn-view" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <select class="link-select" id="sel-${doc.id}">
+        <option value="">— Choisir un vacancier</option>
+        ${options}
+      </select>
+      <button class="btn-confirm" onclick="confirmLink('${doc.id}')">Lier</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>
+    ${rows}
+  `;
+}
+
+function renderAll() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filterStatus = document.getElementById('filterStatus').value;
+  const filterFoyer = document.getElementById('filterFoyer').value;
+
+  let personnes = allPersonnes.filter(p => {
+    const name = `${p.prenom} ${p.nom}`.toLowerCase();
+    const foyer = (p.foyer || '').toLowerCase();
+    if (search && !name.includes(search) && !foyer.includes(search)) return false;
+    if (filterStatus && getStatus(p.id) !== filterStatus) return false;
+    if (filterFoyer && p.foyer !== filterFoyer) return false;
+    return true;
+  });
+
+  const html = buildUnlinked() +
+    `<div class="section-title">👥 Vacanciers <span class="count">${personnes.length}</span></div>` +
+    personnes.map(buildPersonneCard).join('');
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function toggleCard(id) {
+  const docs = document.getElementById(`docs-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  docs.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+async function openDoc(path) {
+  const url = await getSignedUrl(path);
+  window.open(url, '_blank');
+}
+
+async function confirmLink(docId) {
+  const sel = document.getElementById(`sel-${docId}`);
+  if (!sel.value) return alert('Choisis un vacancier.');
+  await linkDocument(docId, sel.value);
+}
+
+function checkAlert() {
+  const newDocs = allDocuments.filter(d => d.status === 'new');
+  if (newDocs.length > 0) {
+    document.getElementById('alertText').textContent =
+      `${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`;
+    document.getElementById('alertBanner').classList.add('show');
+  }
+}
+
+async function init() {
+  await fetchData();
+  buildFilters();
+  buildStats();
+  checkAlert();
+  renderAll();
+
+  document.getElementById('searchInput').addEventListener('input', renderAll);
+  document.getElementById('filterStatus').addEventListener('change', renderAll);
+  document.getElementById('filterFoyer').addEventListener('change', renderAll);
+}
+
+init();
+</script>
+</body>
+</html>
