@@ -728,9 +728,10 @@ async function getSignedUrl(path) {
   return data ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : null;
 }
 async function openDoc(path, filename) {
+  console.log('openDoc appelé:', path, filename);
   const url = await getSignedUrl(path);
-  if (!url) return;
-
+  console.log('URL générée:', url);
+  if (!url) { alert('Impossible de générer le lien'); return; }
   document.getElementById('pdfPreviewTitle').textContent = filename || path.split('/').pop();
   document.getElementById('pdfPreviewIframe').src = url;
   document.getElementById('pdfPreviewDownload').href = url;
