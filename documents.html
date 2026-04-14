@@ -457,6 +457,15 @@ body {
   .doc-type-label { width: 90px; }
   .unlinked-card { flex-wrap: wrap; }
 }
+
+
+.badge-inscription  { background: #d1fae5; color: #065f46; }
+.badge-confidentiel { background: #fee2e2; color: #991b1b; }
+.badge-ordonnance   { background: #dbeafe; color: #1e40af; }
+.badge-divers       { background: #fce7f3; color: #9d174d; }
+.badge-pending      { background: var(--orange-bg); color: var(--orange); }
+
+
 </style>
 </head>
 <body>
@@ -524,6 +533,12 @@ body {
       <input type="date" id="sejourDebut">
       <label>Date de fin</label>
       <input type="date" id="sejourFin">
+      <label>Catégorie</label>
+      <select id="sejourCategorie" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
+        <option value="weekend">🏕️ Week-end</option>
+        <option value="mini_sejour">⛺ Mini séjour</option>
+        <option value="semaine">🌊 Semaine</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Annuler</button>
@@ -536,7 +551,19 @@ body {
 const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 const REQUIRED_TYPES = ['inscription', 'confidentiel'];
-const TYPE_LABELS = { inscription: '📝 Inscription', confidentiel: '🔒 Confidentiel' };
+const TYPE_LABELS = {
+  inscription:  '📝 Inscription',
+  confidentiel: '🔒 Confidentiel',
+  ordonnance:   '💊 Ordonnance',
+  divers:       '📎 Divers'
+};
+const TYPE_BADGE_CLASS = {
+  inscription:  'badge-inscription',
+  confidentiel: 'badge-confidentiel',
+  ordonnance:   'badge-ordonnance',
+  divers:       'badge-divers',
+  autre:        'badge-divers'
+};
 
 let allPersonnes = [], allDocuments = [], allSejours = [], allSejoursPersonnes = [];
 
@@ -626,8 +653,9 @@ async function saveSejour() {
   const nom = document.getElementById('sejourNom').value.trim();
   const debut = document.getElementById('sejourDebut').value;
   const fin = document.getElementById('sejourFin').value;
+  const categorie = document.getElementById('sejourCategorie').value;
   if (!nom || !debut || !fin) return alert('Remplis tous les champs.');
-  await api('/rest/v1/sejours', 'POST', { nom, date_debut: debut, date_fin: fin });
+  await api('/rest/v1/sejours', 'POST', { nom, date_debut: debut, date_fin: fin, categorie });
   closeModal();
   await init();
 }
@@ -747,13 +775,13 @@ function buildPersonCard(p, sejourId = null) {
   const status = getStatus(p.id);
 
   const badges = status === 'complete'
-    ? `<span class="badge ok">✅ Dossier complet</span>`
-    : status === 'pending'
-    ? `<span class="badge pending">⏳ En attente de vérif</span>`
-    : REQUIRED_TYPES.map(t => {
-        const has = docs.find(d => d.type === t);
-        return `<span class="badge ${has ? 'ok' : 'missing'}">${TYPE_LABELS[t]}</span>`;
-      }).join('');
+  ? `<span class="badge badge-inscription">✅ Dossier complet</span>`
+  : status === 'pending'
+  ? `<span class="badge badge-pending">⏳ En attente de vérif</span>`
+  : REQUIRED_TYPES.map(t => {
+      const has = docs.find(d => d.type === t);
+      return `<span class="badge ${has ? TYPE_BADGE_CLASS[t] : 'badge-missing'}">${TYPE_LABELS[t]}</span>`;
+    }).join('');
 
   // ← ICI le bloc docRows
   const docRows = REQUIRED_TYPES.map(t => {
@@ -787,6 +815,8 @@ function buildPersonCard(p, sejourId = null) {
         <option value="inscription">📝 Inscription</option>
         <option value="confidentiel">🔒 Confidentiel</option>
         <option value="dossier_complet">📁 Dossier complet</option>
+        <option value="ordonnance">💊 Ordonnance</option>
+        <option value="divers">📎 Divers</option>
       </select>
     </div>`).join('');
 
@@ -838,40 +868,60 @@ function buildSejoursSection(personnesFiltered) {
     <div class="section-title">✈️ Séjours</div>
     <p class="empty">Aucun séjour créé. Cliquez sur "+ Nouveau séjour".</p>`;
 
-  const sejoursContent = allSejours.map(s => {
-    const personnes = getSejourPersonnes(s.id).filter(p => personnesFiltered.some(pf => pf.id === p.id));
-    const others    = personnesFiltered.filter(p => !allSejoursPersonnes.some(sp => sp.sejour_id === s.id && sp.personne_id === p.id));
-    const options   = others.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
-    const cards     = personnes.length ? personnes.map(p => buildPersonCard(p, s.id)).join('') : `<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
-    const uid = `sejour-${s.id}`;
+  const categories = [
+    { key: 'weekend',     label: '🏕️ Week-ends',   },
+    { key: 'mini_sejour', label: '⛺ Mini séjours', },
+    { key: 'semaine',     label: '🌊 Semaines',     },
+  ];
 
-    const estPasse = new Date(s.date_fin) < new Date();
-    const btnArchiver = estPasse ? `
-      <button class="btn btn-archive btn-sm"
-        onclick="event.stopPropagation(); archiverSejour('${s.id}')"
-        title="Archiver ce séjour">
-        📦 Archiver
-      </button>` : '';
+  const categoriesHtml = categories.map(cat => {
+    const sejours = allSejours.filter(s => (s.categorie || 'semaine') === cat.key);
+    if (!sejours.length) return '';
+
+    const sejoursHtml = sejours.map(s => {
+      const personnes = getSejourPersonnes(s.id).filter(p => personnesFiltered.some(pf => pf.id === p.id));
+      const others = personnesFiltered.filter(p => !allSejoursPersonnes.some(sp => sp.sejour_id === s.id && sp.personne_id === p.id));
+      const options = others.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
+      const cards = personnes.length ? personnes.map(p => buildPersonCard(p, s.id)).join('') : `<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
+      const uid = `sejour-${s.id}`;
+      const estPasse = new Date(s.date_fin) < new Date();
+      const btnArchiver = estPasse ? `
+        <button class="btn btn-archive btn-sm"
+          onclick="event.stopPropagation(); archiverSejour('${s.id}')"
+          title="Archiver ce séjour">📦 Archiver</button>` : '';
+
+      return `
+        <div class="sejour-block">
+          <div class="sejour-header" onclick="toggleSejour('${uid}')">
+            <h3>${s.nom}</h3>
+            <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
+            <span class="sejour-count">${personnes.length} vacancier(s)</span>
+            ${btnArchiver}
+            <span class="sejour-chevron" id="schev-${uid}">▶</span>
+          </div>
+          <div class="sejour-body" id="${uid}">
+            ${cards}
+            ${options ? `
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+              <select class="link-select" id="add-sel-${s.id}">
+                <option value="">+ Ajouter un vacancier</option>
+                ${options}
+              </select>
+              <button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button>
+            </div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
 
     return `
-      <div class="sejour-block">
-        <div class="sejour-header" onclick="toggleSejour('${uid}')">
-          <h3>✈️ ${s.nom}</h3>
-          <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
-          <span class="sejour-count">${personnes.length} vacancier(s)</span>
-          ${btnArchiver}
-          <span class="sejour-chevron" id="schev-${uid}">▶</span>
+      <div style="margin-bottom:8px">
+        <div class="section-title" style="font-size:13px;margin:12px 0 8px;cursor:pointer;user-select:none"
+          onclick="toggleCat('cat-${cat.key}', 'chev-cat-${cat.key}')">
+          ${cat.label} <span class="count">${sejours.length}</span>
+          <span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span>
         </div>
-        <div class="sejour-body" id="${uid}">
-          ${cards}
-          ${options ? `
-          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
-            <select class="link-select" id="add-sel-${s.id}">
-              <option value="">+ Ajouter un vacancier</option>
-              ${options}
-            </select>
-            <button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button>
-          </div>` : ''}
+        <div id="cat-${cat.key}" style="display:none">
+          ${sejoursHtml}
         </div>
       </div>`;
   }).join('');
@@ -882,8 +932,15 @@ function buildSejoursSection(personnesFiltered) {
       <span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span>
     </div>
     <div id="sejours-container" style="display:none">
-      ${sejoursContent}
+      ${categoriesHtml}
     </div>`;
+}
+
+function toggleCat(id, chevId) {
+  const el = document.getElementById(id);
+  const chev = document.getElementById(chevId);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (chev) chev.classList.toggle('open');
 }
 
 async function archiverSejour(sejourId) {
@@ -915,7 +972,11 @@ function toggleSejoursContainer() {
 function buildUnlinked() {
   const unlinked = getUnlinked();
   if (!unlinked.length) return '';
-  const options = allPersonnes.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
+
+  const options = allPersonnes.map(p =>
+    `<option value="${p.id}">${p.prenom} ${p.nom} — ${p.foyer}</option>`
+  ).join('');
+
   const rows = unlinked.map(doc => `
     <div class="unlinked-card">
       <span style="font-size:1.6rem">📄</span>
@@ -924,6 +985,9 @@ function buildUnlinked() {
         <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
       </div>
       <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <input type="text" placeholder="🔍 Rechercher vacancier..."
+        oninput="filterUnlinkedSelect('sel-${doc.id}', this.value)"
+        style="width:180px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:12px;font-family:'DM Sans',sans-serif">
       <select class="link-select" id="sel-${doc.id}">
         <option value="">— Choisir un vacancier</option>
         ${options}
@@ -931,7 +995,18 @@ function buildUnlinked() {
       <button class="btn btn-success btn-sm" onclick="confirmLink('${doc.id}')">Lier</button>
       <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
     </div>`).join('');
+
   return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
+}
+
+function filterUnlinkedSelect(selectId, query) {
+  const sel = document.getElementById(selectId);
+  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) return; // Garder l'option vide
+    const text = opt.textContent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    opt.style.display = text.includes(q) ? '' : 'none';
+  });
 }
 
 function checkAlerts() {
