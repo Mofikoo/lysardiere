@@ -847,25 +847,45 @@ function buildPersonCard(p, sejourId = null) {
     }).join('');
 
   // ← ICI le bloc docRows
-  const docRows = REQUIRED_TYPES.map(t => {
-    const typeDocs = docs.filter(d => d.type === t);
-    if (typeDocs.length === 0) return `
-      <div class="doc-row">
-        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-        <span class="doc-missing">— Document manquant</span>
-      </div>`;
-    return typeDocs.map(doc => `
-      <div class="doc-row">
-        <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-        <span class="doc-filename">${doc.filename}</span>
-        <span class="doc-date">${fmtDate(doc.email_date)}</span>
-        <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-      </div>`).join('');
-  }).join('');
+ // Documents obligatoires (inscription + confidentiel)
+const docRows = REQUIRED_TYPES.map(t => {
+  const typeDocs = docs.filter(d => d.type === t);
+  if (typeDocs.length === 0) return `
+    <div class="doc-row">
+      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+      <span class="doc-missing">— Document manquant</span>
+    </div>`;
+  return typeDocs.map(doc => `
+    <div class="doc-row">
+      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
+      <span class="doc-filename">${doc.filename}</span>
+      <span class="doc-date">${fmtDate(doc.email_date)}</span>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
+    </div>`).join('');
+}).join('');
 
-  // Docs non classés
-  const unclassified = docs.filter(d => !REQUIRED_TYPES.includes(d.type) && d.type !== 'dossier_complet');
+// Documents classifiés mais hors obligatoires (ordonnance, divers)
+const extraTypes = ['ordonnance', 'divers'];
+const extraRows = extraTypes.flatMap(t => 
+  docs.filter(d => d.type === t).map(doc => `
+    <div class="doc-row">
+      <span class="doc-type-label" style="color:${t === 'ordonnance' ? 'var(--blue)' : 'var(--purple)'}">${TYPE_LABELS[t]}</span>
+      <span class="doc-filename">${doc.filename}</span>
+      <span class="doc-date">${fmtDate(doc.email_date)}</span>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
+    </div>`)
+).join('');
+
+// Docs non classés
+// Documents non classés (type = 'autre' ou null)
+const unclassified = docs.filter(d => 
+  !REQUIRED_TYPES.includes(d.type) && 
+  !extraTypes.includes(d.type) && 
+  d.type !== 'dossier_complet'
+);
+  
   const unclassifiedRows = unclassified.map(doc => `
     <div class="doc-row">
       <span class="doc-type-label" style="color:var(--orange)">📎 Non classé</span>
@@ -905,8 +925,9 @@ function buildPersonCard(p, sejourId = null) {
         ${removeBtn}
         <span class="chevron" id="chev-${uid}">▶</span>
       </div>
-      <div class="person-docs" id="docs-${uid}">
+    <div class="person-docs" id="docs-${uid}">
         ${docRows}
+        ${extraRows}
         ${unclassifiedRows}
         ${btnValider}
       </div>
