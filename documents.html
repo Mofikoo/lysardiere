@@ -923,7 +923,7 @@ const docRows = REQUIRED_TYPES.map(t => {
       <span class="doc-type-label">${TYPE_LABELS[t]}</span>
       <span class="doc-filename">${doc.filename}</span>
       <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
       <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
     </div>`).join('');
 }).join('');
@@ -936,7 +936,7 @@ const extraRows = extraTypes.flatMap(t =>
       <span class="doc-type-label" style="color:${t === 'ordonnance' ? 'var(--blue)' : 'var(--purple)'}">${TYPE_LABELS[t]}</span>
       <span class="doc-filename">${doc.filename}</span>
       <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
       <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
     </div>`)
 ).join('');
@@ -954,7 +954,7 @@ const unclassified = docs.filter(d =>
       <span class="doc-type-label" style="color:var(--orange)">📎 Non classé</span>
       <span class="doc-filename">${doc.filename}</span>
       <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
       <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
       <select class="link-select" onchange="classifyDoc('${doc.id}', this.value)">
         <option value="">— Classer comme...</option>
@@ -1147,7 +1147,7 @@ function buildUnlinked() {
       <strong>${doc.filename}</strong>
       <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
     </div>
-    <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+    <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
     <div class="search-select" id="ss-${doc.id}">
       <input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier..."
         oninput="filterSearchSelect('${doc.id}', this.value)"
@@ -1168,7 +1168,21 @@ function buildUnlinked() {
     <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
   </div>`).join('');
 
-  return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
+  return `
+    <div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">
+      ⚠️ À classer <span class="count">${unlinked.length}</span>
+      <span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span>
+    </div>
+    <div id="aclasser-container" style="display:none">
+      ${rows}
+    </div>`;
+  }
+
+function toggleAClasser() {
+  const container = document.getElementById('aclasser-container');
+  const chevron = document.getElementById('aclasser-chevron');
+  container.style.display = container.style.display === 'none' ? 'block' : 'none';
+  chevron.classList.toggle('open');
 }
 
 function filterSearchSelect(docId, query) {
