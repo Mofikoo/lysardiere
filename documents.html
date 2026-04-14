@@ -505,6 +505,58 @@ body {
 .badge-pending      { background: var(--orange-bg); color: var(--orange); }
 
 
+/*-------------------------------*/
+
+.pdf-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24,83,79,0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+.pdf-preview-overlay.show { display: flex; }
+.pdf-preview-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 90vw;
+  max-width: 900px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pdf-preview-header {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pdf-preview-title {
+  font-family: 'Fraunces', serif;
+  color: var(--gold);
+  font-size: 14px;
+  flex: 1;
+}
+.pdf-preview-iframe {
+  flex: 1;
+  border: none;
+  width: 100%;
+}
+.pdf-preview-actions {
+  padding: 10px 20px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg);
+}
+
 </style>
 </head>
 <body>
@@ -675,9 +727,20 @@ async function getSignedUrl(path) {
   const data = await api(`/storage/v1/object/sign/documents/${path}`, 'POST', { expiresIn: 60 });
   return data ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : null;
 }
-async function openDoc(path) {
+async function openDoc(path, filename) {
   const url = await getSignedUrl(path);
-  if (url) window.open(url, '_blank');
+  if (!url) return;
+
+  document.getElementById('pdfPreviewTitle').textContent = filename || path.split('/').pop();
+  document.getElementById('pdfPreviewIframe').src = url;
+  document.getElementById('pdfPreviewDownload').href = url;
+  document.getElementById('pdfPreviewOverlay').classList.add('show');
+}
+
+function closePdfPreview(event) {
+  if (event && event.target !== document.getElementById('pdfPreviewOverlay')) return;
+  document.getElementById('pdfPreviewOverlay').classList.remove('show');
+  document.getElementById('pdfPreviewIframe').src = '';
 }
 
 function detectTypeFromFilename(filename) {
@@ -1242,6 +1305,23 @@ init();
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="document.getElementById('newdocsOverlay').classList.remove('show')">OK, compris</button>
+    </div>
+  </div>
+  <div class="pdf-preview-overlay" id="pdfPreviewOverlay" onclick="closePdfPreview(event)">
+    <div class="pdf-preview-box">
+      <div class="pdf-preview-header">
+        <span style="font-size:18px">📄</span>
+        <span class="pdf-preview-title" id="pdfPreviewTitle">Document</span>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent" 
+          onclick="closePdfPreview()">✕ Fermer</button>
+      </div>
+      <iframe class="pdf-preview-iframe" id="pdfPreviewIframe" src=""></iframe>
+      <div class="pdf-preview-actions">
+        <a class="btn btn-primary btn-sm" id="pdfPreviewDownload" href="#" download target="_blank">
+          ⬇️ Télécharger
+        </a>
+        <button class="btn btn-sm" onclick="closePdfPreview()">Fermer</button>
+      </div>
     </div>
   </div>
 </div>
