@@ -368,6 +368,45 @@ body {
   color: var(--text);
 }
 
+.search-select {
+  position: relative;
+  width: 260px;
+  flex-shrink: 0;
+}
+.search-select-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+.search-select-input:focus { border-color: var(--forest-mid); }
+.search-select-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: var(--shadow-md);
+}
+.search-select-item {
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+.search-select-item:hover { background: var(--mint); }
+
 /* ── MODAL ───────────────────────────────────── */
 .modal-overlay {
   position: fixed;
@@ -698,9 +737,9 @@ async function addPersonToSejour(sid) {
   await addToSejour(sid, sel.value);
 }
 async function confirmLink(docId) {
-  const sel = document.getElementById(`sel-${docId}`);
-  if (!sel.value) return alert('Choisis un vacancier.');
-  await linkDocument(docId, sel.value);
+  const val = document.getElementById(`sel-${docId}`).value;
+  if (!val) return alert('Choisis un vacancier.');
+  await linkDocument(docId, val);
 }
 async function confirmSejour(spId) {
   await api(`/rest/v1/sejours_personnes?id=eq.${spId}`, 'PATCH', { confirmed: true });
@@ -1025,20 +1064,52 @@ function buildUnlinked() {
       <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
     </div>
     <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-    <select class="link-select" id="sel-${doc.id}" size="1"
-      onchange="if(this.value) document.getElementById('lier-${doc.id}').style.display='inline-flex'">
-      <option value="">— Choisir un vacancier</option>
-      ${allPersonnes
-        .sort((a,b) => a.nom.localeCompare(b.nom))
-        .map(p => `<option value="${p.id}">${p.nom} ${p.prenom} — ${p.foyer}</option>`)
-        .join('')}
-    </select>
+    <div class="search-select" id="ss-${doc.id}">
+      <input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier..."
+        oninput="filterSearchSelect('${doc.id}', this.value)"
+        onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'"
+        autocomplete="off">
+      <div class="search-select-list" id="ss-list-${doc.id}">
+        ${allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).map(p => `
+          <div class="search-select-item" 
+            data-id="${p.id}"
+            data-name="${p.nom} ${p.prenom}"
+            onclick="selectPerson('${doc.id}', '${p.id}', '${p.nom} ${p.prenom} — ${p.foyer}')">
+            ${p.nom} ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span>
+          </div>`).join('')}
+      </div>
+      <input type="hidden" id="sel-${doc.id}">
+    </div>
     <button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button>
     <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
   </div>`).join('');
 
   return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
 }
+
+function filterSearchSelect(docId, query) {
+  const list = document.getElementById(`ss-list-${docId}`);
+  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  list.style.display = 'block';
+  Array.from(list.children).forEach(item => {
+    const name = item.dataset.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    item.style.display = name.includes(q) ? 'block' : 'none';
+  });
+}
+
+function selectPerson(docId, personneId, label) {
+  document.getElementById(`sel-${docId}`).value = personneId;
+  document.querySelector(`#ss-${docId} .search-select-input`).value = label;
+  document.getElementById(`ss-list-${docId}`).style.display = 'none';
+  document.getElementById(`lier-${docId}`).style.display = 'inline-flex';
+}
+
+// Fermer les listes si on clique ailleurs
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-select')) {
+    document.querySelectorAll('.search-select-list').forEach(l => l.style.display = 'none');
+  }
+});
 
 function filterUnlinkedSelect(selectId, query) {
   const sel = document.getElementById(selectId);
