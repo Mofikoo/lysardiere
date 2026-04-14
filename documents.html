@@ -728,19 +728,21 @@ async function getSignedUrl(path) {
   return data ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : null;
 }
 async function openDoc(path, filename) {
-  console.log('openDoc appelé:', path, filename);
   const url = await getSignedUrl(path);
-  console.log('URL générée:', url);
   if (!url) { alert('Impossible de générer le lien'); return; }
   document.getElementById('pdfPreviewTitle').textContent = filename || path.split('/').pop();
   document.getElementById('pdfPreviewIframe').src = url;
   document.getElementById('pdfPreviewDownload').href = url;
-  document.getElementById('pdfPreviewOverlay').classList.add('show');
+  const overlay = document.getElementById('pdfPreviewOverlay');
+  overlay.classList.add('show');
+  overlay.style.display = 'flex';
 }
 
 function closePdfPreview(event) {
   if (event && event.target !== document.getElementById('pdfPreviewOverlay')) return;
-  document.getElementById('pdfPreviewOverlay').classList.remove('show');
+  const overlay = document.getElementById('pdfPreviewOverlay');
+  overlay.classList.remove('show');
+  overlay.style.display = 'none';
   document.getElementById('pdfPreviewIframe').src = '';
 }
 
