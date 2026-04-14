@@ -574,6 +574,7 @@ body {
     <div class="header-actions">
       <a href="index.html" class="back-link">← Accueil</a>
       <button class="btn btn-accent btn-sm" onclick="openModal()">+ Nouveau séjour</button>
+      <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Nouveau vacancier</button>
     </div>
   </div>
 </div>
@@ -1269,6 +1270,82 @@ function getFilteredPersonnes() {
   });
 }
 
+async function openAddPersonModal() {
+  const [lieux, personnes] = await Promise.all([
+    api('/rest/v1/lieux?select=id,data&order=id.asc'),
+    api('/rest/v1/personnes?select=data&order=id.asc')
+  ]);
+
+  // Lieux
+  const selLieu = document.getElementById('newLieu');
+  selLieu.innerHTML = '<option value="">— Choisir un lieu de RDV</option>';
+  if (lieux) {
+    lieux
+      .sort((a,b) => (a.data?.nom||'').localeCompare(b.data?.nom||''))
+      .forEach(l => {
+        const o = document.createElement('option');
+        o.value = l.id;
+        o.textContent = l.data?.nom || l.id;
+        selLieu.appendChild(o);
+      });
+  }
+
+  // Foyers — extraire les foyers uniques des personnes existantes
+  const foyers = [...new Set(
+    (personnes || []).map(p => p.data?.foyer).filter(Boolean)
+  )].sort();
+  const selFoyer = document.getElementById('newFoyer');
+  selFoyer.innerHTML = '<option value="">— Choisir un foyer</option>';
+  foyers.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f;
+    o.textContent = f;
+    selFoyer.appendChild(o);
+  });
+
+  document.getElementById('addPersonOverlay').classList.add('show');
+}
+
+function closeAddPersonModal() {
+  document.getElementById('addPersonOverlay').classList.remove('show');
+  document.getElementById('newPrenom').value = '';
+  document.getElementById('newNom').value = '';
+  document.getElementById('newFoyer').value = '';
+  document.getElementById('newLieu').value = '';
+  document.getElementById('newBesoins').value = '';
+  document.getElementById('newNotes').value = '';
+}
+
+async function savePerson() {
+  const prenom = document.getElementById('newPrenom').value.trim();
+  const nom = document.getElementById('newNom').value.trim().toUpperCase();
+  const foyer = document.getElementById('newFoyer').value.trim();
+  const lieu = document.getElementById('newLieu').value;
+  const besoins = document.getElementById('newBesoins').value.trim();
+  const notes = document.getElementById('newNotes').value.trim();
+
+  if (!prenom || !nom || !foyer) return alert('Prénom, nom et foyer sont obligatoires.');
+
+  // Générer un ID au même format que l'app transport
+  const id = `p${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+  const data = {
+    id,
+    prenom,
+    nom,
+    foyer,
+    lieu: lieu || '',
+    lieux: lieu ? [lieu] : [],
+    besoins,
+    notes
+  };
+
+  await api('/rest/v1/personnes', 'POST', { id, data });
+  closeAddPersonModal();
+  await init();
+  alert(`✅ ${prenom} ${nom} ajouté(e) avec succès !`);
+}
+
 function renderAll() {
   const personnes = getFilteredPersonnes();
   const fSejour   = document.getElementById('filterSejour').value;
@@ -1302,6 +1379,37 @@ async function init() {
 
 init();
 </script>
+<!-- MODAL NOUVEAU VACANCIER -->
+<div class="modal-overlay" id="addPersonOverlay">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <span style="font-size:20px">👤</span>
+      <span class="modal-header-text">Nouveau vacancier</span>
+    </div>
+    <div class="modal-body">
+      <label>Prénom</label>
+      <input type="text" id="newPrenom" placeholder="Prénom">
+      <label>Nom</label>
+      <input type="text" id="newNom" placeholder="NOM">
+      <label>Foyer</label>
+        <select id="newFoyer" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
+          <option value="">— Choisir un foyer</option>
+        </select>
+      <label>Lieu de RDV</label>
+      <select id="newLieu" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
+        <option value="">— Choisir un lieu de RDV</option>
+      </select>
+      <label>Besoins PMR</label>
+      <input type="text" id="newBesoins" placeholder="Ex: fauteuil roulant, ...">
+      <label>Notes</label>
+      <input type="text" id="newNotes" placeholder="Notes complémentaires">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddPersonModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="savePerson()">Créer</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL NOUVEAUX DOCUMENTS -->
 <div class="modal-overlay" id="newdocsOverlay">
   <div class="modal-box" style="max-width:520px">
