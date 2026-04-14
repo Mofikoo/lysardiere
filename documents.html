@@ -641,12 +641,36 @@ async function openDoc(path) {
   if (url) window.open(url, '_blank');
 }
 
+function detectTypeFromFilename(filename) {
+  const f = filename.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (f.includes('inscription') || f.includes('inscript')) return 'inscription';
+  if (f.includes('confidentiel') || f.includes('confident')) return 'confidentiel';
+  if (f.includes('ordonnance') || f.includes('ordo')) return 'ordonnance';
+  return null;
+}
+
 async function linkDocument(docId, personneId) {
   const p = allPersonnes.find(x => x.id === personneId);
+  const doc = allDocuments.find(d => d.id === docId);
+  
+  // Détection automatique du type via le nom du fichier
+  const detectedType = detectTypeFromFilename(doc?.filename || '');
+  
   await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', {
-    personne_id: personneId, personne_nom: `${p.prenom} ${p.nom}`, status: 'linked'
+    personne_id: personneId,
+    personne_nom: `${p.prenom} ${p.nom}`,
+    status: 'linked',
+    type: detectedType || doc?.type || 'autre'
   });
-  await init();
+  
+  // Mise à jour locale
+  if (doc) {
+    doc.personne_id = personneId;
+    doc.personne_nom = `${p.prenom} ${p.nom}`;
+    doc.type = detectedType || doc.type;
+  }
+  
+  renderAll();
 }
 
 async function saveSejour() {
@@ -860,7 +884,23 @@ async function validerDossier(personneId) {
 async function classifyDoc(docId, type) {
   if (!type) return;
   await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', { type, status: 'linked' });
-  await init();
+  
+  // Mise à jour locale sans re-render complet
+  const doc = allDocuments.find(d => d.id === docId);
+  if (doc) doc.type = type;
+  
+  // Re-render uniquement les stats et badges
+  buildStats();
+  
+  // Déplacer visuellement le doc de "non classé" vers la fiche personne
+  const card = document.querySelector(`[data-doc-id="${docId}"]`);
+  if (card) {
+    card.style.transition = 'opacity 0.3s';
+    card.style.opacity = '0';
+    setTimeout(() => renderAll(), 350);
+  } else {
+    renderAll();
+  }
 }
 
 function buildSejoursSection(personnesFiltered) {
@@ -978,23 +1018,24 @@ function buildUnlinked() {
   ).join('');
 
   const rows = unlinked.map(doc => `
-    <div class="unlinked-card">
-      <span style="font-size:1.6rem">📄</span>
-      <div class="unlinked-info">
-        <strong>${doc.filename}</strong>
-        <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
-      </div>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
-      <input type="text" placeholder="🔍 Rechercher vacancier..."
-        oninput="filterUnlinkedSelect('sel-${doc.id}', this.value)"
-        style="width:180px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:12px;font-family:'DM Sans',sans-serif">
-      <select class="link-select" id="sel-${doc.id}">
-        <option value="">— Choisir un vacancier</option>
-        ${options}
-      </select>
-      <button class="btn btn-success btn-sm" onclick="confirmLink('${doc.id}')">Lier</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-    </div>`).join('');
+  <div class="unlinked-card" data-doc-id="${doc.id}">
+    <span style="font-size:1.6rem">📄</span>
+    <div class="unlinked-info">
+      <strong>${doc.filename}</strong>
+      <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
+    </div>
+    <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}')">Voir PDF</button>
+    <select class="link-select" id="sel-${doc.id}" size="1"
+      onchange="if(this.value) document.getElementById('lier-${doc.id}').style.display='inline-flex'">
+      <option value="">— Choisir un vacancier</option>
+      ${allPersonnes
+        .sort((a,b) => a.nom.localeCompare(b.nom))
+        .map(p => `<option value="${p.id}">${p.nom} ${p.prenom} — ${p.foyer}</option>`)
+        .join('')}
+    </select>
+    <button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
+  </div>`).join('');
 
   return `<div class="section-title">⚠️ À classer <span class="count">${unlinked.length}</span></div>${rows}`;
 }
