@@ -343,16 +343,95 @@ async function api(path, method='GET', body=null) {
 }
 
 async function fetchData() {
-  const [pRaw, docs, sejours, sp] = await Promise.all([
+  const [pRaw, docs, sejours, sp, archivedSejours] = await Promise.all([
     api('/rest/v1/personnes?select=id,data&order=id.asc'),
     api('/rest/v1/documents?select=*&order=email_date.desc'),
     api('/rest/v1/sejours?archived=eq.false&select=*&order=date_debut.asc'),
-    api('/rest/v1/sejours_personnes?select=*')
+    api('/rest/v1/sejours_personnes?select=*'),
+    api('/rest/v1/sejours?archived=eq.true&select=*&order=date_debut.desc')
   ]);
   allPersonnes = (pRaw||[]).map(p => ({ id:p.id, prenom:p.data?.prenom||'', nom:p.data?.nom||'', foyer:p.data?.foyer||'' }));
   allDocuments = docs||[];
   allSejours = sejours||[];
   allSejoursPersonnes = sp||[];
+  allArchivedSejours = archivedSejours||[];
+}
+
+function buildArchivesSection() {
+  if (!allArchivedSejours.length) return '';
+
+  // Grouper par année
+  const byAnnee = {};
+  allArchivedSejours.forEach(s => {
+    const annee = s.annee || new Date(s.date_debut).getFullYear();
+    if (!byAnnee[annee]) byAnnee[annee] = [];
+    byAnnee[annee].push(s);
+  });
+
+  const anneesHtml = Object.entries(byAnnee).sort((a,b) => b[0]-a[0]).map(([annee, sejours]) => {
+    const sejoursHtml = sejours.map(s => {
+      const personnes = allSejoursPersonnes
+        .filter(sp => sp.sejour_id === s.id)
+        .map(sp => allPersonnes.find(p => p.id === sp.personne_id))
+        .filter(Boolean);
+
+      const cardsHtml = personnes.map(p => {
+        const docs = allDocuments.filter(d => d.personne_id === p.id);
+        const docsHtml = docs.map(doc => `
+          <div class="doc-row">
+            <span class="doc-type-pill ${doc.type==='confidentiel'?'confidentiel':doc.type==='inscription'?'inscription':doc.type==='ordonnance'?'ordonnance':'divers'}">${TYPE_LABELS[doc.type]||doc.type}</span>
+            <span class="doc-filename">${doc.filename}</span>
+            <span class="doc-date">${fmtDate(doc.email_date)}</span>
+            <div class="doc-actions">
+              <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir</button>
+            </div>
+          </div>`).join('') || '<p class="empty-sejour">Aucun document.</p>';
+
+        const uid = `arch-${p.id}-${s.id}`;
+        return `
+          <div class="person-card">
+            <div class="person-header" onclick="toggleCard('${uid}')">
+              <div class="person-avatar">${initials(p.prenom,p.nom)}</div>
+              <div class="person-info">
+                <div class="person-name">${p.prenom} ${p.nom}</div>
+                <div class="person-foyer">${p.foyer}</div>
+              </div>
+              <span style="font-size:11px;color:var(--text-light)">${docs.length} doc${docs.length>1?'s':''}</span>
+              <span class="chevron" id="chev-${uid}">▶</span>
+            </div>
+            <div class="person-docs" id="docs-${uid}">${docsHtml}</div>
+          </div>`;
+      }).join('') || '<p class="empty-sejour">Aucun vacancier.</p>';
+
+      const uid = `arch-sejour-${s.id}`;
+      return `
+        <div class="sejour-block" style="opacity:0.85">
+          <div class="sejour-header" onclick="toggleSejour('${uid}')" style="background:linear-gradient(135deg,#4a5e5c,#6a7e7c)">
+            <h3>${s.nom}</h3>
+            <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
+            <span class="sejour-count">${personnes.length} vacancier(s)</span>
+            <span class="sejour-chevron" id="schev-${uid}">▶</span>
+          </div>
+          <div class="sejour-body" id="${uid}">${cardsHtml}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:8px">
+        <div class="cat-header" onclick="toggleCat('arch-${annee}','chev-arch-${annee}')">
+          📦 ${annee} <span class="count">${sejours.length} séjour(s)</span>
+          <span class="chevron" id="chev-arch-${annee}" style="margin-left:auto">▶</span>
+        </div>
+        <div id="arch-${annee}" style="display:none">${sejoursHtml}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="section-title" onclick="toggleCat('archives-container','chev-archives')" style="cursor:pointer;user-select:none;color:var(--text-mid)">
+      📦 Archives <span class="count">${allArchivedSejours.length}</span>
+      <span class="chevron" id="chev-archives" style="margin-left:auto">▶</span>
+    </div>
+    <div id="archives-container" style="display:none">${anneesHtml}</div>`;
 }
 
 function getPersonDocs(id) { return allDocuments.filter(d => d.personne_id===id); }
@@ -486,7 +565,7 @@ async function archiverSejour(sejourId) {
   if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
   await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
   const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
-  for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}`,'PATCH',{archived:true});
+  for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}&type=neq.confidentiel`,'PATCH',{archived:true});
   await init();
 }
 
@@ -622,6 +701,33 @@ async function savePerson() {
   alert(`✅ ${prenom} ${nom} ajouté(e) avec succès !`);
 }
 
+function getAnneeActive() {
+  return new Date().getFullYear();
+}
+
+function checkNouvelAn() {
+  const lastCheck = localStorage.getItem('lysardiere_last_year_check');
+  const anneeActuelle = getAnneeActive();
+  
+  if (lastCheck && parseInt(lastCheck) < anneeActuelle) {
+    // Nouvel an détecté — archiver automatiquement
+    archiverAnnee(parseInt(lastCheck));
+  }
+  localStorage.setItem('lysardiere_last_year_check', anneeActuelle);
+}
+
+async function archiverAnnee(annee) {
+  if (!confirm(`Archiver automatiquement tous les séjours et inscriptions de ${annee} ?`)) return;
+  
+  // Archiver les séjours de l'année passée
+  await api(`/rest/v1/sejours?annee=eq.${annee}`, 'PATCH', { archived: true });
+  
+  // Archiver les documents de l'année passée SAUF les confidentielles
+  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
+  
+  await init();
+}
+
 function getFilteredPersonnes() {
   const search=document.getElementById('searchInput').value.toLowerCase(), fStatus=document.getElementById('filterStatus').value, fFoyer=document.getElementById('filterFoyer').value, fSejour=document.getElementById('filterSejour').value;
   return allPersonnes.filter(p=>{
@@ -647,7 +753,7 @@ function renderAll() {
 let listenersAdded=false;
 async function init() {
   await fetchData();
-  buildFilters(); buildStats(); checkAlerts(); renderAll(); checkNewDocsSinceLastVisit();
+  buildFilters(); buildStats(); checkAlerts(); renderAll(); checkNewDocsSinceLastVisit(); checkNouvelAn();
   if (!listenersAdded) {
     document.getElementById('searchInput').addEventListener('input',renderAll);
     document.getElementById('filterStatus').addEventListener('change',renderAll);
