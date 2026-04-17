@@ -14,41 +14,39 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --forest: #18534F;
-  --forest-mid: #226D68;
+  --forest:       #18534F;
+  --forest-mid:   #226D68;
   --forest-light: #2A847E;
-  --mint: #ECF8F6;
-  --mint-deep: #D4EFEB;
-  --gold: #FEEAA1;
-  --gold-deep: #F5D96B;
-  --copper: #D6955B;
-  --copper-deep: #B87A45;
-  --bg: #F7F3EC;
-  --card: #FFFFFF;
-  --text: #1A2A28;
-  --text-mid: #4A5E5C;
-  --text-light: #7A8E8C;
-  --border: #D8E0DE;
+  --mint:         #ECF8F6;
+  --mint-deep:    #D4EFEB;
+  --gold:         #FEEAA1;
+  --gold-deep:    #F5D96B;
+  --bg:           #F7F3EC;
+  --card:         #FFFFFF;
+  --text:         #1A2A28;
+  --text-mid:     #4A5E5C;
+  --text-light:   #7A8E8C;
+  --border:       #D8E0DE;
   --border-light: #E8EEEC;
-  --red: #C0392B;
-  --red-bg: #FDECEA;
-  --green: #1B7A4A;
-  --green-bg: #E4F5EC;
-  --blue: #0077A8;
-  --blue-bg: #E8F4FB;
-  --purple: #6B3FA0;
-  --purple-bg: #F3E8FB;
-  --orange: #D97706;
-  --orange-bg: #FEF3C7;
-  --shadow-sm: 0 1px 3px rgba(24,83,79,0.06);
-  --shadow-md: 0 4px 12px rgba(24,83,79,0.08);
-  --shadow-lg: 0 8px 30px rgba(24,83,79,0.12);
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-xs: 7px;
+  --red:          #C0392B;
+  --red-bg:       #FDECEA;
+  --green:        #1B7A4A;
+  --green-bg:     #E4F5EC;
+  --blue:         #0077A8;
+  --blue-bg:      #E8F4FB;
+  --purple:       #6B3FA0;
+  --purple-bg:    #F3E8FB;
+  --orange:       #D97706;
+  --orange-bg:    #FEF3C7;
+  --shadow-sm:    0 1px 3px rgba(24,83,79,0.06);
+  --shadow-md:    0 4px 16px rgba(24,83,79,0.10);
+  --shadow-lg:    0 8px 32px rgba(24,83,79,0.14);
+  --radius:       16px;
+  --radius-sm:    10px;
+  --radius-xs:    7px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: 'DM Sans', sans-serif;
@@ -63,505 +61,201 @@ body {
   flex-direction: column;
 }
 
-/* ── HEADER ─────────────────────────────────── */
+/* HEADER */
 .header {
   background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%);
-  padding: 0;
   padding-top: env(safe-area-inset-top);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 20px rgba(24,83,79,0.25);
+  position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 2px 24px rgba(24,83,79,0.28);
 }
 .header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  gap: 12px;
+  display: flex; align-items: center;
+  padding: 10px 20px; gap: 12px; min-height: 60px;
 }
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-}
-.header-brand img {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--gold);
-}
-.header-brand-text h1 {
-  font-family: 'Fraunces', serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gold);
-  line-height: 1.2;
-}
-.header-brand-text span {
-  font-size: 9px;
-  color: rgba(255,255,255,0.5);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-.header-actions { display: flex; align-items: center; gap: 10px; }
-.back-link {
-  color: rgba(255,255,255,0.65);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
-  background: rgba(255,255,255,0.08);
-  transition: all 0.15s;
-}
-.back-link:hover { background: rgba(255,255,255,0.15); color: white; }
+.header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+.header-brand img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.header-brand-text h1 { font-family: 'Fraunces', serif; font-size: 17px; color: var(--gold); line-height: 1.2; }
+.header-brand-text span { display: block; font-size: 9px; color: rgba(255,255,255,0.45); letter-spacing: 2px; text-transform: uppercase; }
+.header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.back-link { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: var(--radius-xs); background: rgba(255,255,255,0.08); transition: all 0.15s; white-space: nowrap; }
+.back-link:hover { background: rgba(255,255,255,0.16); color: white; }
 
-/* ── BANNERS ─────────────────────────────────── */
-.alert-banner {
-  background: var(--orange-bg);
-  border-left: 4px solid var(--orange);
-  padding: 10px 20px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #92400e;
-  font-weight: 500;
-}
+/* BANNERS */
+.alert-banner { background: var(--orange-bg); border-left: 4px solid var(--orange); padding: 10px 20px; display: none; align-items: center; gap: 10px; font-size: 13px; color: #92400e; font-weight: 500; }
 .alert-banner.show { display: flex; }
-
-.confirm-banner {
-  background: var(--blue-bg);
-  border-left: 4px solid var(--blue);
-  padding: 10px 20px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--blue);
-  flex-wrap: wrap;
-}
+.confirm-banner { background: var(--blue-bg); border-left: 4px solid var(--blue); padding: 10px 20px; display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--blue); flex-wrap: wrap; }
 .confirm-banner.show { display: flex; }
 
-/* ── TOOLBAR ─────────────────────────────────── */
-.toolbar {
-  padding: 12px 20px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  background: var(--card);
-  border-bottom: 1px solid var(--border-light);
-  box-shadow: var(--shadow-sm);
-}
-.toolbar input, .toolbar select {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text);
-  background: var(--bg);
-  outline: none;
-  font-family: 'DM Sans', sans-serif;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.toolbar input { width: 220px; }
-.toolbar input:focus, .toolbar select:focus {
-  border-color: var(--forest-mid);
-  box-shadow: 0 0 0 3px rgba(34,109,104,0.1);
-}
+/* TOOLBAR */
+.toolbar { background: var(--card); border-bottom: 1px solid var(--border-light); padding: 10px 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; box-shadow: var(--shadow-sm); }
+.toolbar input, .toolbar select { border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 7px 11px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; height: 34px; }
+.toolbar input { min-width: 200px; flex: 1; max-width: 260px; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--forest-mid); box-shadow: 0 0 0 3px rgba(34,109,104,0.1); }
 
-/* ── STATS BAR ───────────────────────────────── */
-.stats-bar {
-  display: flex;
-  gap: 8px;
-  padding: 12px 20px;
-  flex-wrap: wrap;
-  background: var(--mint);
-  border-bottom: 1px solid var(--mint-deep);
-}
-.stat-chip {
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: var(--shadow-sm);
-  font-size: 12px;
-  color: var(--text-mid);
-}
-.stat-chip .num { font-size: 1.3rem; font-weight: 700; }
-.stat-chip.ok .num    { color: var(--green); }
-.stat-chip.warn .num  { color: var(--orange); }
+/* STATS */
+.stats-bar { display: flex; gap: 8px; padding: 12px 20px; flex-wrap: wrap; background: linear-gradient(to right, var(--mint), #f0faf8); border-bottom: 1px solid var(--mint-deep); }
+.stat-chip { background: var(--card); border: 1px solid var(--border-light); border-radius: 30px; padding: 5px 14px; display: flex; align-items: center; gap: 7px; box-shadow: var(--shadow-sm); font-size: 12px; color: var(--text-mid); white-space: nowrap; }
+.stat-chip .num { font-size: 1.1rem; font-weight: 700; font-family: 'Fraunces', serif; }
+.stat-chip.ok .num { color: var(--green); }
+.stat-chip.warn .num { color: var(--orange); }
 .stat-chip.danger .num { color: var(--red); }
 
-/* ── MAIN ────────────────────────────────────── */
-.main { padding: 16px 20px; flex: 1; }
+/* MAIN */
+.main { padding: 20px; flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; }
 
-.section-title {
-  font-family: 'Fraunces', serif;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--forest);
-  margin: 20px 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--gold);
-}
-.section-title .count {
-  background: var(--mint-deep);
-  border-radius: 20px;
-  padding: 2px 10px;
-  font-size: 11px;
-  color: var(--forest-mid);
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-}
+/* SECTION TITLES */
+.section-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--forest); margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid var(--gold-deep); }
+.section-title .count { background: var(--mint-deep); border-radius: 20px; padding: 2px 10px; font-size: 11px; color: var(--forest-mid); font-family: 'DM Sans', sans-serif; font-weight: 600; }
 
-/* ── SÉJOUR BLOCKS ───────────────────────────── */
-.sejour-block {
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-  margin-bottom: 12px;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-.sejour-header {
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%);
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-.sejour-header:hover { opacity: 0.92; }
-.sejour-header h3 {
-  flex: 1;
-  font-family: 'Fraunces', serif;
-  font-size: 15px;
-  color: var(--gold);
-}
-.sejour-dates { font-size: 12px; color: rgba(255,255,255,0.6); }
-.sejour-count {
-  background: rgba(255,255,255,0.15);
-  color: white;
-  border-radius: 20px;
-  padding: 2px 10px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.sejour-chevron { color: rgba(255,255,255,0.5); font-size: 11px; transition: transform 0.2s; }
+/* SÉJOUR BLOCKS */
+.sejour-block { border: 1px solid var(--border-light); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s; }
+.sejour-block:hover { box-shadow: var(--shadow-md); }
+.sejour-header { padding: 13px 18px; display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%); cursor: pointer; user-select: none; }
+.sejour-header h3 { flex: 1; font-family: 'Fraunces', serif; font-size: 14px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sejour-dates { font-size: 11px; color: rgba(255,255,255,0.55); white-space: nowrap; flex-shrink: 0; }
+.sejour-count { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+.sejour-chevron { color: rgba(255,255,255,0.45); font-size: 10px; transition: transform 0.2s; flex-shrink: 0; }
 .sejour-chevron.open { transform: rotate(90deg); }
-.sejour-body { display: none; padding: 12px 18px; background: var(--card); }
+.sejour-body { display: none; padding: 14px 18px; background: var(--card); }
 .sejour-body.open { display: block; }
-.empty-sejour { color: var(--text-light); font-size: 13px; padding: 8px 0; }
+.empty-sejour { color: var(--text-light); font-size: 13px; padding: 6px 0; }
+.cat-header { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; color: var(--forest); margin: 10px 0 8px; display: flex; align-items: center; gap: 7px; padding-bottom: 6px; border-bottom: 1px dashed var(--mint-deep); cursor: pointer; user-select: none; }
 
-/* ── PERSON CARDS ────────────────────────────── */
-.person-card {
-  background: var(--bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  margin-bottom: 6px;
-  overflow: hidden;
-}
-.person-header {
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
+/* PERSON CARDS */
+.person-card { background: var(--bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 6px; overflow: hidden; transition: box-shadow 0.15s; }
+.person-card:hover { box-shadow: var(--shadow-sm); }
+.person-header { padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.15s; }
 .person-header:hover { background: var(--mint); }
-.person-name { font-weight: 600; flex: 1; font-size: 13px; color: var(--text); }
-.person-foyer { font-size: 11px; color: var(--text-light); }
-
-.doc-badges { display: flex; gap: 5px; }
-.badge {
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.badge.ok      { background: var(--green-bg); color: var(--green); }
-.badge.missing { background: var(--red-bg);   color: var(--red); }
-
-.chevron { color: var(--text-light); transition: transform 0.2s; font-size: 10px; }
+.person-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--forest-light), var(--forest-mid)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; flex-shrink: 0; }
+.person-info { flex: 1; min-width: 0; }
+.person-name { font-weight: 600; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-foyer { font-size: 11px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+.badge { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.badge.ok { background: var(--green-bg); color: var(--green); }
+.badge.missing { background: var(--red-bg); color: var(--red); }
+.badge-inscription { background: #d1fae5; color: #065f46; }
+.badge-confidentiel { background: #fee2e2; color: #991b1b; }
+.badge-ordonnance { background: #dbeafe; color: #1e40af; }
+.badge-divers { background: #fce7f3; color: #9d174d; }
+.badge-pending { background: var(--orange-bg); color: var(--orange); }
+.chevron { color: var(--text-light); transition: transform 0.2s; font-size: 10px; flex-shrink: 0; }
 .chevron.open { transform: rotate(90deg); }
-
-.person-docs {
-  display: none;
-  padding: 0 14px 12px;
-  border-top: 1px solid var(--border-light);
-  background: var(--card);
-}
+.person-docs { display: none; padding: 0 14px 12px 56px; border-top: 1px solid var(--border-light); background: var(--card); }
 .person-docs.open { display: block; }
 
-.doc-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 12px;
-}
+/* DOC ROWS */
+.doc-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; flex-wrap: wrap; }
 .doc-row:last-child { border-bottom: none; }
-.doc-type-label { width: 120px; font-weight: 600; color: var(--text-mid); font-size: 11px; }
-.doc-filename   { flex: 1; color: var(--text); }
-.doc-date       { color: var(--text-light); font-size: 11px; width: 85px; }
-.doc-missing    { color: var(--red); font-style: italic; flex: 1; font-size: 12px; }
+.doc-type-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.doc-type-pill.inscription { background: #d1fae5; color: #065f46; }
+.doc-type-pill.confidentiel { background: #fee2e2; color: #991b1b; }
+.doc-type-pill.ordonnance { background: #dbeafe; color: #1e40af; }
+.doc-type-pill.divers { background: #fce7f3; color: #9d174d; }
+.doc-type-pill.missing { background: var(--bg); color: var(--text-light); border: 1px dashed var(--border); }
+.doc-type-pill.nonclasse { background: var(--orange-bg); color: var(--orange); }
+.doc-filename { flex: 1; color: var(--text); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-date { color: var(--text-light); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.doc-missing { color: var(--text-light); font-style: italic; font-size: 12px; }
+.doc-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.valider-block { padding: 10px 0 2px; border-top: 1px solid var(--border-light); margin-top: 6px; }
 
-/* ── BUTTONS ─────────────────────────────────── */
-.btn {
-  padding: 6px 14px;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.15s;
-  background: var(--card);
-  color: var(--text);
-}
+/* À CLASSER */
+.unlinked-card { background: var(--card); border: 1px solid #fde68a; border-left: 4px solid var(--orange); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; box-shadow: var(--shadow-sm); align-items: start; }
+.unlinked-icon { font-size: 1.4rem; padding-top: 2px; }
+.unlinked-info { min-width: 0; }
+.unlinked-info strong { display: block; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unlinked-meta { color: var(--text-light); font-size: 11px; margin-top: 2px; }
+.unlinked-actions { grid-column: 2; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* SEARCH SELECT */
+.search-select { position: relative; flex: 1; min-width: 180px; max-width: 280px; }
+.search-select-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 12px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; height: 32px; transition: border-color 0.2s; }
+.search-select-input:focus { border-color: var(--forest-mid); box-shadow: 0 0 0 2px rgba(34,109,104,0.1); }
+.search-select-list { display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xs); max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow-md); }
+.search-select-item { padding: 7px 12px; font-size: 12px; cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border-light); }
+.search-select-item:last-child { border-bottom: none; }
+.search-select-item:hover { background: var(--mint); }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 13px; border-radius: var(--radius-xs); border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; transition: all 0.15s; background: var(--card); color: var(--text); white-space: nowrap; text-decoration: none; }
 .btn:hover { background: var(--mint); border-color: var(--forest-mid); }
 .btn-primary { background: var(--forest); color: white; border-color: var(--forest); }
 .btn-primary:hover { background: var(--forest-mid); }
 .btn-accent { background: var(--gold); color: var(--forest); border-color: var(--gold-deep); font-weight: 700; }
 .btn-accent:hover { background: var(--gold-deep); }
 .btn-success { background: var(--green-bg); color: var(--green); border-color: #b8ddb8; }
-.btn-danger  { background: var(--red-bg);   color: var(--red);   border-color: #f5c6c2; }
-.btn-info    { background: var(--blue-bg);  color: var(--blue);  border-color: #b8ddf0; }
+.btn-success:hover { background: #c8ecd8; }
+.btn-danger { background: var(--red-bg); color: var(--red); border-color: #f5c6c2; }
+.btn-danger:hover { background: #fbd5d1; }
+.btn-info { background: var(--blue-bg); color: var(--blue); border-color: #b8ddf0; }
+.btn-info:hover { background: #d0e9f8; }
+.btn-archive { background: var(--purple-bg); color: var(--purple); border-color: #d8b8f0; }
+.btn-archive:hover { background: #e8d0f8; }
 .btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-icon { padding: 4px 7px; }
+.link-select { padding: 5px 9px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 12px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 30px; }
 
-/* ── UNLINKED CARDS ──────────────────────────── */
-.unlinked-card {
-  background: var(--card);
-  border: 1px solid #fde68a;
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: var(--shadow-sm);
-  font-size: 13px;
-}
-.unlinked-info { flex: 1; }
-.unlinked-info strong { display: block; font-size: 13px; color: var(--text); }
-.unlinked-info span   { color: var(--text-light); font-size: 11px; }
-.link-select {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  font-size: 12px;
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.search-select {
-  position: relative;
-  width: 260px;
-  flex-shrink: 0;
-}
-.search-select-input {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  font-size: 12px;
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
-}
-.search-select-input:focus { border-color: var(--forest-mid); }
-.search-select-list {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  max-height: 220px;
-  overflow-y: auto;
-  z-index: 50;
-  box-shadow: var(--shadow-md);
-}
-.search-select-item {
-  padding: 8px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--text);
-}
-.search-select-item:hover { background: var(--mint); }
-
-/* ── MODAL ───────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(24,83,79,0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-  animation: modalFadeIn 0.2s ease;
-}
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(24,83,79,0.50); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; animation: fadeIn 0.2s ease; }
 .modal-overlay.show { display: flex; }
-@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.modal-box {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  max-width: 420px;
-  width: 100%;
-  overflow: hidden;
-  animation: modalSlideIn 0.25s ease;
-}
-@keyframes modalSlideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-.modal-header {
-  padding: 16px 20px;
-  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.modal-header-text {
-  font-family: 'Fraunces', serif;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--gold);
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-box { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-lg); max-width: 440px; width: 100%; overflow: hidden; animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { padding: 16px 20px; background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%); display: flex; align-items: center; gap: 10px; }
+.modal-header-text { font-family: 'Fraunces', serif; font-size: 15px; color: var(--gold); }
 .modal-body { padding: 20px; }
-.modal-body label {
-  font-size: 11px;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  display: block;
-}
-.modal-body input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  padding: 9px 12px;
-  font-size: 13px;
-  color: var(--text);
-  background: var(--bg);
-  outline: none;
-  font-family: 'DM Sans', sans-serif;
-  margin-bottom: 14px;
-  transition: border-color 0.2s;
-}
-.modal-body input:focus { border-color: var(--forest-mid); }
-.modal-actions {
-  padding: 0 20px 16px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+.modal-body label { display: block; font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 4px; }
+.modal-body input, .modal-body select { display: block; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 9px 12px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; margin-bottom: 14px; transition: border-color 0.2s; }
+.modal-body input:focus, .modal-body select:focus { border-color: var(--forest-mid); box-shadow: 0 0 0 3px rgba(34,109,104,0.1); }
+.modal-actions { padding: 0 20px 16px; display: flex; gap: 8px; justify-content: flex-end; }
 
-/* ── MISC ────────────────────────────────────── */
-.loading { text-align: center; padding: 48px; color: var(--text-light); font-size: 13px; }
-.empty   { text-align: center; padding: 32px; color: var(--text-light); font-size: 13px; }
+/* PDF PREVIEW */
+.pdf-preview-overlay { position: fixed; inset: 0; background: rgba(10,30,28,0.80); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 16px; }
+.pdf-preview-overlay.show { display: flex; }
+.pdf-preview-box { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: min(92vw, 960px); height: min(90vh, 860px); display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.2s ease; }
+.pdf-preview-header { padding: 12px 18px; background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.pdf-preview-title { font-family: 'Fraunces', serif; color: var(--gold); font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-preview-iframe { flex: 1; border: none; width: 100%; display: block; }
+.pdf-preview-actions { padding: 10px 18px; display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border-light); background: var(--bg); flex-shrink: 0; }
 
-/* ── RESPONSIVE ──────────────────────────────── */
-@media (max-width: 700px) {
-  .toolbar input { width: 100%; }
-  .main { padding: 10px 12px; }
-  .doc-date { display: none; }
+/* MISC */
+.loading { text-align: center; padding: 56px; color: var(--text-light); font-size: 13px; }
+.empty { text-align: center; padding: 32px; color: var(--text-light); font-size: 13px; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .main { padding: 14px; }
+  .toolbar { gap: 6px; }
+  .toolbar input { min-width: 0; flex: 1; max-width: none; }
+  .toolbar select { flex: 1; min-width: 0; }
+  .header-brand-text span { display: none; }
+  .stats-bar { padding: 10px 14px; gap: 6px; }
+  .sejour-dates { display: none; }
+  .unlinked-card { grid-template-columns: 1fr; }
+  .unlinked-icon { display: none; }
+  .unlinked-actions { flex-wrap: wrap; }
+  .search-select { max-width: none; width: 100%; }
 }
 @media (max-width: 480px) {
-  .header-top { padding: 10px 14px; }
-  .header-brand img { width: 36px; height: 36px; }
+  .header-top { padding: 8px 14px; }
+  .header-brand img { width: 34px; height: 34px; }
   .header-brand-text h1 { font-size: 15px; }
-  .doc-type-label { width: 90px; }
-  .unlinked-card { flex-wrap: wrap; }
+  .doc-date { display: none; }
+  .person-docs { padding-left: 14px; }
+  .person-avatar { display: none; }
+  .main { padding: 10px; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
 }
-
-
-.badge-inscription  { background: #d1fae5; color: #065f46; }
-.badge-confidentiel { background: #fee2e2; color: #991b1b; }
-.badge-ordonnance   { background: #dbeafe; color: #1e40af; }
-.badge-divers       { background: #fce7f3; color: #9d174d; }
-.badge-pending      { background: var(--orange-bg); color: var(--orange); }
-
-
-/*-------------------------------*/
-
-.pdf-preview-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(24,83,79,0.7);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
+@media (min-width: 1100px) {
+  .main { padding: 24px 28px; }
+  .stats-bar { padding: 12px 28px; }
+  .toolbar { padding: 10px 28px; }
 }
-.pdf-preview-overlay.show { display: flex; }
-.pdf-preview-box {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  width: 90vw;
-  max-width: 900px;
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.pdf-preview-header {
-  padding: 12px 20px;
-  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.pdf-preview-title {
-  font-family: 'Fraunces', serif;
-  color: var(--gold);
-  font-size: 14px;
-  flex: 1;
-}
-.pdf-preview-iframe {
-  flex: 1;
-  border: none;
-  width: 100%;
-}
-.pdf-preview-actions {
-  padding: 10px 20px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  border-top: 1px solid var(--border-light);
-  background: var(--bg);
-}
-
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="header-top">
     <a href="index.html" class="header-brand">
@@ -573,21 +267,17 @@ body {
     </a>
     <div class="header-actions">
       <a href="index.html" class="back-link">← Accueil</a>
-      <button class="btn btn-accent btn-sm" onclick="openModal()">+ Nouveau séjour</button>
-      <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Nouveau vacancier</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)" onclick="openModal()">✈️ Séjour</button>
+      <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Vacancier</button>
     </div>
   </div>
 </div>
 
-<!-- BANNERS -->
-<div class="alert-banner" id="alertBanner">
-  ⚠️ <span id="alertText"></span>
-</div>
+<div class="alert-banner" id="alertBanner">⚠️ <span id="alertText"></span></div>
 <div class="confirm-banner" id="confirmBanner"></div>
 
-<!-- TOOLBAR -->
 <div class="toolbar">
-  <input type="text" id="searchInput" placeholder="🔍 Rechercher un vacancier...">
+  <input type="text" id="searchInput" placeholder="🔍 Rechercher un vacancier…">
   <select id="filterSejour">
     <option value="">Tous les séjours</option>
     <option value="none">Sans séjour</option>
@@ -595,27 +285,23 @@ body {
   <select id="filterStatus">
     <option value="">Tous les statuts</option>
     <option value="complete">Complets ✅</option>
+    <option value="pending">À vérifier ⏳</option>
     <option value="incomplete">Incomplets ⚠️</option>
-    <option value="empty">Aucun document 🔴</option>
+    <option value="empty">Sans document 🔴</option>
   </select>
   <select id="filterFoyer">
     <option value="">Tous les foyers</option>
   </select>
 </div>
 
-<!-- STATS -->
 <div class="stats-bar" id="statsBar"></div>
+<div class="main" id="mainContent"><div class="loading">Chargement des données…</div></div>
 
-<!-- MAIN -->
-<div class="main" id="mainContent">
-  <div class="loading">Chargement des données…</div>
-</div>
-
-<!-- MODAL NOUVEAU SÉJOUR -->
+<!-- MODAL SÉJOUR -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-box">
     <div class="modal-header">
-      <span style="font-size:20px">✈️</span>
+      <span style="font-size:18px">✈️</span>
       <span class="modal-header-text">Nouveau séjour</span>
     </div>
     <div class="modal-body">
@@ -626,7 +312,7 @@ body {
       <label>Date de fin</label>
       <input type="date" id="sejourFin">
       <label>Catégorie</label>
-      <select id="sejourCategorie" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
+      <select id="sejourCategorie">
         <option value="weekend">🏕️ Week-end</option>
         <option value="mini_sejour">⛺ Mini séjour</option>
         <option value="semaine">🌊 Semaine</option>
@@ -634,7 +320,7 @@ body {
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Annuler</button>
-      <button class="btn btn-primary" onclick="saveSejour()">Créer le séjour</button>
+      <button class="btn btn-primary" onclick="saveSejour()">Créer</button>
     </div>
   </div>
 </div>
@@ -643,32 +329,12 @@ body {
 const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 const REQUIRED_TYPES = ['inscription', 'confidentiel'];
-const TYPE_LABELS = {
-  inscription:  '📝 Inscription',
-  confidentiel: '🔒 Confidentiel',
-  ordonnance:   '💊 Ordonnance',
-  divers:       '📎 Divers'
-};
-const TYPE_BADGE_CLASS = {
-  inscription:  'badge-inscription',
-  confidentiel: 'badge-confidentiel',
-  ordonnance:   'badge-ordonnance',
-  divers:       'badge-divers',
-  autre:        'badge-divers'
-};
+const TYPE_LABELS = { inscription:'📝 Inscription', confidentiel:'🔒 Confidentiel', ordonnance:'💊 Ordonnance', divers:'📎 Divers', dossier_complet:'📁 Dossier complet' };
 
-let allPersonnes = [], allDocuments = [], allSejours = [], allSejoursPersonnes = [];
+let allPersonnes=[], allDocuments=[], allSejours=[], allSejoursPersonnes=[];
 
-async function api(path, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    }
-  };
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type':'application/json', Prefer:'return=representation' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(SUPABASE_URL + path, opts);
   if (!res.ok) return null;
@@ -680,54 +346,39 @@ async function fetchData() {
   const [pRaw, docs, sejours, sp] = await Promise.all([
     api('/rest/v1/personnes?select=id,data&order=id.asc'),
     api('/rest/v1/documents?select=*&order=email_date.desc'),
-    api('/rest/v1/sejours?select=*&order=date_debut.asc'),
-    api('/rest/v1/sejours_personnes?select=*'),
     api('/rest/v1/sejours?archived=eq.false&select=*&order=date_debut.asc'),
-    api('/rest/v1/documents?archived=eq.false&select=*&order=email_date.desc')
+    api('/rest/v1/sejours_personnes?select=*')
   ]);
-  allPersonnes = (pRaw || []).map(p => ({
-    id: p.id,
-    prenom: p.data?.prenom || '',
-    nom: p.data?.nom || '',
-    foyer: p.data?.foyer || ''
-  }));
-  allDocuments = docs || [];
-  allSejours = sejours || [];
-  allSejoursPersonnes = sp || [];
+  allPersonnes = (pRaw||[]).map(p => ({ id:p.id, prenom:p.data?.prenom||'', nom:p.data?.nom||'', foyer:p.data?.foyer||'' }));
+  allDocuments = docs||[];
+  allSejours = sejours||[];
+  allSejoursPersonnes = sp||[];
 }
 
-function getPersonDocs(id)    { return allDocuments.filter(d => d.personne_id === id); }
-function getUnlinked()        { return allDocuments.filter(d => !d.personne_id); }
-function getMissingTypes(id)  { const t = getPersonDocs(id).map(d => d.type); return REQUIRED_TYPES.filter(x => !t.includes(x)); }
+function getPersonDocs(id) { return allDocuments.filter(d => d.personne_id===id); }
+function getUnlinked()     { return allDocuments.filter(d => !d.personne_id); }
 
 function getStatus(id) {
   const docs = getPersonDocs(id);
   if (!docs.length) return 'empty';
-  
-  // Dossier complet vérifié
-  const dossierComplet = docs.find(d => d.type === 'dossier_complet' && d.verified);
-  if (dossierComplet) return 'complete';
-  
-  // Dossier complet non vérifié
-  const dossierNonVerif = docs.find(d => d.type === 'dossier_complet' && !d.verified);
-  if (dossierNonVerif) return 'pending';
-
-  // Inscription + confidentiel tous deux présents mais non vérifiés
-  const hasInscription = docs.find(d => d.type === 'inscription');
-  const hasConfidentiel = docs.find(d => d.type === 'confidentiel');
-  if (hasInscription && hasConfidentiel) return 'pending';
-
+  if (docs.find(d => d.type==='dossier_complet' && d.verified)) return 'complete';
+  if (docs.find(d => d.type==='dossier_complet' && !d.verified)) return 'pending';
+  if (docs.find(d=>d.type==='inscription') && docs.find(d=>d.type==='confidentiel')) return 'pending';
   return 'incomplete';
 }
+
 function getSejourPersonnes(sid) {
-  return allSejoursPersonnes.filter(sp => sp.sejour_id === sid)
-    .map(sp => allPersonnes.find(p => p.id === sp.personne_id)).filter(Boolean);
+  return allSejoursPersonnes.filter(sp=>sp.sejour_id===sid).map(sp=>allPersonnes.find(p=>p.id===sp.personne_id)).filter(Boolean);
 }
+
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : ''; }
+function initials(prenom, nom) { return `${(prenom||'')[0]||''}${(nom||'')[0]||''}`.toUpperCase(); }
 
 async function getSignedUrl(path) {
   const data = await api(`/storage/v1/object/sign/documents/${path}`, 'POST', { expiresIn: 60 });
   return data ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : null;
 }
+
 async function openDoc(path, filename) {
   const url = await getSignedUrl(path);
   if (!url) { alert('Impossible de générer le lien'); return; }
@@ -747,662 +398,279 @@ function closePdfPreview(event) {
   document.getElementById('pdfPreviewIframe').src = '';
 }
 
+function buildFilters() {
+  const foyers = [...new Set(allPersonnes.map(p=>p.foyer).filter(Boolean))].sort();
+  const selF = document.getElementById('filterFoyer');
+  selF.innerHTML = '<option value="">Tous les foyers</option>';
+  foyers.forEach(f => { const o=document.createElement('option'); o.value=f; o.textContent=f; selF.appendChild(o); });
+  const selS = document.getElementById('filterSejour');
+  selS.innerHTML = '<option value="">Tous les séjours</option><option value="none">Sans séjour</option>';
+  allSejours.forEach(s => { const o=document.createElement('option'); o.value=s.id; o.textContent=`${s.nom} (${fmtDate(s.date_debut)})`; selS.appendChild(o); });
+}
+
+function buildStats() {
+  const c  = allPersonnes.filter(p=>getStatus(p.id)==='complete').length;
+  const pe = allPersonnes.filter(p=>getStatus(p.id)==='pending').length;
+  const i  = allPersonnes.filter(p=>getStatus(p.id)==='incomplete').length;
+  const v  = allPersonnes.filter(p=>getStatus(p.id)==='empty').length;
+  const a  = getUnlinked().length;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-chip ok"><span class="num">${c}</span> complets</div>
+    <div class="stat-chip warn"><span class="num">${pe}</span> à vérifier</div>
+    <div class="stat-chip warn"><span class="num">${i}</span> incomplets</div>
+    <div class="stat-chip danger"><span class="num">${v}</span> sans doc</div>
+    <div class="stat-chip warn"><span class="num">${a}</span> à classer</div>
+    <div class="stat-chip"><span class="num">${allPersonnes.length}</span> vacanciers</div>`;
+}
+
+async function deleteDoc(docId, storagePath) {
+  if (!confirm('Supprimer ce document définitivement ?')) return;
+  await api(`/rest/v1/documents?id=eq.${docId}`, 'DELETE');
+  await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, { method:'DELETE', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}` } });
+  await init();
+}
+
 function detectTypeFromFilename(filename) {
-  const f = filename.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (f.includes('inscription') || f.includes('inscript')) return 'inscription';
-  if (f.includes('confidentiel') || f.includes('confident')) return 'confidentiel';
-  if (f.includes('ordonnance') || f.includes('ordo')) return 'ordonnance';
+  const f = (filename||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if (f.includes('inscription')||f.includes('inscript')) return 'inscription';
+  if (f.includes('confidentiel')||f.includes('confident')) return 'confidentiel';
+  if (f.includes('ordonnance')||f.includes('ordo')) return 'ordonnance';
   return null;
 }
 
+async function classifyDoc(docId, type) {
+  if (!type) return;
+  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', { type, status:'linked' });
+  const doc = allDocuments.find(d=>d.id===docId);
+  if (doc) doc.type = type;
+  buildStats(); renderAll();
+}
+
 async function linkDocument(docId, personneId) {
-  const p = allPersonnes.find(x => x.id === personneId);
-  const doc = allDocuments.find(d => d.id === docId);
-  
-  // Détection automatique du type via le nom du fichier
-  const detectedType = detectTypeFromFilename(doc?.filename || '');
-  
-  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', {
-    personne_id: personneId,
-    personne_nom: `${p.prenom} ${p.nom}`,
-    status: 'linked',
-    type: detectedType || doc?.type || 'autre'
-  });
-  
-  // Mise à jour locale
-  if (doc) {
-    doc.personne_id = personneId;
-    doc.personne_nom = `${p.prenom} ${p.nom}`;
-    doc.type = detectedType || doc.type;
-  }
-  
+  const p = allPersonnes.find(x=>x.id===personneId);
+  const doc = allDocuments.find(d=>d.id===docId);
+  const detectedType = detectTypeFromFilename(doc?.filename||'');
+  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', { personne_id:personneId, personne_nom:`${p.prenom} ${p.nom}`, status:'linked', type:detectedType||doc?.type||'autre' });
+  if (doc) { doc.personne_id=personneId; doc.personne_nom=`${p.prenom} ${p.nom}`; doc.type=detectedType||doc.type; }
   renderAll();
 }
 
-async function saveSejour() {
-  const nom = document.getElementById('sejourNom').value.trim();
-  const debut = document.getElementById('sejourDebut').value;
-  const fin = document.getElementById('sejourFin').value;
-  const categorie = document.getElementById('sejourCategorie').value;
-  if (!nom || !debut || !fin) return alert('Remplis tous les champs.');
-  await api('/rest/v1/sejours', 'POST', { nom, date_debut: debut, date_fin: fin, categorie });
-  closeModal();
-  await init();
-}
-
-async function addToSejour(sid, pid) {
-  await api('/rest/v1/sejours_personnes', 'POST', { sejour_id: sid, personne_id: pid, confirmed: true });
-  await init();
-}
-async function removeFromSejour(sid, pid) {
-  await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`, 'DELETE');
-  await init();
-}
-async function addPersonToSejour(sid) {
-  const sel = document.getElementById(`add-sel-${sid}`);
-  if (!sel.value) return;
-  await addToSejour(sid, sel.value);
-}
 async function confirmLink(docId) {
   const val = document.getElementById(`sel-${docId}`).value;
   if (!val) return alert('Choisis un vacancier.');
   await linkDocument(docId, val);
 }
-async function confirmSejour(spId) {
-  await api(`/rest/v1/sejours_personnes?id=eq.${spId}`, 'PATCH', { confirmed: true });
-  await init();
-}
-async function rejectSejour(spId) {
-  await api(`/rest/v1/sejours_personnes?id=eq.${spId}`, 'DELETE');
+
+async function validerDossier(personneId) {
+  if (!confirm('Confirmer que le dossier est complet ?')) return;
+  await api(`/rest/v1/documents?personne_id=eq.${personneId}`, 'PATCH', { verified:true });
   await init();
 }
 
 function openModal()  { document.getElementById('modalOverlay').classList.add('show'); }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
 
-function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : ''; }
-
-function buildFilters() {
-  const foyers = [...new Set(allPersonnes.map(p => p.foyer).filter(Boolean))].sort();
-  const selF = document.getElementById('filterFoyer');
-  selF.innerHTML = '<option value="">Tous les foyers</option>';
-  foyers.forEach(f => { const o = document.createElement('option'); o.value = f; o.textContent = f; selF.appendChild(o); });
-
-  const selS = document.getElementById('filterSejour');
-  selS.innerHTML = '<option value="">Tous les séjours</option><option value="none">Sans séjour</option>';
-  allSejours.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = `${s.nom} (${fmtDate(s.date_debut)})`; selS.appendChild(o); });
+async function saveSejour() {
+  const nom=document.getElementById('sejourNom').value.trim(), debut=document.getElementById('sejourDebut').value, fin=document.getElementById('sejourFin').value, categorie=document.getElementById('sejourCategorie').value;
+  if (!nom||!debut||!fin) return alert('Remplis tous les champs.');
+  await api('/rest/v1/sejours','POST',{nom,date_debut:debut,date_fin:fin,categorie});
+  closeModal(); await init();
 }
 
-function buildStats() {
-  const complets  = allPersonnes.filter(p => getStatus(p.id) === 'complete').length;
-  const pending   = allPersonnes.filter(p => getStatus(p.id) === 'pending').length;
-  const incomplets= allPersonnes.filter(p => getStatus(p.id) === 'incomplete').length;
-  const vides     = allPersonnes.filter(p => getStatus(p.id) === 'empty').length;
-  const aClasser  = getUnlinked().length;
-  document.getElementById('statsBar').innerHTML = `
-    <div class="stat-chip ok"><span class="num">${complets}</span> complets</div>
-    <div class="stat-chip warn"><span class="num">${pending}</span> à vérifier</div>
-    <div class="stat-chip warn"><span class="num">${incomplets}</span> incomplets</div>
-    <div class="stat-chip danger"><span class="num">${vides}</span> sans document</div>
-    <div class="stat-chip warn"><span class="num">${aClasser}</span> à classer</div>
-    <div class="stat-chip"><span class="num">${allPersonnes.length}</span> vacanciers</div>
-  `;
-}
-
-async function deleteDoc(docId, storagePath) {
-  if (!confirm('Supprimer ce document définitivement ?')) return;
-  await api(`/rest/v1/documents?id=eq.${docId}`, 'DELETE');
-  await supabaseStorageDelete(storagePath);
-  await init();
-}
-
-async function supabaseStorageDelete(path) {
-  await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
-    method: 'DELETE',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-    }
-  });
-}
-
-function checkNewDocsSinceLastVisit() {
-  const lastVisit = localStorage.getItem('lysardiere_last_visit');
-  const now = new Date().toISOString();
-  localStorage.setItem('lysardiere_last_visit', now);
-
-  if (!lastVisit) return; // Première visite, pas de pop-up
-
-  const newDocs = allDocuments.filter(d => d.created_at > lastVisit);
-  if (!newDocs.length) return;
-
-  // Grouper par personne
-  const byPersonne = {};
-  newDocs.forEach(doc => {
-    const key = doc.personne_nom || 'Non classé';
-    if (!byPersonne[key]) byPersonne[key] = [];
-    byPersonne[key].push(doc.filename);
-  });
-
-  const lines = Object.entries(byPersonne).map(([nom, files]) =>
-    `<tr style="border-bottom:1px solid var(--border-light)">
-      <td style="padding:8px 0;font-weight:600;width:180px">${nom}</td>
-      <td style="padding:8px 0;color:var(--text-mid)">${files.join(', ')}</td>
-    </tr>`
-  ).join('');
-
-  document.getElementById('newdocs-count').textContent = newDocs.length;
-  document.getElementById('newdocs-list').innerHTML = lines;
-  document.getElementById('newdocsOverlay').classList.add('show');
-}
-
-function closePreview() {
-  document.getElementById('previewOverlay').classList.remove('show');
-}
-
-function buildPersonCard(p, sejourId = null) {
-  const docs = getPersonDocs(p.id);
-  const status = getStatus(p.id);
-
-  const badges = status === 'complete'
-  ? `<span class="badge badge-inscription">✅ Dossier complet</span>`
-  : status === 'pending'
-  ? `<span class="badge badge-pending">⏳ En attente de vérif</span>`
-  : REQUIRED_TYPES.map(t => {
-      const has = docs.find(d => d.type === t);
-      return `<span class="badge ${has ? TYPE_BADGE_CLASS[t] : 'badge-missing'}">${TYPE_LABELS[t]}</span>`;
-    }).join('');
-
-  // ← ICI le bloc docRows
- // Documents obligatoires (inscription + confidentiel)
-const docRows = REQUIRED_TYPES.map(t => {
-  const typeDocs = docs.filter(d => d.type === t);
-  if (typeDocs.length === 0) return `
-    <div class="doc-row">
-      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-      <span class="doc-missing">— Document manquant</span>
-    </div>`;
-  return typeDocs.map(doc => `
-    <div class="doc-row">
-      <span class="doc-type-label">${TYPE_LABELS[t]}</span>
-      <span class="doc-filename">${doc.filename}</span>
-      <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-    </div>`).join('');
-}).join('');
-
-// Documents classifiés mais hors obligatoires (ordonnance, divers)
-const extraTypes = ['ordonnance', 'divers'];
-const extraRows = extraTypes.flatMap(t => 
-  docs.filter(d => d.type === t).map(doc => `
-    <div class="doc-row">
-      <span class="doc-type-label" style="color:${t === 'ordonnance' ? 'var(--blue)' : 'var(--purple)'}">${TYPE_LABELS[t]}</span>
-      <span class="doc-filename">${doc.filename}</span>
-      <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-    </div>`)
-).join('');
-
-// Docs non classés
-// Documents non classés (type = 'autre' ou null)
-const unclassified = docs.filter(d => 
-  !REQUIRED_TYPES.includes(d.type) && 
-  !extraTypes.includes(d.type) && 
-  d.type !== 'dossier_complet'
-);
-  
-  const unclassifiedRows = unclassified.map(doc => `
-    <div class="doc-row">
-      <span class="doc-type-label" style="color:var(--orange)">📎 Non classé</span>
-      <span class="doc-filename">${doc.filename}</span>
-      <span class="doc-date">${fmtDate(doc.email_date)}</span>
-      <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-      <select class="link-select" onchange="classifyDoc('${doc.id}', this.value)">
-        <option value="">— Classer comme...</option>
-        <option value="inscription">📝 Inscription</option>
-        <option value="confidentiel">🔒 Confidentiel</option>
-        <option value="dossier_complet">📁 Dossier complet</option>
-        <option value="ordonnance">💊 Ordonnance</option>
-        <option value="divers">📎 Divers</option>
-      </select>
-    </div>`).join('');
-
-  // Bouton valider si pending
-  const btnValider = status === 'pending' ? `
-    <div style="padding:10px 0;border-top:1px solid var(--border-light);margin-top:4px">
-      <button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">
-        ✅ Valider le dossier comme complet
-      </button>
-    </div>` : '';
-
-  const removeBtn = sejourId
-    ? `<button class="btn btn-danger btn-sm" onclick="removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`
-    : '';
-
-  const uid = `${p.id}-${sejourId || 'all'}`;
-  return `
-    <div class="person-card">
-      <div class="person-header" onclick="toggleCard('${uid}')">
-        <span class="person-name">${p.prenom} ${p.nom}</span>
-        <span class="person-foyer">${p.foyer}</span>
-        <div class="doc-badges">${badges}</div>
-        ${removeBtn}
-        <span class="chevron" id="chev-${uid}">▶</span>
-      </div>
-    <div class="person-docs" id="docs-${uid}">
-        ${docRows}
-        ${extraRows}
-        ${unclassifiedRows}
-        ${btnValider}
-      </div>
-    </div>`;
-}
-
-async function validerDossier(personneId) {
-  if (!confirm('Confirmer que le dossier est complet ?')) return;
-  // Marquer tous les docs de cette personne comme vérifiés
-  await api(`/rest/v1/documents?personne_id=eq.${personneId}`, 'PATCH', { verified: true });
-  await init();
-}
-
-async function classifyDoc(docId, type) {
-  if (!type) return;
-  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', { type, status: 'linked' });
-  
-  // Mise à jour locale sans re-render complet
-  const doc = allDocuments.find(d => d.id === docId);
-  if (doc) doc.type = type;
-  
-  // Re-render uniquement les stats et badges
-  buildStats();
-  
-  // Déplacer visuellement le doc de "non classé" vers la fiche personne
-  const card = document.querySelector(`[data-doc-id="${docId}"]`);
-  if (card) {
-    card.style.transition = 'opacity 0.3s';
-    card.style.opacity = '0';
-    setTimeout(() => renderAll(), 350);
-  } else {
-    renderAll();
-  }
-}
-
-function buildSejoursSection(personnesFiltered) {
-  if (!allSejours.length) return `
-    <div class="section-title">✈️ Séjours</div>
-    <p class="empty">Aucun séjour créé. Cliquez sur "+ Nouveau séjour".</p>`;
-
-  const categories = [
-    { key: 'weekend',     label: '🏕️ Week-ends',   },
-    { key: 'mini_sejour', label: '⛺ Mini séjours', },
-    { key: 'semaine',     label: '🌊 Semaines',     },
-  ];
-
-  const categoriesHtml = categories.map(cat => {
-    const sejours = allSejours.filter(s => (s.categorie || 'semaine') === cat.key);
-    if (!sejours.length) return '';
-
-    const sejoursHtml = sejours.map(s => {
-      const personnes = getSejourPersonnes(s.id).filter(p => personnesFiltered.some(pf => pf.id === p.id));
-      const others = personnesFiltered.filter(p => !allSejoursPersonnes.some(sp => sp.sejour_id === s.id && sp.personne_id === p.id));
-      const options = others.map(p => `<option value="${p.id}">${p.prenom} ${p.nom}</option>`).join('');
-      const cards = personnes.length ? personnes.map(p => buildPersonCard(p, s.id)).join('') : `<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
-      const uid = `sejour-${s.id}`;
-      const estPasse = new Date(s.date_fin) < new Date();
-      const btnArchiver = estPasse ? `
-        <button class="btn btn-archive btn-sm"
-          onclick="event.stopPropagation(); archiverSejour('${s.id}')"
-          title="Archiver ce séjour">📦 Archiver</button>` : '';
-
-      return `
-        <div class="sejour-block">
-          <div class="sejour-header" onclick="toggleSejour('${uid}')">
-            <h3>${s.nom}</h3>
-            <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
-            <span class="sejour-count">${personnes.length} vacancier(s)</span>
-            ${btnArchiver}
-            <span class="sejour-chevron" id="schev-${uid}">▶</span>
-          </div>
-          <div class="sejour-body" id="${uid}">
-            ${cards}
-            ${options ? `
-            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
-              <select class="link-select" id="add-sel-${s.id}">
-                <option value="">+ Ajouter un vacancier</option>
-                ${options}
-              </select>
-              <button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button>
-            </div>` : ''}
-          </div>
-        </div>`;
-    }).join('');
-
-    return `
-      <div style="margin-bottom:8px">
-        <div class="section-title" style="font-size:13px;margin:12px 0 8px;cursor:pointer;user-select:none"
-          onclick="toggleCat('cat-${cat.key}', 'chev-cat-${cat.key}')">
-          ${cat.label} <span class="count">${sejours.length}</span>
-          <span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span>
-        </div>
-        <div id="cat-${cat.key}" style="display:none">
-          ${sejoursHtml}
-        </div>
-      </div>`;
-  }).join('');
-
-  return `
-    <div class="section-title" onclick="toggleSejoursContainer()" style="cursor:pointer;user-select:none">
-      ✈️ Séjours <span class="count">${allSejours.length}</span>
-      <span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span>
-    </div>
-    <div id="sejours-container" style="display:none">
-      ${categoriesHtml}
-    </div>`;
-}
-
-function toggleCat(id, chevId) {
-  const el = document.getElementById(id);
-  const chev = document.getElementById(chevId);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  if (chev) chev.classList.toggle('open');
-}
+async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await init(); }
+async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await init(); }
+async function addPersonToSejour(sid) { const sel=document.getElementById(`add-sel-${sid}`); if(!sel.value) return; await addToSejour(sid,sel.value); }
 
 async function archiverSejour(sejourId) {
-  const sejour = allSejours.find(s => s.id === sejourId);
+  const sejour = allSejours.find(s=>s.id===sejourId);
   if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
-
-  // Archiver le séjour
-  await api(`/rest/v1/sejours?id=eq.${sejourId}`, 'PATCH', { archived: true });
-
-  // Archiver tous les documents des vacanciers de ce séjour
-  const personneIds = allSejoursPersonnes
-    .filter(sp => sp.sejour_id === sejourId)
-    .map(sp => sp.personne_id);
-
-  for (const pid of personneIds) {
-    await api(`/rest/v1/documents?personne_id=eq.${pid}`, 'PATCH', { archived: true });
-  }
-
+  await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
+  const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
+  for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}`,'PATCH',{archived:true});
   await init();
 }
 
-function toggleSejoursContainer() {
-  const container = document.getElementById('sejours-container');
-  const chevron = document.getElementById('sejours-chevron');
-  container.style.display = container.style.display === 'none' ? 'block' : 'none';
-  chevron.classList.toggle('open');
-}
-
-function buildUnlinked() {
-  const unlinked = getUnlinked();
-  if (!unlinked.length) return '';
-
-  const options = allPersonnes.map(p =>
-    `<option value="${p.id}">${p.prenom} ${p.nom} — ${p.foyer}</option>`
-  ).join('');
-
-  const rows = unlinked.map(doc => `
-  <div class="unlinked-card" data-doc-id="${doc.id}">
-    <span style="font-size:1.6rem">📄</span>
-    <div class="unlinked-info">
-      <strong>${doc.filename}</strong>
-      <span>De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span>
-    </div>
-    <button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}', '${doc.filename}')">Voir PDF</button>
-    <div class="search-select" id="ss-${doc.id}">
-      <input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier..."
-        oninput="filterSearchSelect('${doc.id}', this.value)"
-        onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'"
-        autocomplete="off">
-      <div class="search-select-list" id="ss-list-${doc.id}">
-        ${allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).map(p => `
-          <div class="search-select-item" 
-            data-id="${p.id}"
-            data-name="${p.nom} ${p.prenom}"
-            onclick="selectPerson('${doc.id}', '${p.id}', '${p.nom} ${p.prenom} — ${p.foyer}')">
-            ${p.nom} ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span>
-          </div>`).join('')}
-      </div>
-      <input type="hidden" id="sel-${doc.id}">
-    </div>
-    <button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button>
-    <button class="btn btn-danger btn-sm" onclick="deleteDoc('${doc.id}', '${doc.storage_path}')">🗑️</button>
-  </div>`).join('');
-
-  return `
-    <div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">
-      ⚠️ À classer <span class="count">${unlinked.length}</span>
-      <span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span>
-    </div>
-    <div id="aclasser-container" style="display:none">
-      ${rows}
-    </div>`;
-  }
-
-function toggleAClasser() {
-  const container = document.getElementById('aclasser-container');
-  const chevron = document.getElementById('aclasser-chevron');
-  container.style.display = container.style.display === 'none' ? 'block' : 'none';
-  chevron.classList.toggle('open');
-}
+async function confirmSejour(spId) { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'PATCH',{confirmed:true}); await init(); }
+async function rejectSejour(spId)  { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'DELETE'); await init(); }
 
 function filterSearchSelect(docId, query) {
   const list = document.getElementById(`ss-list-${docId}`);
-  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   list.style.display = 'block';
-  Array.from(list.children).forEach(item => {
-    const name = item.dataset.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    item.style.display = name.includes(q) ? 'block' : 'none';
-  });
+  Array.from(list.children).forEach(item => { const name=(item.dataset.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); item.style.display=name.includes(q)?'block':'none'; });
+}
+function selectPerson(docId,personneId,label) {
+  document.getElementById(`sel-${docId}`).value=personneId;
+  document.querySelector(`#ss-${docId} .search-select-input`).value=label;
+  document.getElementById(`ss-list-${docId}`).style.display='none';
+  document.getElementById(`lier-${docId}`).style.display='inline-flex';
+}
+document.addEventListener('click', e => { if (!e.target.closest('.search-select')) document.querySelectorAll('.search-select-list').forEach(l=>l.style.display='none'); });
+
+function toggleCard(uid) { document.getElementById(`docs-${uid}`)?.classList.toggle('open'); document.getElementById(`chev-${uid}`)?.classList.toggle('open'); }
+function toggleSejour(uid) { document.getElementById(uid)?.classList.toggle('open'); document.getElementById(`schev-${uid}`)?.classList.toggle('open'); }
+function toggleSejoursContainer() { const c=document.getElementById('sejours-container'),v=document.getElementById('sejours-chevron'); c.style.display=c.style.display==='none'?'block':'none'; v?.classList.toggle('open'); }
+function toggleAClasser() { const c=document.getElementById('aclasser-container'),v=document.getElementById('aclasser-chevron'); c.style.display=c.style.display==='none'?'block':'none'; v?.classList.toggle('open'); }
+function toggleCat(id,chevId) { const el=document.getElementById(id),ch=document.getElementById(chevId); if(el) el.style.display=el.style.display==='none'?'block':'none'; if(ch) ch.classList.toggle('open'); }
+
+function buildPersonCard(p, sejourId=null) {
+  const docs=getPersonDocs(p.id), status=getStatus(p.id);
+  let badgesHtml='';
+  if (status==='complete') badgesHtml=`<span class="badge badge-inscription">✅ Complet</span>`;
+  else if (status==='pending') badgesHtml=`<span class="badge badge-pending">⏳ À vérifier</span>`;
+  else badgesHtml=REQUIRED_TYPES.map(t=>{ const has=docs.find(d=>d.type===t); return `<span class="badge ${has?`badge-${t}`:'missing'}">${has?TYPE_LABELS[t]:TYPE_LABELS[t]+' ✗'}</span>`; }).join('');
+
+  const docRows=REQUIRED_TYPES.map(t=>{
+    const typeDocs=docs.filter(d=>d.type===t);
+    if (!typeDocs.length) return `<div class="doc-row"><span class="doc-type-pill missing">${TYPE_LABELS[t]}</span><span class="doc-missing">Document manquant</span></div>`;
+    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
+  }).join('');
+
+  const extraTypes=['ordonnance','divers','dossier_complet'];
+  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`)).join('');
+
+  const unclassified=docs.filter(d=>!REQUIRED_TYPES.includes(d.type)&&!extraTypes.includes(d.type));
+  const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
+
+  const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">✅ Valider comme complet</button></div>`:'';
+  const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
+  const uid=`${p.id}-${sejourId||'all'}`;
+
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}</div></div>`;
 }
 
-function selectPerson(docId, personneId, label) {
-  document.getElementById(`sel-${docId}`).value = personneId;
-  document.querySelector(`#ss-${docId} .search-select-input`).value = label;
-  document.getElementById(`ss-list-${docId}`).style.display = 'none';
-  document.getElementById(`lier-${docId}`).style.display = 'inline-flex';
+function buildSejoursSection(personnesFiltered) {
+  if (!allSejours.length) return `<div class="section-title" onclick="toggleSejoursContainer()" style="cursor:pointer;user-select:none">✈️ Séjours <span class="count">0</span><span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span></div><p class="empty">Aucun séjour. Cliquez sur "✈️ Séjour" pour en créer un.</p>`;
+
+  const cats=[{key:'weekend',label:'🏕️ Week-ends'},{key:'mini_sejour',label:'⛺ Mini séjours'},{key:'semaine',label:'🌊 Semaines'}];
+  const catsHtml=cats.map(cat=>{
+    const sejours=allSejours.filter(s=>(s.categorie||'semaine')===cat.key);
+    if (!sejours.length) return '';
+    const sejoursHtml=sejours.map(s=>{
+      const personnes=getSejourPersonnes(s.id).filter(p=>personnesFiltered.some(pf=>pf.id===p.id));
+      const others=personnesFiltered.filter(p=>!allSejoursPersonnes.some(sp=>sp.sejour_id===s.id&&sp.personne_id===p.id));
+      const options=others.map(p=>`<option value="${p.id}">${p.prenom} ${p.nom} — ${p.foyer}</option>`).join('');
+      const cards=personnes.length?personnes.map(p=>buildPersonCard(p,s.id)).join(''):`<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
+      const uid=`sejour-${s.id}`;
+      const estPasse=new Date(s.date_fin)<new Date();
+      const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
+    }).join('');
+    return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
+  }).join('');
+
+  return `<div class="section-title" onclick="toggleSejoursContainer()" style="cursor:pointer;user-select:none">✈️ Séjours <span class="count">${allSejours.length}</span><span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span></div><div id="sejours-container" style="display:none">${catsHtml}</div>`;
 }
 
-// Fermer les listes si on clique ailleurs
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-select')) {
-    document.querySelectorAll('.search-select-list').forEach(l => l.style.display = 'none');
-  }
-});
-
-function filterUnlinkedSelect(selectId, query) {
-  const sel = document.getElementById(selectId);
-  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  Array.from(sel.options).forEach(opt => {
-    if (!opt.value) return; // Garder l'option vide
-    const text = opt.textContent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    opt.style.display = text.includes(q) ? '' : 'none';
-  });
+function buildUnlinked() {
+  const unlinked=getUnlinked();
+  if (!unlinked.length) return '';
+  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${doc.id}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${doc.filename}</strong><span class="unlinked-meta">De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir PDF</button><div class="search-select" id="ss-${doc.id}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${doc.id}',this.value)" onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${doc.id}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${p.id}" data-name="${p.nom} ${p.prenom}" onclick="selectPerson('${doc.id}','${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')"><strong>${p.nom}</strong> ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span></div>`).join('')}</div><input type="hidden" id="sel-${doc.id}"></div><button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
+  return `<div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">⚠️ À classer <span class="count">${unlinked.length}</span><span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span></div><div id="aclasser-container" style="display:none">${rows}</div>`;
 }
 
 function checkAlerts() {
-  const newDocs = allDocuments.filter(d => d.status === 'new');
-  if (newDocs.length) {
-    document.getElementById('alertText').textContent = `${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`;
-    document.getElementById('alertBanner').classList.add('show');
-  }
-  const toConfirm = allSejoursPersonnes.filter(sp => sp.confirmed === false);
+  const newDocs=allDocuments.filter(d=>d.status==='new');
+  if (newDocs.length) { document.getElementById('alertText').textContent=`${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`; document.getElementById('alertBanner').classList.add('show'); }
+  const toConfirm=allSejoursPersonnes.filter(sp=>sp.confirmed===false);
   if (toConfirm.length) {
-    const banner = document.getElementById('confirmBanner');
-    banner.classList.add('show');
-    banner.innerHTML = `<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>` +
-      toConfirm.map(sp => {
-        const p = allPersonnes.find(x => x.id === sp.personne_id);
-        const s = allSejours.find(x => x.id === sp.sejour_id);
-        if (!p || !s) return '';
-        return `<span><strong>${p.prenom} ${p.nom}</strong> → ${s.nom}</span>
-          <button class="btn btn-info btn-sm" onclick="confirmSejour('${sp.id}')">Confirmer</button>
-          <button class="btn btn-danger btn-sm" onclick="rejectSejour('${sp.id}')">Rejeter</button>`;
-      }).join('');
+    const banner=document.getElementById('confirmBanner'); banner.classList.add('show');
+    banner.innerHTML=`<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>`+toConfirm.map(sp=>{ const p=allPersonnes.find(x=>x.id===sp.personne_id),s=allSejours.find(x=>x.id===sp.sejour_id); if(!p||!s) return ''; return `<span><strong>${p.prenom} ${p.nom}</strong> → ${s.nom}</span><button class="btn btn-info btn-sm" onclick="confirmSejour('${sp.id}')">Confirmer</button><button class="btn btn-danger btn-sm" onclick="rejectSejour('${sp.id}')">Rejeter</button>`; }).join('');
   }
 }
 
-function toggleCard(uid) {
-  document.getElementById(`docs-${uid}`)?.classList.toggle('open');
-  document.getElementById(`chev-${uid}`)?.classList.toggle('open');
-}
-function toggleSejour(uid) {
-  document.getElementById(uid)?.classList.toggle('open');
-  document.getElementById(`schev-${uid}`)?.classList.toggle('open');
-}
-
-function getFilteredPersonnes() {
-  const search  = document.getElementById('searchInput').value.toLowerCase();
-  const fStatus = document.getElementById('filterStatus').value;
-  const fFoyer  = document.getElementById('filterFoyer').value;
-  const fSejour = document.getElementById('filterSejour').value;
-  return allPersonnes.filter(p => {
-    const name = `${p.prenom} ${p.nom}`.toLowerCase();
-    if (search && !name.includes(search) && !(p.foyer||'').toLowerCase().includes(search)) return false;
-    if (fStatus && getStatus(p.id) !== fStatus) return false;
-    if (fFoyer  && p.foyer !== fFoyer) return false;
-    if (fSejour === 'none' && allSejoursPersonnes.some(sp => sp.personne_id === p.id)) return false;
-    if (fSejour && fSejour !== 'none' && !allSejoursPersonnes.some(sp => sp.sejour_id === fSejour && sp.personne_id === p.id)) return false;
-    return true;
-  });
+function checkNewDocsSinceLastVisit() {
+  const lastVisit=localStorage.getItem('lysardiere_last_visit');
+  localStorage.setItem('lysardiere_last_visit', new Date().toISOString());
+  if (!lastVisit) return;
+  const newDocs=allDocuments.filter(d=>d.created_at>lastVisit);
+  if (!newDocs.length) return;
+  const byP={};
+  newDocs.forEach(doc=>{ const k=doc.personne_nom||'— Non classé'; if(!byP[k]) byP[k]=[]; byP[k].push(doc.filename); });
+  document.getElementById('newdocs-count').textContent=newDocs.length;
+  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${nom}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.join(', ')}</td></tr>`).join('');
+  document.getElementById('newdocsOverlay').classList.add('show');
 }
 
 async function openAddPersonModal() {
-  const [lieux, personnes] = await Promise.all([
-    api('/rest/v1/lieux?select=id,data&order=id.asc'),
-    api('/rest/v1/personnes?select=data&order=id.asc')
-  ]);
-
-  // Lieux
-  const selLieu = document.getElementById('newLieu');
-  selLieu.innerHTML = '<option value="">— Choisir un lieu de RDV</option>';
-  if (lieux) {
-    lieux
-      .sort((a,b) => (a.data?.nom||'').localeCompare(b.data?.nom||''))
-      .forEach(l => {
-        const o = document.createElement('option');
-        o.value = l.id;
-        o.textContent = l.data?.nom || l.id;
-        selLieu.appendChild(o);
-      });
-  }
-
-  // Foyers — extraire les foyers uniques des personnes existantes
-  const foyers = [...new Set(
-    (personnes || []).map(p => p.data?.foyer).filter(Boolean)
-  )].sort();
-  const selFoyer = document.getElementById('newFoyer');
-  selFoyer.innerHTML = '<option value="">— Choisir un foyer</option>';
-  foyers.forEach(f => {
-    const o = document.createElement('option');
-    o.value = f;
-    o.textContent = f;
-    selFoyer.appendChild(o);
-  });
-
+  const [lieux,personnes]=await Promise.all([api('/rest/v1/lieux?select=id,data&order=id.asc'),api('/rest/v1/personnes?select=data&order=id.asc')]);
+  const selLieu=document.getElementById('newLieu');
+  selLieu.innerHTML='<option value="">— Choisir un lieu de RDV</option>';
+  if (lieux) lieux.sort((a,b)=>(a.data?.nom||'').localeCompare(b.data?.nom||'')).forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.data?.nom||l.id; selLieu.appendChild(o); });
+  const foyers=[...new Set((personnes||[]).map(p=>p.data?.foyer).filter(Boolean))].sort();
+  const selFoyer=document.getElementById('newFoyer');
+  selFoyer.innerHTML='<option value="">— Choisir un foyer</option>';
+  foyers.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; selFoyer.appendChild(o); });
   document.getElementById('addPersonOverlay').classList.add('show');
 }
 
 function closeAddPersonModal() {
   document.getElementById('addPersonOverlay').classList.remove('show');
-  document.getElementById('newPrenom').value = '';
-  document.getElementById('newNom').value = '';
-  document.getElementById('newFoyer').value = '';
-  document.getElementById('newLieu').value = '';
-  document.getElementById('newBesoins').value = '';
-  document.getElementById('newNotes').value = '';
+  ['newPrenom','newNom','newBesoins','newNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('newFoyer').value='';
+  document.getElementById('newLieu').value='';
 }
 
 async function savePerson() {
-  const prenom = document.getElementById('newPrenom').value.trim();
-  const nom = document.getElementById('newNom').value.trim().toUpperCase();
-  const foyer = document.getElementById('newFoyer').value.trim();
-  const lieu = document.getElementById('newLieu').value;
-  const besoins = document.getElementById('newBesoins').value.trim();
-  const notes = document.getElementById('newNotes').value.trim();
-
-  if (!prenom || !nom || !foyer) return alert('Prénom, nom et foyer sont obligatoires.');
-
-  // Générer un ID au même format que l'app transport
-  const id = `p${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-  const data = {
-    id,
-    prenom,
-    nom,
-    foyer,
-    lieu: lieu || '',
-    lieux: lieu ? [lieu] : [],
-    besoins,
-    notes
-  };
-
-  await api('/rest/v1/personnes', 'POST', { id, data });
-  closeAddPersonModal();
-  await init();
+  const prenom=document.getElementById('newPrenom').value.trim(), nom=document.getElementById('newNom').value.trim().toUpperCase(), foyer=document.getElementById('newFoyer').value.trim(), lieu=document.getElementById('newLieu').value, besoins=document.getElementById('newBesoins').value.trim(), notes=document.getElementById('newNotes').value.trim();
+  if (!prenom||!nom||!foyer) return alert('Prénom, nom et foyer sont obligatoires.');
+  const id=`p${Date.now()}_${Math.floor(Math.random()*1000)}`;
+  await api('/rest/v1/personnes','POST',{id,data:{id,prenom,nom,foyer,lieu:lieu||'',lieux:lieu?[lieu]:[],besoins,notes}});
+  closeAddPersonModal(); await init();
   alert(`✅ ${prenom} ${nom} ajouté(e) avec succès !`);
 }
 
-function renderAll() {
-  const personnes = getFilteredPersonnes();
-  const fSejour   = document.getElementById('filterSejour').value;
-  let html = buildUnlinked();
-  if (!fSejour || fSejour === 'none') {
-  const sejoursHtml = buildSejoursSection(personnes);
-  html += sejoursHtml;}
-  html += `<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
-  html += personnes.map(p => buildPersonCard(p)).join('') || '<p class="empty">Aucun vacancier trouvé.</p>';
-  document.getElementById('mainContent').innerHTML = html;
+function getFilteredPersonnes() {
+  const search=document.getElementById('searchInput').value.toLowerCase(), fStatus=document.getElementById('filterStatus').value, fFoyer=document.getElementById('filterFoyer').value, fSejour=document.getElementById('filterSejour').value;
+  return allPersonnes.filter(p=>{
+    const name=`${p.prenom} ${p.nom}`.toLowerCase();
+    if (search&&!name.includes(search)&&!(p.foyer||'').toLowerCase().includes(search)) return false;
+    if (fStatus&&getStatus(p.id)!==fStatus) return false;
+    if (fFoyer&&p.foyer!==fFoyer) return false;
+    if (fSejour==='none'&&allSejoursPersonnes.some(sp=>sp.personne_id===p.id)) return false;
+    if (fSejour&&fSejour!=='none'&&!allSejoursPersonnes.some(sp=>sp.sejour_id===fSejour&&sp.personne_id===p.id)) return false;
+    return true;
+  });
 }
 
-let listenersAdded = false;
+function renderAll() {
+  const personnes=getFilteredPersonnes(), fSejour=document.getElementById('filterSejour').value;
+  let html=buildUnlinked();
+  if (!fSejour||fSejour==='none') html+=buildSejoursSection(personnes);
+  html+=`<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
+  html+=personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
+  document.getElementById('mainContent').innerHTML=html;
+}
 
+let listenersAdded=false;
 async function init() {
   await fetchData();
-  buildFilters();
-  buildStats();
-  checkAlerts();
-  renderAll();
-  checkNewDocsSinceLastVisit();
-
+  buildFilters(); buildStats(); checkAlerts(); renderAll(); checkNewDocsSinceLastVisit();
   if (!listenersAdded) {
-    document.getElementById('searchInput').addEventListener('input', renderAll);
-    document.getElementById('filterStatus').addEventListener('change', renderAll);
-    document.getElementById('filterFoyer').addEventListener('change', renderAll);
-    document.getElementById('filterSejour').addEventListener('change', renderAll);
-    listenersAdded = true;
+    document.getElementById('searchInput').addEventListener('input',renderAll);
+    document.getElementById('filterStatus').addEventListener('change',renderAll);
+    document.getElementById('filterFoyer').addEventListener('change',renderAll);
+    document.getElementById('filterSejour').addEventListener('change',renderAll);
+    listenersAdded=true;
   }
 }
-
 init();
 </script>
-<!-- MODAL NOUVEAU VACANCIER -->
+
+<!-- MODAL VACANCIER -->
 <div class="modal-overlay" id="addPersonOverlay">
   <div class="modal-box" style="max-width:480px">
     <div class="modal-header">
-      <span style="font-size:20px">👤</span>
+      <span style="font-size:18px">👤</span>
       <span class="modal-header-text">Nouveau vacancier</span>
     </div>
     <div class="modal-body">
-      <label>Prénom</label>
-      <input type="text" id="newPrenom" placeholder="Prénom">
-      <label>Nom</label>
-      <input type="text" id="newNom" placeholder="NOM">
-      <label>Foyer</label>
-        <select id="newFoyer" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
-          <option value="">— Choisir un foyer</option>
-        </select>
-      <label>Lieu de RDV</label>
-      <select id="newLieu" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);margin-bottom:14px">
-        <option value="">— Choisir un lieu de RDV</option>
-      </select>
-      <label>Besoins PMR</label>
-      <input type="text" id="newBesoins" placeholder="Ex: fauteuil roulant, ...">
-      <label>Notes</label>
-      <input type="text" id="newNotes" placeholder="Notes complémentaires">
+      <label>Prénom</label><input type="text" id="newPrenom" placeholder="Prénom">
+      <label>Nom</label><input type="text" id="newNom" placeholder="NOM">
+      <label>Foyer</label><select id="newFoyer"><option value="">— Choisir un foyer</option></select>
+      <label>Lieu de RDV</label><select id="newLieu"><option value="">— Choisir un lieu de RDV</option></select>
+      <label>Besoins PMR</label><input type="text" id="newBesoins" placeholder="Ex: fauteuil roulant…">
+      <label>Notes</label><input type="text" id="newNotes" placeholder="Notes complémentaires">
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeAddPersonModal()">Annuler</button>
@@ -1410,21 +678,18 @@ init();
     </div>
   </div>
 </div>
-<!-- MODAL NOUVEAUX DOCUMENTS -->
+
+<!-- MODAL NOUVEAUX DOCS -->
 <div class="modal-overlay" id="newdocsOverlay">
   <div class="modal-box" style="max-width:520px">
     <div class="modal-header">
-      <span style="font-size:20px">🔔</span>
-      <span class="modal-header-text"><span id="newdocs-count"></span> nouveau(x) document(s) depuis votre dernière visite</span>
+      <span style="font-size:18px">🔔</span>
+      <span class="modal-header-text"><span id="newdocs-count"></span> nouveau(x) document(s)</span>
     </div>
     <div class="modal-body">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="border-bottom:2px solid var(--gold)">
-            <th style="padding:6px 0;text-align:left;color:var(--forest);font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Vacancier</th>
-            <th style="padding:6px 0;text-align:left;color:var(--forest);font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Fichier(s)</th>
-          </tr>
-        </thead>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">Depuis votre dernière visite :</p>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:2px solid var(--gold-deep)"><th style="padding:6px 0;text-align:left;color:var(--forest);font-size:10px;text-transform:uppercase;letter-spacing:0.8px">Vacancier</th><th style="padding:6px 0;text-align:left;color:var(--forest);font-size:10px;text-transform:uppercase;letter-spacing:0.8px">Fichier(s)</th></tr></thead>
         <tbody id="newdocs-list"></tbody>
       </table>
     </div>
@@ -1433,22 +698,22 @@ init();
     </div>
   </div>
 </div>
+
+<!-- PDF PREVIEW -->
 <div class="pdf-preview-overlay" id="pdfPreviewOverlay" onclick="closePdfPreview(event)">
-    <div class="pdf-preview-box">
-      <div class="pdf-preview-header">
-        <span style="font-size:18px">📄</span>
-        <span class="pdf-preview-title" id="pdfPreviewTitle">Document</span>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent" 
-          onclick="closePdfPreview()">✕ Fermer</button>
-      </div>
-      <iframe class="pdf-preview-iframe" id="pdfPreviewIframe" src=""></iframe>
-      <div class="pdf-preview-actions">
-        <a class="btn btn-primary btn-sm" id="pdfPreviewDownload" href="#" download target="_blank">
-          ⬇️ Télécharger
-        </a>
-        <button class="btn btn-sm" onclick="closePdfPreview()">Fermer</button>
-      </div>
+  <div class="pdf-preview-box">
+    <div class="pdf-preview-header">
+      <span style="font-size:16px">📄</span>
+      <span class="pdf-preview-title" id="pdfPreviewTitle">Document</span>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="closePdfPreview()">✕ Fermer</button>
+    </div>
+    <iframe class="pdf-preview-iframe" id="pdfPreviewIframe" src=""></iframe>
+    <div class="pdf-preview-actions">
+      <a class="btn btn-primary btn-sm" id="pdfPreviewDownload" href="#" download target="_blank">⬇️ Télécharger</a>
+      <button class="btn btn-sm" onclick="closePdfPreview()">Fermer</button>
     </div>
   </div>
+</div>
+
 </body>
 </html>
