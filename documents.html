@@ -536,7 +536,9 @@ function buildPersonCard(p, sejourId=null) {
   const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
   const uid=`${p.id}-${sejourId||'all'}`;
 
-  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}</div></div>`;
+  const totalDocs = docs.length;
+  const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}</div></div>`;
 }
 
 function buildSejoursSection(personnesFiltered) {
