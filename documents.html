@@ -565,7 +565,7 @@ async function archiverSejour(sejourId) {
   if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
   await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
   const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
-  for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}&type=neq.confidentiel`,'PATCH',{archived:true});
+  for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}&type=neq.confidentiel&type=neq.dossier_complet`,'PATCH',{archived:true});
   await init();
 }
 
@@ -720,7 +720,7 @@ async function archiverAnnee(annee) {
   if (!confirm(`Archiver automatiquement tous les séjours et inscriptions de ${annee} ?`)) return;
   
   // Archiver les séjours de l'année passée
-  await api(`/rest/v1/sejours?annee=eq.${annee}`, 'PATCH', { archived: true });
+  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel&type=neq.dossier_complet`, 'PATCH', { archived: true });
   
   // Archiver les documents de l'année passée SAUF les confidentielles
   await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
