@@ -526,11 +526,16 @@ async function classifyDoc(docId, type) {
   buildStats(); renderAll();
 }
 
-async function linkDocument(docId, personneId) {
+async function linkDocument(docId, personneId, typeForce=null) {
   const p = allPersonnes.find(x=>x.id===personneId);
   const doc = allDocuments.find(d=>d.id===docId);
-  const detectedType = detectTypeFromFilename(doc?.filename||'');
-  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', { personne_id:personneId, personne_nom:`${p.prenom} ${p.nom}`, status:'linked', type:detectedType||doc?.type||'autre' });
+  const detectedType = typeForce || detectTypeFromFilename(doc?.filename||'');
+  await api(`/rest/v1/documents?id=eq.${docId}`, 'PATCH', {
+    personne_id: personneId,
+    personne_nom: `${p.prenom} ${p.nom}`,
+    status: 'linked',
+    type: detectedType || doc?.type || 'autre'
+  });
   if (doc) { doc.personne_id=personneId; doc.personne_nom=`${p.prenom} ${p.nom}`; doc.type=detectedType||doc.type; }
   renderAll();
 }
@@ -538,7 +543,8 @@ async function linkDocument(docId, personneId) {
 async function confirmLink(docId) {
   const val = document.getElementById(`sel-${docId}`).value;
   if (!val) return alert('Choisis un vacancier.');
-  await linkDocument(docId, val);
+  const typeChoisi = document.getElementById(`type-${docId}`).value || null;
+  await linkDocument(docId, val, typeChoisi);
 }
 
 async function validerDossier(personneId) {
@@ -583,6 +589,7 @@ function selectPerson(docId,personneId,label) {
   document.getElementById(`sel-${docId}`).value=personneId;
   document.querySelector(`#ss-${docId} .search-select-input`).value=label;
   document.getElementById(`ss-list-${docId}`).style.display='none';
+  document.getElementById(`type-${docId}`).style.display = 'inline-block';
   document.getElementById(`lier-${docId}`).style.display='inline-flex';
 }
 document.addEventListener('click', e => { if (!e.target.closest('.search-select')) document.querySelectorAll('.search-select-list').forEach(l=>l.style.display='none'); });
@@ -647,7 +654,15 @@ function buildSejoursSection(personnesFiltered) {
 function buildUnlinked() {
   const unlinked=getUnlinked();
   if (!unlinked.length) return '';
-  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${doc.id}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${doc.filename}</strong><span class="unlinked-meta">De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir PDF</button><div class="search-select" id="ss-${doc.id}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${doc.id}',this.value)" onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${doc.id}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${p.id}" data-name="${p.nom} ${p.prenom}" onclick="selectPerson('${doc.id}','${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')"><strong>${p.nom}</strong> ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span></div>`).join('')}</div><input type="hidden" id="sel-${doc.id}"></div><button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
+  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${doc.id}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${doc.filename}</strong><span class="unlinked-meta">De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir PDF</button><div class="search-select" id="ss-${doc.id}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${doc.id}',this.value)" onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${doc.id}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${p.id}" data-name="${p.nom} ${p.prenom}" onclick="selectPerson('${doc.id}','${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')"><strong>${p.nom}</strong> ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span></div>`).join('')}</div><input type="hidden" id="sel-${doc.id}"></div><select class="link-select" id="type-${doc.id}" style="display:none;height:30px;font-size:11px">
+  <option value="">Type auto</option>
+  <option value="inscription">📝 Inscription</option>
+  <option value="confidentiel">🔒 Confidentiel</option>
+  <option value="dossier_complet">📁 Dossier complet</option>
+  <option value="ordonnance">💊 Ordonnance</option>
+  <option value="divers">📎 Divers</option>
+</select>
+<button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
   return `<div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">⚠️ À classer <span class="count">${unlinked.length}</span><span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span></div><div id="aclasser-container" style="display:none">${rows}</div>`;
 }
 
