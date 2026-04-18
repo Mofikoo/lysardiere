@@ -803,26 +803,34 @@ function getFilteredPersonnes() {
 }
 
 async function openAddDocModal() {
-  const selP = document.getElementById('docPersonne');
-  selP.innerHTML = '<option value="">— Choisir un vacancier</option>';
-  allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).forEach(p => {
-    const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = `${p.nom} ${p.prenom} — ${p.foyer}`;
-    selP.appendChild(o);
-  });
+  const list = document.getElementById('ss-list-doc');
+  list.innerHTML = allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).map(p => `
+  <div class="search-select-item"
+    data-id="${p.id}"
+    data-name="${p.nom} ${p.prenom}"
+    onclick="selectDocPerson('${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')">
+    <strong>${p.nom}</strong> ${p.prenom}
+    <span style="color:var(--text-light);font-size:11px"> — ${p.foyer}</span>
+  </div>`).join('');
   document.getElementById('addDocOverlay').classList.add('show');
 }
 
 function closeAddDocModal() {
   document.getElementById('addDocOverlay').classList.remove('show');
   document.getElementById('docFile').value = '';
-  document.getElementById('docPersonne').value = '';
+  document.getElementById('sel-doc').value = '';
+  document.querySelector('#ss-doc .search-select-input').value = '';
   document.getElementById('docType').value = 'inscription';
 }
 
+function selectDocPerson(personneId, label) {
+  document.getElementById('sel-doc').value = personneId;
+  document.querySelector('#ss-doc .search-select-input').value = label;
+  document.getElementById('ss-list-doc').style.display = 'none';
+}
+
 async function saveDoc() {
-  const personneId = document.getElementById('docPersonne').value;
+  const personneId = document.getElementById('sel-doc').value;
   const type       = document.getElementById('docType').value;
   const file       = document.getElementById('docFile').files[0];
   if (!file) return alert('Choisis un fichier PDF.');
@@ -922,7 +930,14 @@ init();
     </div>
     <div class="modal-body">
       <label>Vacancier</label>
-      <select id="docPersonne"><option value="">— Choisir un vacancier</option></select>
+      <div class="search-select" id="ss-doc" style="width:100%;max-width:none">
+        <input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…"
+          oninput="filterSearchSelect('doc', this.value)"
+          onfocus="document.getElementById('ss-list-doc').style.display='block'"
+          autocomplete="off">
+        <div class="search-select-list" id="ss-list-doc"></div>
+        <input type="hidden" id="sel-doc">
+      </div>
       <label>Type de document</label>
       <select id="docType">
         <option value="inscription">📝 Inscription</option>
