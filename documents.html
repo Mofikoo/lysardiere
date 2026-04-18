@@ -904,10 +904,17 @@ function renderAll() {
   const personnes=getFilteredPersonnes(), fSejour=document.getElementById('filterSejour').value;
   let html=buildUnlinked();
   if (!fSejour||fSejour==='none') html+=buildSejoursSection(personnes);
-  html+=`<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
-  html+=personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
+  html+=`<div class="section-title" onclick="toggleVacanciers()" style="cursor:pointer;user-select:none">👥 Tous les vacanciers <span class="count">${personnes.length}</span><span class="chevron" id="vacanciers-chevron" style="margin-left:auto">▶</span></div>`;
+  html+=`<div id="vacanciers-container" style="display:none">${personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>'}</div>`;
   html += buildArchivesSection();
   document.getElementById('mainContent').innerHTML=html;
+}
+
+function toggleVacanciers() {
+  const c=document.getElementById('vacanciers-container');
+  const v=document.getElementById('vacanciers-chevron');
+  c.style.display=c.style.display==='none'?'block':'none';
+  v?.classList.toggle('open');
 }
 
 let listenersAdded=false;
