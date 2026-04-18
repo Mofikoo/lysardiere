@@ -660,17 +660,43 @@ async function compilePDF(personneId, nom) {
     }
   }
 
-  const mergedBytes = await merged.save();
-  const blob = new Blob([mergedBytes], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
+const mergedBytes = await merged.save();
+  const filename = `${nom.replace(/\s/g,'_')}_dossier_complet.pdf`;
+  const timestamp = new Date().toISOString().replace(/[:.]/g,'-');
+  const storagePath = `incoming/${timestamp}_${filename}`;
 
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${nom.replace(/\s/g,'_')}_dossier_complet.pdf`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // Upload dans Storage
+  const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/pdf'
+    },
+    body: mergedBytes
+  });
 
-  if (erreurs > 0) alert(`✅ PDF compilé ! (${erreurs} document(s) ignoré(s) en raison d'erreurs)`);
+  if (!uploadRes.ok) return alert('Erreur lors de l\'upload du dossier compilé.');
+
+  // Insérer en base
+  const p = allPersonnes.find(x => x.id === personneId);
+  await api('/rest/v1/documents', 'POST', {
+    personne_id:   personneId,
+    personne_nom:  `${p.prenom} ${p.nom}`,
+    type:          'dossier_complet',
+    filename,
+    storage_path:  storagePath,
+    email_from:    'Compilation automatique',
+    email_subject: 'Dossier compilé',
+    email_date:    new Date().toISOString(),
+    status:        'linked',
+    manually_uploaded: true,
+    annee:         new Date().getFullYear()
+  });
+
+  await init();
+  if (erreurs > 0) alert(`✅ Dossier compilé ! (${erreurs} document(s) ignoré(s))`);
+  else alert(`✅ Dossier compilé et ajouté au dossier de ${nom} !`);
 }
 
 function buildSejoursSection(personnesFiltered) {
