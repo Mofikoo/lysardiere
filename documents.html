@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lysardière">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>La Lysardière · Documents</title>
@@ -620,12 +621,56 @@ function buildPersonCard(p, sejourId=null) {
   const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${doc.storage_path}','${doc.filename}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${doc.storage_path}')" title="Supprimer">🗑</button></div></div>`).join('');
 
   const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">✅ Valider comme complet</button></div>`:'';
+  const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${p.id}','${p.prenom} ${p.nom}')">📄 Compiler tous les PDFs</button></div>` : '';
   const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
   const uid=`${p.id}-${sejourId||'all'}`;
 
   const totalDocs = docs.length;
   const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
-  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}</div></div>`;
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}${btnCompile}</div></div>`;
+}
+
+async function compilePDF(personneId, nom) {
+  const docs = getPersonDocs(personneId);
+  
+  // Ordre : inscription → dossier_complet → confidentiel → ordonnance → divers → reste
+  const ordre = ['inscription', 'dossier_complet', 'confidentiel', 'ordonnance', 'divers'];
+  const sorted = [
+    ...ordre.flatMap(t => docs.filter(d => d.type === t)),
+    ...docs.filter(d => !ordre.includes(d.type))
+  ];
+
+  if (!sorted.length) return alert('Aucun document à compiler.');
+
+  const { PDFDocument } = PDFLib;
+  const merged = await PDFDocument.create();
+
+  let erreurs = 0;
+  for (const doc of sorted) {
+    try {
+      const url = await getSignedUrl(doc.storage_path);
+      if (!url) { erreurs++; continue; }
+      const bytes = await fetch(url).then(r => r.arrayBuffer());
+      const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    } catch(e) {
+      console.warn(`Erreur sur ${doc.filename}:`, e);
+      erreurs++;
+    }
+  }
+
+  const mergedBytes = await merged.save();
+  const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nom.replace(/\s/g,'_')}_dossier_complet.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  if (erreurs > 0) alert(`✅ PDF compilé ! (${erreurs} document(s) ignoré(s) en raison d'erreurs)`);
 }
 
 function buildSejoursSection(personnesFiltered) {
