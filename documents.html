@@ -747,6 +747,7 @@ function renderAll() {
   if (!fSejour||fSejour==='none') html+=buildSejoursSection(personnes);
   html+=`<div class="section-title">👥 Tous les vacanciers <span class="count">${personnes.length}</span></div>`;
   html+=personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
+  html += buildArchivesSection();
   document.getElementById('mainContent').innerHTML=html;
 }
 
