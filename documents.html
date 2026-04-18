@@ -268,6 +268,7 @@ body {
     <div class="header-actions">
       <a href="index.html" class="back-link">← Accueil</a>
       <button class="btn btn-sm" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)" onclick="openModal()">✈️ Séjour</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)" onclick="openAddDocModal()">📎 Document</button>
       <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Vacancier</button>
     </div>
   </div>
@@ -721,7 +722,7 @@ async function archiverAnnee(annee) {
   
   // Archiver les séjours de l'année passée
   await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel&type=neq.dossier_complet`, 'PATCH', { archived: true });
-  
+
   // Archiver les documents de l'année passée SAUF les confidentielles
   await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
   
@@ -739,6 +740,70 @@ function getFilteredPersonnes() {
     if (fSejour&&fSejour!=='none'&&!allSejoursPersonnes.some(sp=>sp.sejour_id===fSejour&&sp.personne_id===p.id)) return false;
     return true;
   });
+}
+
+async function openAddDocModal() {
+  const selP = document.getElementById('docPersonne');
+  selP.innerHTML = '<option value="">— Choisir un vacancier</option>';
+  allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = `${p.nom} ${p.prenom} — ${p.foyer}`;
+    selP.appendChild(o);
+  });
+  document.getElementById('addDocOverlay').classList.add('show');
+}
+
+function closeAddDocModal() {
+  document.getElementById('addDocOverlay').classList.remove('show');
+  document.getElementById('docFile').value = '';
+  document.getElementById('docPersonne').value = '';
+  document.getElementById('docType').value = 'inscription';
+}
+
+async function saveDoc() {
+  const personneId = document.getElementById('docPersonne').value;
+  const type       = document.getElementById('docType').value;
+  const file       = document.getElementById('docFile').files[0];
+  if (!file) return alert('Choisis un fichier PDF.');
+
+  const p = allPersonnes.find(x => x.id === personneId);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = file.name;
+  const storagePath = `incoming/${timestamp}_${filename.replace(/\s/g,'_')}`;
+
+  // Upload dans Supabase Storage
+  const arrayBuffer = await file.arrayBuffer();
+  const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/pdf'
+    },
+    body: arrayBuffer
+  });
+
+  if (!uploadRes.ok) return alert('Erreur lors de l\'upload du fichier.');
+
+  // Insérer en base
+  await api('/rest/v1/documents', 'POST', {
+    personne_id:   personneId || null,
+    personne_nom:  p ? `${p.prenom} ${p.nom}` : null,
+    type,
+    filename,
+    storage_path:  storagePath,
+    email_from:    'Upload manuel',
+    email_subject: 'Upload manuel',
+    email_date:    new Date().toISOString(),
+    status:        personneId ? 'linked' : 'new',
+    manually_uploaded: true,
+    annee:         new Date().getFullYear()
+  });
+
+  closeAddDocModal();
+  await init();
+  alert('✅ Document ajouté avec succès !');
 }
 
 function renderAll() {
@@ -784,6 +849,34 @@ init();
     <div class="modal-actions">
       <button class="btn" onclick="closeAddPersonModal()">Annuler</button>
       <button class="btn btn-primary" onclick="savePerson()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJOUT DOCUMENT -->
+<div class="modal-overlay" id="addDocOverlay">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <span style="font-size:18px">📎</span>
+      <span class="modal-header-text">Ajouter un document</span>
+    </div>
+    <div class="modal-body">
+      <label>Vacancier</label>
+      <select id="docPersonne"><option value="">— Choisir un vacancier</option></select>
+      <label>Type de document</label>
+      <select id="docType">
+        <option value="inscription">📝 Inscription</option>
+        <option value="confidentiel">🔒 Confidentiel</option>
+        <option value="dossier_complet">📁 Dossier complet</option>
+        <option value="ordonnance">💊 Ordonnance</option>
+        <option value="divers">📎 Divers</option>
+      </select>
+      <label>Fichier PDF</label>
+      <input type="file" id="docFile" accept=".pdf" style="padding:6px">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAddDocModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveDoc()">Ajouter</button>
     </div>
   </div>
 </div>
