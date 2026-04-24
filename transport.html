@@ -1727,6 +1727,7 @@ function renderSemaineCard(s,idx,isArchive){
         +(pqCount>0?'<span class="badge" style="background:var(--red-bg);color:var(--red);border:1px solid #f5c6c2">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
         +'<a href="'+mapsUrl+'" target="_blank" class="no-print" style="text-decoration:none"><button class="btn btn-info btn-sm">Maps</button></a>'
         +'<button class="btn btn-sm btn-edit no-print" onclick="event.stopPropagation();modifierConducteurSem(\''+s.id+'\','+ci+')">Modifier conducteur</button>'
+        +'<button class="btn btn-sm no-print" onclick="event.stopPropagation();recalcMapsConvoiSem(\''+s.id+'\','+ci+')" style="font-size:9px">🔄 Recalculer horaires</button>'
         +'</div></div>'
         +'<div style="font-size:11px;color:var(--text-light);margin-bottom:6px">'
         +(c.depart.length?'<span style="color:var(--red);font-weight:600">Dep : </span>'+c.depart.map(function(p){return p.prenom+' '+p.nom+(p.foyer?' ('+p.foyer+')':'')}).join(', '):'')
@@ -1759,6 +1760,33 @@ function renderSemaineCard(s,idx,isArchive){
 
 function toggleSem(id){var el=document.getElementById(id);var arr=document.getElementById('arr-'+id);if(el.classList.contains('open')){el.classList.remove('open');if(arr)arr.textContent='\u25BC'}else{el.classList.add('open');if(arr)arr.textContent='\u25B2'}}
 function toggleArchive(){var el=document.getElementById('archive-body');var arr=document.getElementById('archive-arrow');if(el.classList.contains('open')){el.classList.remove('open');arr.textContent='\u25BC'}else{el.classList.add('open');arr.textContent='\u25B2'}}
+
+async function recalcMapsConvoiSem(semId,convoiIdx){
+  var sem=semaines.find(function(x){return x.id===semId})||archives.find(function(x){return x.id===semId});
+  if(!sem) return;
+  var c=sem.convois[convoiIdx];
+  if(!c) return;
+  // Clear old leg durations
+  c.legDurations=null;
+  c.customHeures=null;
+  c.mapsEnrichi=false;
+  // Re-enrich just this one convoi
+  setPersist('⏳ Recalcul Maps...','neutral');
+  await attendreMaps();
+  await enrichirConvoisAvecMaps([c]);
+  if(c.mapsEnrichi){
+    // Recalculate duration
+    c.dureeMin=c.legDurations.reduce(function(s,l){return s+l.min},0);
+    c.km=c.legDurations.reduce(function(s,l){return s+l.km},0);
+    // Save to Supabase
+    var table=semaines.indexOf(sem)>=0?'semaines':'archives';
+    await dbUpsert(table,sem.id,sem);
+    setPersist('✅ Horaires recalculés','ok');
+  } else {
+    setPersist('Erreur Maps','neutral');
+  }
+  renderSemaines();
+}
 
 function editSemHeure(semId,convoiIdx,stopIdx,val){
   var s=semaines.find(function(x){return x.id===semId})||archives.find(function(x){return x.id===semId});
