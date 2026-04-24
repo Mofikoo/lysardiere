@@ -911,7 +911,7 @@ input:focus, select:focus {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--forest)">Foyers (<span id="foyer-count">0</span>)</span>
       <button class="btn btn-sm" onclick="initFoyersFromPersonnes(true)">🔄 Synchroniser depuis les personnes</button>
-      <button class="btn btn-sm" onclick="syncFoyersInSemaines()" style="background:var(--copper);color:white;border:none">🔄 Mettre à jour les semaines sauvegardées</button>
+      <button class="btn btn-sm" onclick="syncFoyersInSemaines()" style="background:var(--copper);color:white;border:none">🔄 Synchroniser noms et foyers dans les semaines</button>
     </div>
     <input style="width:100%;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 14px;font-size:12px;margin-bottom:10px;font-family:'DM Sans',sans-serif" id="search-foyer" placeholder="Rechercher un foyer..." oninput="renderFoyers()">
     <div id="foyers-list"></div>
@@ -2027,10 +2027,13 @@ async function syncFoyersInSemaines(){
         if(!list) return;
         list.forEach(function(p){
           var current=findMatchingPersonne(p);
-          if(current&&current.foyer&&current.foyer!==p.foyer){
-            p.foyer=current.foyer;
-            changed=true;
-          }
+          if(!current) return;
+          // Sync foyer
+          if(current.foyer&&current.foyer!==p.foyer){p.foyer=current.foyer;changed=true}
+          // Sync prenom
+          if(current.prenom&&current.prenom!==p.prenom){p.prenom=current.prenom;changed=true}
+          // Sync nom
+          if(current.nom&&current.nom!==p.nom){p.nom=current.nom;changed=true}
         });
       }
       updatePers(c.depart);
@@ -2046,7 +2049,7 @@ async function syncFoyersInSemaines(){
       updated++;
     }
   }
-  lyAlert(updated+' semaine'+(updated>1?'s':'')+' mise'+(updated>1?'s':'')+' à jour.','success');
+  lyAlert(updated+' semaine'+(updated>1?'s':'')+' mise'+(updated>1?'s':'')+' à jour (prénoms, noms, foyers synchronisés).','success');
 }
 
 function refreshFoyerSelect(){
@@ -3680,34 +3683,42 @@ async function renderCourrier(){
     s.convois.forEach(function(c){
       // For each person in depart or arrivee
       function processPers(p, type){
-        // Use CURRENT foyer from personnes DB, not the one frozen in the convoi
+        // Use CURRENT data from personnes DB, not the frozen convoi data
         var currentPers=findMatchingPersonne(p);
+        var prenom=currentPers?currentPers.prenom:p.prenom;
+        var nom=currentPers?(currentPers.nom||''):(p.nom||'');
         var foyer=currentPers?(currentPers.foyer||'Sans foyer'):(p.foyer||'Sans foyer');
         
         // Special case: FAMILLE → one PDF per person
         var isFamille=foyer.toUpperCase()==='FAMILLE';
-        var mapKey=isFamille?(foyer+'|||'+p.prenom+' '+(p.nom||'')):foyer;
+        var mapKey=isFamille?(foyer+'|||'+prenom+' '+nom):foyer;
         
         // Find the actual stop where this person is in this convoi
+        // Match by old name (frozen in convoi) since stops reference old names
         var stopLieu=null;
+        var frozenName=p.prenom+' '+(p.nom||'');
         c.stops.forEach(function(st){
           if(st.action==='depart'||st.action==='retour') return;
           var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
-          if(names.indexOf(p.prenom+' '+(p.nom||''))>=0 && st.pt && st.pt.nom){
+          if(names.indexOf(frozenName)>=0 && st.pt && st.pt.nom){
             stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
           }
         });
-        if(!stopLieu){
-          var pLieux=currentPers?getPersonLieux(currentPers):[];
-          stopLieu=getLieu(pLieux[0])||{nom:'Lieu inconnu',adresse:''};
+        // Fallback: use current person's lieu from DB
+        if(!stopLieu&&currentPers){
+          var pLieux=getPersonLieux(currentPers);
+          var lieuObj=getLieu(pLieux[0]);
+          if(lieuObj) stopLieu={nom:lieuObj.nom,adresse:lieuObj.adresse||''};
         }
+        if(!stopLieu) stopLieu={nom:'Lieu inconnu',adresse:''};
         
-        var displayFoyer=isFamille?('Famille — '+p.prenom+' '+(p.nom||'').toUpperCase()):foyer;
+        var displayFoyer=isFamille?('Famille — '+prenom+' '+nom.toUpperCase()):foyer;
         if(!courrierMap[mapKey]){
           courrierMap[mapKey]={foyer:displayFoyer,lieu:stopLieu,personnes:{}};
         }
-        var persKey=p.prenom+' '+(p.nom||'');
-        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:p.prenom,nom:p.nom||'',trajets:[],lieu:stopLieu};
+        // Use CURRENT name as key (not frozen)
+        var persKey=prenom+' '+nom;
+        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:prenom,nom:nom,trajets:[],lieu:stopLieu};
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].lieu=stopLieu;
         // Compute hour for this person at this stop
@@ -3716,7 +3727,7 @@ async function renderCourrier(){
         if(hData.heures.length){
           c.stops.forEach(function(st,si){
             var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
-            if(names.indexOf(persKey)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
+            if(names.indexOf(frozenName)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
           });
         }
         // Avoid duplicate: check if same date+type already exists
