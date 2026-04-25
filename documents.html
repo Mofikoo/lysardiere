@@ -725,26 +725,52 @@ function buildSejoursSection(personnesFiltered) {
 }
 
 async function imprimerSejour(sejourId) {
+  const sejour = allSejours.find(s => s.id === sejourId);
   const personnes = getSejourPersonnes(sejourId);
   if (!personnes.length) return alert('Aucun vacancier dans ce séjour.');
 
-  const urls = [];
+  alert('Compilation en cours, merci de patienter…');
+
+  const { PDFDocument } = PDFLib;
+  const merged = await PDFDocument.create();
+  const ordre = ['inscription', 'dossier_complet', 'confidentiel', 'ordonnance', 'divers'];
+  let erreurs = 0;
+
   for (const p of personnes) {
     const docs = getPersonDocs(p.id);
-    for (const doc of docs) {
-      const url = await getSignedUrl(doc.storage_path);
-      if (url) urls.push({ url, nom: `${p.prenom} ${p.nom}`, filename: doc.filename });
+    const sorted = [
+      ...ordre.flatMap(t => docs.filter(d => d.type === t)),
+      ...docs.filter(d => !ordre.includes(d.type))
+    ];
+    for (const doc of sorted) {
+      try {
+        const url = await getSignedUrl(doc.storage_path);
+        if (!url) { erreurs++; continue; }
+        const bytes = await fetch(url).then(r => r.arrayBuffer());
+        const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
+        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(pg => merged.addPage(pg));
+      } catch(e) {
+        console.warn(`Erreur sur ${doc.filename}:`, e);
+        erreurs++;
+      }
     }
   }
 
-  if (!urls.length) return alert('Aucun document trouvé.');
+  const mergedBytes = await merged.save();
+  const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
 
-  // Ouvrir chaque PDF dans un nouvel onglet pour impression
-  for (const item of urls) {
-    window.open(item.url, '_blank');
-  }
+  // Ouvrir dans la preview pour impression directe
+  document.getElementById('pdfPreviewTitle').textContent = `Séjour ${sejour?.nom || ''} — tous les documents`;
+  document.getElementById('pdfPreviewIframe').src = url;
+  document.getElementById('pdfPreviewDownload').href = url;
+  document.getElementById('pdfPreviewDownload').download = `sejour_${(sejour?.nom||'').replace(/\s/g,'_')}.pdf`;
+  const overlay = document.getElementById('pdfPreviewOverlay');
+  overlay.classList.add('show');
+  overlay.style.display = 'flex';
 
-  alert(`${urls.length} document(s) ouvert(s) dans de nouveaux onglets. Imprimez chacun depuis son onglet.`);
+  if (erreurs > 0) console.warn(`${erreurs} document(s) ignoré(s)`);
 }
 
 function buildUnlinked() {
