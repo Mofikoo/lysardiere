@@ -716,12 +716,35 @@ function buildSejoursSection(personnesFiltered) {
       const uid=`sejour-${s.id}`;
       const estPasse=new Date(s.date_fin)<new Date();
       const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
-      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
     }).join('');
     return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
   }).join('');
 
   return `<div class="section-title" onclick="toggleSejoursContainer()" style="cursor:pointer;user-select:none">✈️ Séjours <span class="count">${allSejours.length}</span><span class="chevron" id="sejours-chevron" style="margin-left:auto">▶</span></div><div id="sejours-container" style="display:none">${catsHtml}</div>`;
+}
+
+async function imprimerSejour(sejourId) {
+  const personnes = getSejourPersonnes(sejourId);
+  if (!personnes.length) return alert('Aucun vacancier dans ce séjour.');
+
+  const urls = [];
+  for (const p of personnes) {
+    const docs = getPersonDocs(p.id);
+    for (const doc of docs) {
+      const url = await getSignedUrl(doc.storage_path);
+      if (url) urls.push({ url, nom: `${p.prenom} ${p.nom}`, filename: doc.filename });
+    }
+  }
+
+  if (!urls.length) return alert('Aucun document trouvé.');
+
+  // Ouvrir chaque PDF dans un nouvel onglet pour impression
+  for (const item of urls) {
+    window.open(item.url, '_blank');
+  }
+
+  alert(`${urls.length} document(s) ouvert(s) dans de nouveaux onglets. Imprimez chacun depuis son onglet.`);
 }
 
 function buildUnlinked() {
