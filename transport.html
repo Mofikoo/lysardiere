@@ -2606,6 +2606,35 @@ if(dureeMin>p.maxDurMin&&cluster.length>1){
 }
 
 convois.push({id:'c'+convois.length,vehicule:veh,stops:stops,depart:allDep,arrivee:allArr,type:ctype,km:km,dureeMin:dureeMin,maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:pk,remplissage:Math.round(pk/veh.cap*100)})
+
+// ABSOLUTE FINAL CHECK: if pk STILL exceeds veh.cap after all attempts, force-split
+if(pk>veh.cap){
+  // Remove the last convoi we just pushed
+  var badConvoi=convois.pop();
+  // Separate deps and arrs into two convois
+  var depCluster=[],arrCluster=[];
+  cluster.forEach(function(n){
+    if(n.depPers.length) depCluster.push({fid:n.fid,lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse,depPers:n.depPers.slice(),arrPers:[],distLys:n.distLys,cap:n.cap});
+    if(n.arrPers.length){
+      // Split arr into chunks that fit
+      var arrs=n.arrPers.slice();
+      while(arrs.length>0){
+        var chunk=arrs.splice(0,veh.cap);
+        arrCluster.push({fid:n.fid,lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse,depPers:[],arrPers:chunk,distLys:n.distLys,cap:n.cap});
+      }
+    }
+  });
+  // Create dep-only convoi
+  if(depCluster.length){
+    var dStops=buildStops(depCluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+    var dKm=Math.round(routeLen(dStops.map(function(s){return s.pt})));
+    var dPk=peakSeatsStops(dStops);
+    var dDep=[];depCluster.forEach(function(n){dDep=dDep.concat(n.depPers)});
+    convois.push({id:'c'+convois.length,vehicule:veh,stops:dStops,depart:dDep,arrivee:[],type:'depart_only',km:dKm,dureeMin:Math.round(dKm/p.vitesse*60),maxDurMin:p.maxDurMin,heureDepart:'',notes:'',peakSeats:dPk,remplissage:Math.round(dPk/veh.cap*100)});
+  }
+  // Put arr chunks back as unassigned for next vehicles
+  arrCluster.forEach(function(ac){unassigned.push(ac)});
+}
 });
 // Handle any unassigned overflow from vehicle shrinking
 if(unassigned.length){
