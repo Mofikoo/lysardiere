@@ -2670,6 +2670,57 @@ convoisOptimises.forEach(function(c,i){
 });
 setPersist('✅ Distances Maps intégrées','ok');renderOptim(date,postErrors)}
 
+async function reOptimiserTout(){
+  if(!convoisOptimises.length) return;
+  var date=document.getElementById('ldate').value;
+  if(!date) return;
+  
+  // Collect ALL persons currently in convois
+  var allDeps={},allArrs={};
+  convoisOptimises.forEach(function(c){
+    (c.depart||[]).forEach(function(p){
+      var match=findMatchingPersonne(p);
+      if(match) allDeps[match.id]=match;
+      else allDeps[p.prenom+'|'+p.nom]={prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',id:'tmp_'+Date.now()+'_'+Math.random(),lieux:[]};
+    });
+    (c.arrivee||[]).forEach(function(p){
+      var match=findMatchingPersonne(p);
+      if(match) allArrs[match.id]=match;
+      else allArrs[p.prenom+'|'+p.nom]={prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',id:'tmp_'+Date.now()+'_'+Math.random(),lieux:[]};
+    });
+  });
+  
+  var deps=Object.values(allDeps);
+  var arrs=Object.values(allArrs);
+  var vehs=vehicles.filter(function(v){return selV[v.id]});
+  // If no vehicles selected, use all
+  if(!vehs.length) vehs=vehicles.slice();
+  
+  var p=getParams();
+  var result=vrpSolve(deps,arrs,vehs,p);
+  
+  solutionHistory.push({convois:result.convois,errors:result.errors,km:result.convois.reduce(function(s,c){return s+c.km},0)});
+  currentSolutionIdx=solutionHistory.length-1;
+  convoisOptimises=result.convois;
+  renderOptim(date,result.errors);
+  window.scrollTo({top:0,behavior:'smooth'});
+  
+  setPersist('⏳ Calcul distances réelles...','neutral');
+  await attendreMaps();
+  await enrichirConvoisAvecMaps(convoisOptimises);
+  solutionHistory[currentSolutionIdx].km=convoisOptimises.reduce(function(s,c){return s+c.km},0);
+  solutionHistory[currentSolutionIdx].convois=convoisOptimises;
+  
+  var maxDur=p.maxDurMin;
+  var postErrors=result.errors.slice();
+  convoisOptimises.forEach(function(c,i){
+    if(c.mapsEnrichi&&c.dureeMin>maxDur) postErrors.push('Convoi '+(i+1)+' : durée Maps '+fmtDur(c.dureeMin)+' dépasse '+fmtDur(maxDur));
+  });
+  setPersist('✅ Ré-optimisation terminée','ok');
+  renderOptim(date,postErrors);
+  lyAlert('Ré-optimisation terminée : '+convoisOptimises.length+' convois, '+convoisOptimises.reduce(function(s,c){return s+c.km},0)+' km total.','success');
+}
+
 function ameliorerOptimisation(){
   // Silently test moving each stop between convois to find improvements
   if(convoisOptimises.length<2) return;
@@ -3212,8 +3263,8 @@ function renderOptim(dateStr,errors){
   var tKm=convoisOptimises.reduce(function(s,c){return s+c.km},0);
   var nbRot=convoisOptimises.filter(function(c){return c.type==='rotation'}).length;
   var html='<div class="card"><div class="stitle">Résultat — '+dateLabel+'</div>';
-  // Améliorer button + solution history
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  html+='<button class="btn btn-primary btn-sm" onclick="reOptimiserTout()" style="display:flex;align-items:center;gap:4px">🔄 Ré-optimiser tous les convois</button>';
   if(solutionHistory.length>1){
     html+='<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">';
     for(var si=0;si<solutionHistory.length;si++){
