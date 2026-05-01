@@ -3411,31 +3411,51 @@ function insertStopInConvoi(convoiIdx,insertAtIdx){
   // Init selected persons arrays
   window._insertStopDep=[];
   window._insertStopArr=[];
+  window._insertStopConvoiIdx=convoiIdx;
 }
 
 function insertStopSearchPers(side){
   var q=document.getElementById('insert-stop-'+side+'-search').value.toLowerCase().trim();
   var el=document.getElementById('insert-stop-'+side+'-results');
-  if(!q||q.length<2){el.innerHTML='';return}
+  if(!q||q.length<1){el.innerHTML='';return}
   var selected=side==='dep'?window._insertStopDep:window._insertStopArr;
-  var selectedIds=selected.map(function(p){return p.id});
-  var results=personnes.filter(function(p){
-    return selectedIds.indexOf(p.id)<0&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0;
+  var selectedNames=selected.map(function(p){return p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase()});
+  // Search in current convoi's passengers
+  var convoiIdx=window._insertStopConvoiIdx;
+  var c=convoisOptimises[convoiIdx];
+  var available=[];
+  var seen={};
+  c.stops.forEach(function(s){
+    (s.depPers||[]).concat(s.arrPers||[]).forEach(function(p){
+      var key=p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase();
+      if(seen[key]) return;
+      seen[key]=true;
+      if(selectedNames.indexOf(key)>=0) return;
+      if((p.prenom+' '+(p.nom||'')+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0){
+        available.push(p);
+      }
+    });
   });
-  el.innerHTML=results.slice(0,8).map(function(p){
+  el.innerHTML=available.map(function(p){
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border-light)">'
-      +'<span>'+p.prenom+' '+p.nom+(p.foyer?' <span style="color:var(--forest);font-size:9px">('+p.foyer+')</span>':'')+'</span>'
+      +'<span>'+p.prenom+' '+(p.nom||'')+(p.foyer?' <span style="color:var(--forest);font-size:9px">('+p.foyer+')</span>':'')+'</span>'
       +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;background:'+(side==='dep'?'var(--red)':'var(--green)')+';color:white;border:none" '
-      +'onclick="insertStopAddPers(\''+side+'\',\''+p.id+'\')">+</button></div>';
+      +'onclick="insertStopAddPers(\''+side+'\',null,\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\''+(p.foyer||'').replace(/'/g,"\\'")+'\')">+</button></div>';
   }).join('')||'<div style="font-size:11px;color:var(--text-light)">Aucun résultat.</div>';
 }
 
-function insertStopAddPers(side,persId){
-  var p=personnes.find(function(x){return x.id===persId});
-  if(!p) return;
+function insertStopAddPers(side,persId,prenom,nom,foyer){
+  var p;
+  if(persId){
+    p=personnes.find(function(x){return x.id===persId});
+    if(!p) return;
+    prenom=p.prenom;nom=p.nom||'';foyer=p.foyer||'';
+  }
+  if(!prenom) return;
   var list=side==='dep'?window._insertStopDep:window._insertStopArr;
-  if(list.some(function(x){return x.id===persId})) return;
-  list.push({prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',id:p.id});
+  var key=prenom.toLowerCase()+'|'+(nom||'').toLowerCase();
+  if(list.some(function(x){return x.prenom.toLowerCase()+'|'+(x.nom||'').toLowerCase()===key})) return;
+  list.push({prenom:prenom,nom:nom||'',foyer:foyer||''});
   // Refresh display
   var el=document.getElementById('insert-stop-'+side+'-selected');
   el.innerHTML=list.map(function(pp,i){
@@ -3487,7 +3507,24 @@ function execInsertStop(convoiIdx,insertAtIdx){
   // Insert at position
   c.stops.splice(insertAtIdx,0,newStop);
   
-  // Recalculate seats
+  // Remove moved persons from their original stops
+  var allMoved=depPers.concat(arrPers);
+  allMoved.forEach(function(mp){
+    var mpKey=mp.prenom.toLowerCase()+'|'+(mp.nom||'').toLowerCase();
+    c.stops.forEach(function(s,si){
+      if(si===insertAtIdx) return;
+      if(s.action==='depart'||s.action==='retour') return;
+      if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
+      if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
+    });
+  });
+  // Remove empty stops (except depart/retour)
+  c.stops=c.stops.filter(function(s){
+    if(s.action==='depart'||s.action==='retour') return true;
+    return (s.depPers&&s.depPers.length)||(s.arrPers&&s.arrPers.length);
+  });
+  
+  // Recalculate all from scratch
   var seats=c.depart?c.depart.length:0;
   c.stops[0].seats=seats;
   for(var i=1;i<c.stops.length-1;i++){
@@ -3496,9 +3533,15 @@ function execInsertStop(convoiIdx,insertAtIdx){
   }
   c.stops[c.stops.length-1].seats=seats;
   
-  // Update convoi totals
-  c.depart=(c.depart||[]).concat(depPers);
-  c.arrivee=(c.arrivee||[]).concat(arrPers);
+  // Update convoi totals from stops
+  var newDep=[],newArr=[];
+  c.stops.forEach(function(s){
+    if(s.action==='depart'||s.action==='retour') return;
+    (s.depPers||[]).forEach(function(p){newDep.push(p)});
+    (s.arrPers||[]).forEach(function(p){newArr.push(p)});
+  });
+  c.depart=newDep;
+  c.arrivee=newArr;
   c.peakSeats=peakSeatsStops(c.stops);
   c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
   c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
