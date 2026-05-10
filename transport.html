@@ -1755,7 +1755,7 @@ function renderSemaineCard(s,idx,isArchive){
         +'</div>'
         +'<div class="timeline-wrap">'+c.stops.map(function(s2,si){
           var dotC=s2.action==='depart'||s2.action==='retour'?'var(--forest)':s2.action==='pickup'?'var(--green)':'var(--red)';
-          var heureStr=(si===0||si===c.stops.length-1)&&heuresSem[si]!==undefined?' <span class="tl-time">'+fmtH(heuresSem[si])+'</span>':'';
+          var heureStr=heuresSem[si]!==undefined?' <span class="tl-time">'+fmtH(heuresSem[si])+'</span>':'';
           var label='';
           if(s2.action==='depart') label='Départ La Lysardiere';
           else if(s2.action==='retour') label='Retour La Lysardiere';
@@ -1765,9 +1765,8 @@ function renderSemaineCard(s,idx,isArchive){
           var timeDetailHtml=renderTimeDetail(si,rawArr,heuresSem,pqIdx);
           // Editable hour input for each stop
           var editHourHtml='';
-          if(heuresSem[si]!==undefined){
-            editHourHtml=' <input type="time" class="no-print" value="'+fmtH(heuresSem[si])+'" style="width:80px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="editSemHeure(\''+s.id+'\','+ci+','+si+',this.value)">';
-          }
+          var hVal=heuresSem[si]!==undefined?fmtH(heuresSem[si]):(si===0&&c.heureDepart?c.heureDepart:'');
+          editHourHtml=' <input type="time" class="no-print" value="'+hVal+'" style="width:80px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="editSemHeure(\''+s.id+'\','+ci+','+si+',this.value)">';
           var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name" style="flex-wrap:wrap">'+s2.pt.nom+heureStr+timeDetailHtml+editHourHtml+'</div><div class="tl-detail">'+label+'</div></div></div>';
           if(si===pqIdx) stopHtml+=PIQUENIQUE_HTML;
           return stopHtml;
@@ -1816,16 +1815,12 @@ function editSemHeure(semId,convoiIdx,stopIdx,val){
   var newMin=parseInt(pts[0])*60+parseInt(pts[1]);
   c.customHeures[stopIdx]=newMin;
   if(stopIdx===0) c.heureDepart=val;
-  // Recalculate all subsequent stops from this one
-  if(c.legDurations && c.legDurations.length){
-    var hData=computeHeures(c);
-    // Clear custom overrides for stops after the edited one and recompute
+  // Recalculate subsequent stops
+  var hData=computeHeures(c);
+  if(hData.heures.length){
     for(var k=stopIdx+1;k<hData.heures.length;k++){
       delete c.customHeures[k];
     }
-    // Recompute with only the edited override
-    hData=computeHeures(c);
-    // No need to store subsequent stops as custom - they are computed from the override
   }
   var table=semaines.find(function(x){return x.id===semId})?'semaines':'archives';
   dbUpsert(table,semId,s);
@@ -3316,7 +3311,8 @@ function renderOptim(dateStr,errors){
       +'<div style="font-size:11px;color:var(--text-light)">'+c.km+'km · pic '+c.peakSeats+'/'+c.vehicule.cap+'</div></div></div>'
       +'<div style="display:flex;gap:6px;align-items:center"><span style="font-size:13px;font-weight:700;color:'+durC+'">⏱ '+fmtDur(c.dureeMin)+'</span>'
       +(c.dureeMin>c.maxDurMin?'<span class="badge" style="background:var(--red-bg);color:var(--red)">Dépasse</span>':'')
-      +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span></div></div>'
+      +'<span class="badge" style="'+getBadgeSt(c.type)+'">'+tl+'</span>'
+      +'<button class="btn btn-sm no-print" onclick="supprimerConvoi('+i+')" style="font-size:9px;padding:2px 8px;background:var(--red);color:white;border:none" title="Supprimer ce convoi">🗑</button></div></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
       +'<div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-light);margin-bottom:3px"><span>Remplissage</span><span style="font-weight:700;color:'+rmpC+'">'+c.remplissage+'%</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+c.remplissage+'%;background:'+rmpC+'"></div></div></div>'
       +'<div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-light);margin-bottom:3px"><span>Durée conducteur</span><span style="font-weight:700;color:'+durC+'">'+durPct+'%</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+Math.min(durPct,100)+'%;background:'+durC+'"></div></div></div></div>'
@@ -3380,6 +3376,16 @@ function renderTimelineStops(stops,cap,convoiIdx){
     }
   });
   return html+'</div>';
+}
+
+async function supprimerConvoi(convoiIdx){
+  var c=convoisOptimises[convoiIdx];
+  var nbPers=(c.depart||[]).length+(c.arrivee||[]).length;
+  if(!await lyConfirm('Supprimer le convoi '+(convoiIdx+1)+' ('+c.vehicule.label+') ?\n'+nbPers+' passager'+(nbPers>1?'s':'')+' seront retirés.')) return;
+  convoisOptimises.splice(convoiIdx,1);
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert('Convoi '+(convoiIdx+1)+' supprimé.','success');
 }
 
 async function supprimerStop(convoiIdx,stopIdx){
