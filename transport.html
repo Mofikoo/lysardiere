@@ -1498,19 +1498,38 @@ async function delVehicle(id){if(!await lyConfirm('Supprimer ce véhicule ?')) r
 // rawArrivals[i] = heure d'arrivee brute exacte
 // Le convoi repart de l'heure RDV de chaque arrêt
 function computeHeures(c){
-  if(!c.heureDepart||!c.legDurations||!c.legDurations.length) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
+  if(!c.heureDepart) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
   var parts=c.heureDepart.split(':');
   var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
-  var nbStops=c.legDurations.length+1;
+  
+  // If no legDurations from Maps, estimate from distances
+  var useLegDurations=c.legDurations&&c.legDurations.length;
+  var estimatedLegs=[];
+  if(!useLegDurations&&c.stops&&c.stops.length>1){
+    var vitesse=70; // km/h default
+    for(var ei=0;ei<c.stops.length-1;ei++){
+      var a=c.stops[ei].pt,b=c.stops[ei+1].pt;
+      if(a&&b&&a.lat&&b.lat){
+        var dkm=dp(a,b);
+        estimatedLegs.push({min:Math.round(dkm/vitesse*60),km:Math.round(dkm)});
+      } else {
+        estimatedLegs.push({min:15,km:10});
+      }
+    }
+  }
+  var legs=useLegDurations?c.legDurations:estimatedLegs;
+  if(!legs.length) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
+  
+  var nbStops=legs.length+1;
   
   // 1) Detect pique-nique: simulate without pique-nique to find stop near midi
   var MIDI=720;var piqueniqueIdx=-1;
   if(startMin<MIDI){
     var simDep=startMin;var simArr=[];simArr[0]=startMin;
-    for(var si=0;si<c.legDurations.length;si++){
-      var sa=simDep+c.legDurations[si].min;
+    for(var si=0;si<legs.length;si++){
+      var sa=simDep+legs[si].min;
       simArr[si+1]=sa;
-      if(si<c.legDurations.length-1) simDep=roundQ(sa+15,sa);
+      if(si<legs.length-1) simDep=roundQ(sa+15,sa);
     }
     if(simArr[nbStops-1]>MIDI){
       var bestIdx=-1;var bestScore=Infinity;
@@ -1531,7 +1550,7 @@ function computeHeures(c){
   var départPrev=startMin;
   
   for(var m=1;m<nbStops;m++){
-    var rawArrival=départPrev+c.legDurations[m-1].min;
+    var rawArrival=départPrev+legs[m-1].min;
     rawArrivals[m]=rawArrival;
     
     if(m===nbStops-1){
@@ -1869,25 +1888,16 @@ async function sauvegarderSemaine(){if(!convoisOptimises.length){await lyAlert('
     var box=document.createElement('div');
     box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px 28px;max-width:420px;width:90%;box-shadow:var(--shadow-lg);text-align:center';
     box.innerHTML='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:12px">Date déjà utilisée</div>'
-      +'<div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Il y a déjà <strong>'+nbExisting+' convoi'+(nbExisting>1?'s':'')+'</strong> enregistré'+(nbExisting>1?'s':'')+' au <strong>'+fmtDate(date)+'</strong>.<br>Que souhaitez-vous faire ?</div>'
+      +'<div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Il y a déjà <strong>'+nbExisting+' convoi'+(nbExisting>1?'s':'')+'</strong> enregistré'+(nbExisting>1?'s':'')+' au <strong>'+fmtDate(date)+'</strong>.<br>Voulez-vous remplacer ?</div>'
       +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
-      +'<button class="btn btn-primary" id="sem-merge">Ajouter à côté</button>'
       +'<button class="btn" style="background:var(--red);color:white;border:none" id="sem-replace">Remplacer tout</button>'
       +'<button class="btn btn-sm" id="sem-cancel">Annuler</button></div>';
     overlay.appendChild(box);document.body.appendChild(overlay);
-    document.getElementById('sem-merge').onclick=function(){overlay.remove();resolve('merge')};
     document.getElementById('sem-replace').onclick=function(){overlay.remove();resolve('replace')};
     document.getElementById('sem-cancel').onclick=function(){overlay.remove();resolve('cancel')};
     overlay.onclick=function(e){if(e.target===overlay){overlay.remove();resolve('cancel')}};
   });
   if(choice==='cancel') return;
-  if(choice==='merge'){
-    existing.convois=existing.convois.concat(convoisOptimises);
-    await dbUpsert('semaines',existing.id,existing);
-    renderSemaines();setPersist('Semaine sauvegardée','ok');
-    lyAlert(convoisOptimises.length+' convoi'+(convoisOptimises.length>1?'s':'')+' ajouté'+(convoisOptimises.length>1?'s':'')+' à la semaine du '+fmtDate(date)+'.','success');
-    return;
-  }
   // replace
   existing.convois=convoisOptimises.slice();
   existing.type=document.getElementById('ltype').value;
@@ -3353,21 +3363,70 @@ function renderTimelineStops(stops,cap,convoiIdx){
     else if(s.action==='pickup'){dotC='var(--green)';phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='<span style="color:var(--green);font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'}
     else if(s.action==='retour'){dotC='var(--forest)';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à l\'arrivée</span>'}
     var moveBtn='';
-    if(convoiIdx!==undefined&&s.action!=='depart'&&s.action!=='retour'&&s.fid&&convoisOptimises.length>1){
+    var delBtn='';
+    if(convoiIdx!==undefined&&s.action!=='depart'&&s.action!=='retour'&&s.fid&&convoisOptimises.length>=1){
       moveBtn='<button class="btn btn-sm no-print" onclick="deplacerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;margin-left:6px" title="Déplacer cet arrêt">↔</button>';
+      delBtn='<button class="btn btn-sm no-print" onclick="supprimerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;background:var(--red);color:white;border:none" title="Supprimer cet arrêt">✕</button>';
     }
     // Duplicate warning + merge button
     var dupBtn='';
     if(s.pt&&s.pt.nom&&nomCount[s.pt.nom]>1&&convoiIdx!==undefined){
       dupBtn='<button class="btn btn-sm no-print" onclick="fusionnerDoublons('+convoiIdx+')" style="font-size:9px;padding:2px 8px;margin-left:4px;background:var(--red);color:white;border:none" title="Fusionner les arrêts en doublon">⚠ Fusionner</button>';
     }
-    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+moveBtn+dupBtn+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')+'</div></div>';
+    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+moveBtn+delBtn+dupBtn+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')+'</div></div>';
     // Insert stop button between stops (not after retour)
     if(convoiIdx!==undefined&&s.action!=='retour'&&si<stops.length-1){
       html+='<div class="no-print" style="text-align:center;margin:2px 0"><button class="btn btn-sm" onclick="insertStopInConvoi('+convoiIdx+','+(si+1)+')" style="font-size:9px;padding:2px 10px;opacity:0.4" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">+ Insérer un arrêt ici</button></div>';
     }
   });
   return html+'</div>';
+}
+
+async function supprimerStop(convoiIdx,stopIdx){
+  var c=convoisOptimises[convoiIdx];
+  var stop=c.stops[stopIdx];
+  if(!stop||stop.action==='depart'||stop.action==='retour') return;
+  var nbPers=(stop.depPers||[]).length+(stop.arrPers||[]).length;
+  var msg='Supprimer l\'arrêt '+stop.pt.nom+' ?';
+  if(nbPers>0) msg+='\n'+nbPers+' passager'+(nbPers>1?'s':'')+' ser'+(nbPers>1?'ont':'a')+' retiré'+(nbPers>1?'s':'')+' du convoi.';
+  if(!await lyConfirm(msg)) return;
+  
+  // Remove the stop
+  c.stops.splice(stopIdx,1);
+  
+  // Recalculate depart/arrivee from remaining stops
+  var newDep=[],newArr=[];
+  c.stops.forEach(function(s){
+    if(s.action==='depart'||s.action==='retour') return;
+    (s.depPers||[]).forEach(function(p){newDep.push(p)});
+    (s.arrPers||[]).forEach(function(p){newArr.push(p)});
+  });
+  c.depart=newDep;c.arrivee=newArr;
+  
+  // Recalculate seats
+  var seats=newDep.length;
+  c.stops[0].seats=seats;
+  for(var i=1;i<c.stops.length-1;i++){
+    seats=seats-(c.stops[i].depPers||[]).length+(c.stops[i].arrPers||[]).length;
+    c.stops[i].seats=seats;
+  }
+  c.stops[c.stops.length-1].seats=seats;
+  
+  c.peakSeats=peakSeatsStops(c.stops);
+  c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+  c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
+  c.dureeMin=Math.round(c.km/getParams().vitesse*60);
+  c.type=(newDep.length&&newArr.length)?'rotation':newDep.length?'depart_only':'arrivee_only';
+  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  
+  // Remove convoi if empty (only depart+retour left)
+  if(c.stops.length<=2){
+    convoisOptimises.splice(convoiIdx,1);
+  }
+  
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert('Arrêt '+stop.pt.nom+' supprimé.','success');
 }
 
 function insertStopInConvoi(convoiIdx,insertAtIdx){
