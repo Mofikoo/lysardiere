@@ -1,103 +1,238 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>La Lysardière</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap');
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: #F7F3EC;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-    header img {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      border: 3px solid #FEEAA1;
-      margin-bottom: 16px;
-      object-fit: cover;
-    }
-    header h1 {
-      font-family: 'Fraunces', serif;
-      font-size: 2rem;
-      color: #18534F;
-    }
-    header p {
-      color: #7A8E8C;
-      margin-top: 6px;
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-size: 11px;
-    }
-    .cards {
-      display: flex;
-      gap: 28px;
-      flex-wrap: wrap;
-      justify-content: center;
-      padding: 0 24px;
-    }
-    .card {
-      background: white;
-      border-radius: 18px;
-      padding: 36px 32px;
-      width: 260px;
-      text-align: center;
-      text-decoration: none;
-      color: inherit;
-      box-shadow: 0 4px 20px rgba(24,83,79,0.08);
-      border: 1px solid #E8EEEC;
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 32px rgba(24,83,79,0.14);
-      border-color: #2A847E;
-    }
-    .card .icon { font-size: 2.8rem; margin-bottom: 18px; }
-    .card h2 {
-      font-family: 'Fraunces', serif;
-      font-size: 1.15rem;
-      color: #18534F;
-      margin-bottom: 8px;
-    }
-    .card p { font-size: 0.88rem; color: #7A8E8C; line-height: 1.5; }
-    footer {
-      margin-top: 60px;
-      color: #B0BDB9;
-      font-size: 0.78rem;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Lysardière — Espace privé</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F3EC;
+    --card: #FFFFFF;
+    --forest: #18534F;
+    --mint: #ECF8F6;
+    --gold: #FEEAA1;
+    --copper: #C77B5A;
+    --red: #C84B4B;
+    --green: #2E8B57;
+    --text-dark: #1A2E2C;
+    --text-mid: #5C6B6A;
+    --text-light: #8A9695;
+    --border: #E5E0D6;
+    --shadow-lg: 0 10px 40px rgba(24,83,79,0.15);
+    --radius: 16px;
+    --radius-xs: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 500px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+  .title {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--forest);
+    margin: 0 0 6px 0;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-mid);
+    margin-bottom: 32px;
+  }
+  .input {
+    width: 100%;
+    font-size: 15px;
+    padding: 14px 18px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xs);
+    margin-bottom: 12px;
+    text-align: center;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input:focus { border-color: var(--forest); }
+  .btn {
+    width: 100%;
+    background: var(--forest);
+    color: white;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #144742; }
+  .error {
+    font-size: 13px;
+    color: var(--red);
+    margin-bottom: 12px;
+    display: none;
+  }
+  .apps-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .app-card {
+    background: var(--mint);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 28px 16px;
+    text-decoration: none;
+    color: var(--text-dark);
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-card:hover {
+    border-color: var(--forest);
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24,83,79,0.1);
+  }
+  .app-icon { font-size: 40px; }
+  .app-name {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--forest);
+  }
+  .app-desc {
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+  .logout {
+    margin-top: 24px;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .logout:hover { color: var(--red); }
+  @media (max-width: 500px) {
+    .apps-grid { grid-template-columns: 1fr; }
+    .card { padding: 32px 24px; }
+  }
+</style>
 </head>
 <body>
-  <header>
-    <img src="icon-192.png" alt="La Lysardière">
-    <h1>La Lysardière</h1>
-    <p>Espace de gestion interne</p>
-  </header>
-  <div class="cards">
-    <a class="card" href="transport.html">
-      <div class="icon">🚌</div>
-      <h2>Gestion du transport</h2>
-      <p>Planification des itinéraires, véhicules et semaines de transport</p>
-    </a>
-    <a class="card" href="documents.html">
-      <div class="icon">📄</div>
-      <h2>Documents d'inscription</h2>
-      <p>Consultation et gestion des fiches reçues par mail</p>
-    </a>
+
+<div class="container">
+  <!-- LOGIN VIEW -->
+  <div id="login-view" class="card">
+    <div class="title">La Lysardière</div>
+    <div class="subtitle">Accès à l'espace privé</div>
+    <input type="password" id="pw" class="input" placeholder="Mot de passe" onkeydown="if(event.key==='Enter') checkLogin()">
+    <label style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-mid);margin-bottom:14px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="remember" style="width:auto;cursor:pointer">
+      <span>Rester connecté sur cet appareil</span>
+    </label>
+    <div id="error" class="error">Mot de passe incorrect</div>
+    <button class="btn" onclick="checkLogin()">Se connecter</button>
   </div>
-  <footer>La Lysardière — Gestion interne</footer>
+
+  <!-- APP SELECTOR VIEW -->
+  <div id="selector-view" class="card" style="display:none">
+    <div class="title">La Lysardière</div>
+    <div class="subtitle">Choisissez une application</div>
+    <div class="apps-grid">
+      <a href="transport.html" class="app-card">
+        <div class="app-icon">🚐</div>
+        <div class="app-name">Transport</div>
+        <div class="app-desc">Trajets et optimisation</div>
+      </a>
+      <a href="document.html" class="app-card">
+        <div class="app-icon">📄</div>
+        <div class="app-name">Documents</div>
+        <div class="app-desc">Gestion documentaire</div>
+      </a>
+    </div>
+    <button class="logout" onclick="logout()">Se déconnecter</button>
+  </div>
+</div>
+
+<script>
+// Mot de passe par défaut : "Lysardiere2026"
+// Pour changer : génère le SHA-256 sur https://emn178.github.io/online-tools/sha256.html
+var APP_PASS_HASH='2e22c2cd22ebec02b8de4a82585aef6b9489a37178becb09236471355af16c58';
+
+async function sha256(str){
+  var buf=new TextEncoder().encode(str);
+  var hash=await crypto.subtle.digest('SHA-256',buf);
+  return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+
+async function checkLogin(){
+  var pw=document.getElementById('pw').value;
+  if(!pw) return;
+  var h=await sha256(pw);
+  if(h===APP_PASS_HASH){
+    var remember=document.getElementById('remember').checked;
+    if(remember){
+      localStorage.setItem('lys_auth','1');
+    }
+    sessionStorage.setItem('lys_auth','1');
+    showSelector();
+  } else {
+    document.getElementById('error').style.display='block';
+    document.getElementById('pw').value='';
+    document.getElementById('pw').focus();
+  }
+}
+
+function showSelector(){
+  document.getElementById('login-view').style.display='none';
+  document.getElementById('selector-view').style.display='block';
+}
+
+function logout(){
+  sessionStorage.removeItem('lys_auth');
+  localStorage.removeItem('lys_auth');
+  document.getElementById('selector-view').style.display='none';
+  document.getElementById('login-view').style.display='block';
+  document.getElementById('pw').value='';
+  document.getElementById('remember').checked=false;
+  document.getElementById('pw').focus();
+}
+
+// Auto-skip if already authenticated (session or persistent)
+if(sessionStorage.getItem('lys_auth')==='1'||localStorage.getItem('lys_auth')==='1'){
+  // Restore session flag for transport.html compatibility
+  sessionStorage.setItem('lys_auth','1');
+  showSelector();
+} else {
+  document.getElementById('pw').focus();
+}
+</script>
 </body>
 </html>

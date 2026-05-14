@@ -1506,11 +1506,12 @@ function computeHeures(c){
   var useLegDurations=c.legDurations&&c.legDurations.length;
   var estimatedLegs=[];
   if(!useLegDurations&&c.stops&&c.stops.length>1){
-    var vitesse=70; // km/h default
+    var vitesse=50; // km/h - réaliste pour routes secondaires
+    var routeFactor=1.3; // route réelle ~30% plus longue que vol d'oiseau
     for(var ei=0;ei<c.stops.length-1;ei++){
       var a=c.stops[ei].pt,b=c.stops[ei+1].pt;
       if(a&&b&&a.lat&&b.lat){
-        var dkm=dp(a,b);
+        var dkm=dp(a,b)*routeFactor;
         estimatedLegs.push({min:Math.round(dkm/vitesse*60),km:Math.round(dkm)});
       } else {
         estimatedLegs.push({min:15,km:10});
@@ -1784,24 +1785,27 @@ async function recalcMapsConvoiSem(semId,convoiIdx){
   if(!sem) return;
   var c=sem.convois[convoiIdx];
   if(!c) return;
-  // Clear old leg durations
   c.legDurations=null;
   c.customHeures=null;
   c.mapsEnrichi=false;
-  // Re-enrich just this one convoi
   setPersist('⏳ Recalcul Maps...','neutral');
   await attendreMaps();
+  if(!window.google||!window.google.maps){
+    setPersist('Erreur : Google Maps non chargé','neutral');
+    lyAlert('Google Maps n\'est pas chargé. Vérifiez la connexion et les autorisations de domaine de la clé API.','error');
+    return;
+  }
   await enrichirConvoisAvecMaps([c]);
   if(c.mapsEnrichi){
-    // Recalculate duration
     c.dureeMin=c.legDurations.reduce(function(s,l){return s+l.min},0);
     c.km=c.legDurations.reduce(function(s,l){return s+l.km},0);
-    // Save to Supabase
     var table=semaines.indexOf(sem)>=0?'semaines':'archives';
     await dbUpsert(table,sem.id,sem);
     setPersist('✅ Horaires recalculés','ok');
+    lyAlert('Horaires recalculés avec Google Maps.','success');
   } else {
     setPersist('Erreur Maps','neutral');
+    lyAlert('Recalcul Maps échoué. Ouvrez la console (F12) pour les détails.','error');
   }
   renderSemaines();
 }
@@ -4637,7 +4641,14 @@ async function manSaveToSemaines(){
   document.getElementById('man-preview-card').style.display='none';
 }
 
-loadData();
+// Vérification d'authentification (depuis index.html)
+if(sessionStorage.getItem('lys_auth')!=='1'&&localStorage.getItem('lys_auth')!=='1'){
+  window.location.href='index.html';
+} else {
+  // Sync flags
+  if(localStorage.getItem('lys_auth')==='1') sessionStorage.setItem('lys_auth','1');
+  loadData();
+}
 
 // ── REALTIME SYNC ────────────────────────────
 var realtimeWs=null;
