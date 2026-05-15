@@ -2369,18 +2369,22 @@ function renderPersonnes(){
 function normPrenom(s){s=s.trim();if(!s)return '';return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
 function normMaj(s){return s.trim().toUpperCase()}
 function findMatchingPersonne(p){
+  // 1. Match by id (most reliable - preserved from original person object)
+  if(p.id){
+    var byId=personnes.find(function(pp){return pp.id===p.id});
+    if(byId) return byId;
+  }
   var pNom=(p.nom||'').toLowerCase().trim();
   var pPrenom=(p.prenom||'').toLowerCase().trim();
-  // Exact match first
+  // 2. Exact match prenom+nom
   var exact=personnes.find(function(pp){
     return pp.prenom.toLowerCase()===pPrenom&&(pp.nom||'').toLowerCase()===pNom;
   });
   if(exact) return exact;
-  // Match by nom only (handles prenom changes like Jp→Jean-pierre)
+  // 3. Match by nom only (handles prenom changes like Jp→Jean-pierre)
   if(pNom.length>1){
     var nomMatches=personnes.filter(function(pp){return(pp.nom||'').toLowerCase()===pNom});
-    if(nomMatches.length===1) return nomMatches[0]; // unique nom match
-    // If multiple, try first letter of prenom
+    if(nomMatches.length===1) return nomMatches[0];
     if(pPrenom.length>0){
       var firstLetter=pPrenom[0];
       var letterMatch=nomMatches.find(function(pp){return pp.prenom.toLowerCase()[0]===firstLetter});
@@ -2460,12 +2464,11 @@ async function syncFoyersInSemaines(){
         list.forEach(function(p){
           var current=findMatchingPersonne(p);
           if(!current) return;
-          // Sync foyer
           if(current.foyer&&current.foyer!==p.foyer){p.foyer=current.foyer;changed=true}
-          // Sync prenom
           if(current.prenom&&current.prenom!==p.prenom){p.prenom=current.prenom;changed=true}
-          // Sync nom
-          if(current.nom&&current.nom!==p.nom){p.nom=current.nom;changed=true}
+          if(current.nom!==undefined&&current.nom!==p.nom){p.nom=current.nom;changed=true}
+          // Store id for future matching (in case name changes again)
+          if(current.id&&!p.id){p.id=current.id;changed=true}
         });
       }
       updatePers(c.depart);
@@ -2473,6 +2476,7 @@ async function syncFoyersInSemaines(){
       c.stops.forEach(function(st){
         updatePers(st.depPers);
         updatePers(st.arrPers);
+        if(st.retourPrevu) updatePers(st.retourPrevu);
       });
     });
     if(changed){
@@ -2492,7 +2496,26 @@ function refreshFoyerSelect(){
 }
 
 async function addPersonne(){var prenom=normPrenom(document.getElementById('pp').value);var nom=normMaj(document.getElementById('pn').value);var foyer=(document.getElementById('pfoyer').value||'').trim().toUpperCase();var ll=getSelectedLieux('pf-container');if(!prenom){await lyAlert('Prénom requis.','error');return}if(isDuplicatePersonne(prenom,nom,foyer,null)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}var p={id:'p'+Date.now(),prenom:prenom,nom:nom,foyer:foyer,lieux:ll,lieu:ll[0]||'',besoins:document.getElementById('pb').value,notes:document.getElementById('pnotes').value.trim()};await dbUpsert('personnes',p.id,p);personnes.push(p);['pp','pn','pnotes'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('pfoyer').value='';document.querySelectorAll('#pf-container input[type=checkbox]').forEach(function(cb){cb.checked=false});document.getElementById('pb').value='';updatePersistBadge();renderPersonnes()}
-async function savePersonne(id){var p=personnes.find(function(x){return x.id===id});if(!p) return;var prenom=normPrenom(document.getElementById('ep-pp-'+id).value)||p.prenom;var nom=normMaj(document.getElementById('ep-pn-'+id).value);var foyer=normMaj(document.getElementById('ep-pfoyer-'+id).value);if(isDuplicatePersonne(prenom,nom,foyer,id)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}p.prenom=prenom;p.nom=nom;p.foyer=foyer;p.lieux=getSelectedLieux('ep-pf-container-'+id);p.lieu=p.lieux[0]||p.lieu||'';p.besoins=document.getElementById('ep-pb-'+id).value;p.notes=document.getElementById('ep-pnotes-'+id).value.trim();await dbUpsert('personnes',id,p);editingPersonneId=null;updatePersistBadge();renderPersonnes()}
+async function savePersonne(id){var p=personnes.find(function(x){return x.id===id});if(!p) return;var prenom=normPrenom(document.getElementById('ep-pp-'+id).value)||p.prenom;var nom=normMaj(document.getElementById('ep-pn-'+id).value);var foyer=normMaj(document.getElementById('ep-pfoyer-'+id).value);if(isDuplicatePersonne(prenom,nom,foyer,id)){await lyAlert('Cette personne existe déjà (meme prenom, nom et foyer).','error');return}
+// Store old values for semaine sync
+var oldPrenom=p.prenom,oldNom=p.nom,oldFoyer=p.foyer;
+p.prenom=prenom;p.nom=nom;p.foyer=foyer;p.lieux=getSelectedLieux('ep-pf-container-'+id);p.lieu=p.lieux[0]||p.lieu||'';p.besoins=document.getElementById('ep-pb-'+id).value;p.notes=document.getElementById('ep-pnotes-'+id).value.trim();await dbUpsert('personnes',id,p);editingPersonneId=null;updatePersistBadge();renderPersonnes();
+// If name/foyer changed, auto-sync all semaines silently
+if(oldPrenom!==prenom||oldNom!==nom||oldFoyer!==foyer){
+  var anyChange=false;
+  var allSem=semaines.concat(archives);
+  for(var si=0;si<allSem.length;si++){
+    var s=allSem[si];var changed=false;
+    s.convois.forEach(function(c){
+      function upd(list){if(!list) return;list.forEach(function(pp){if(pp.id===id){if(pp.prenom!==prenom){pp.prenom=prenom;changed=true}if(pp.nom!==nom){pp.nom=nom;changed=true}if(pp.foyer!==foyer){pp.foyer=foyer;changed=true}}})}
+      upd(c.depart);upd(c.arrivee);
+      c.stops.forEach(function(st){upd(st.depPers);upd(st.arrPers);if(st.retourPrevu)upd(st.retourPrevu)});
+    });
+    if(changed){var table=semaines.indexOf(s)>=0?'semaines':'archives';await dbUpsert(table,s.id,s);anyChange=true}
+  }
+  if(anyChange) setPersist('✅ Semaines synchronisées','ok');
+}
+}
 async function delP(id){setPersist('⏳ Suppression...','neutral');await dbDelete('personnes',id);personnes=personnes.filter(function(p){return p.id!==id});updatePersistBadge();renderPersonnes()}
 
 // ── PAGE TRAJETS ──────────────────────────────
@@ -4517,9 +4540,27 @@ async function renderCourrier(){
         if(!courrierMap[mapKey]){
           courrierMap[mapKey]={foyer:displayFoyer,lieu:stopLieu,personnes:{}};
         }
-        // Use CURRENT name as key (not frozen)
+        // Use CURRENT name as key, but also dedup by id if available
         var persKey=prenom+' '+nom;
-        if(!courrierMap[mapKey].personnes[persKey]) courrierMap[mapKey].personnes[persKey]={prenom:prenom,nom:nom,trajets:[],lieu:stopLieu};
+        var persId=(currentPers||p).id;
+        // Check if this person exists under a different name (old entry from before name change)
+        if(persId&&!courrierMap[mapKey].personnes[persKey]){
+          // Scan for existing entry with same id
+          var existingKey=Object.keys(courrierMap[mapKey].personnes).find(function(k){
+            return courrierMap[mapKey].personnes[k]._id===persId;
+          });
+          if(existingKey&&existingKey!==persKey){
+            // Rename the old entry to the new name
+            courrierMap[mapKey].personnes[persKey]=courrierMap[mapKey].personnes[existingKey];
+            courrierMap[mapKey].personnes[persKey].prenom=prenom;
+            courrierMap[mapKey].personnes[persKey].nom=nom;
+            delete courrierMap[mapKey].personnes[existingKey];
+          }
+        }
+        if(!courrierMap[mapKey].personnes[persKey]){
+          courrierMap[mapKey].personnes[persKey]={prenom:prenom,nom:nom,_id:persId,trajets:[],lieu:stopLieu};
+        }
+        if(persId) courrierMap[mapKey].personnes[persKey]._id=persId;
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
         if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].lieu=stopLieu;
         // Compute hour for this person at this stop
