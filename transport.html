@@ -1066,6 +1066,28 @@ input:focus, select:focus {
 
 <!-- GUIDE -->
 <div class="tab-pane" id="pane-guide">
+  <div class="card" style="border-left:4px solid var(--copper);background:linear-gradient(135deg,var(--card) 0%,var(--mint) 100%)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="font-size:32px">💾</div>
+      <div>
+        <div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--forest)">Sauvegarde complète (Transport + Documents)</div>
+        <div style="font-size:11px;color:var(--text-light)" id="backup-status">Aucune sauvegarde locale enregistrée</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:14px">
+      Télécharge un fichier ZIP contenant <strong>TOUTES</strong> les données des deux applications :
+      <br>• <strong>Transport</strong> : lieux, personnes, semaines, archives, véhicules, prix gazole
+      <br>• <strong>Documents</strong> : fiches vacanciers, séjours, et tous les fichiers PDF/images joints
+      <br>Une sauvegarde automatique est proposée chaque semaine. La restauration recrée tout fidèlement.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="downloadBackupFull()">⬇ Télécharger sauvegarde COMPLÈTE</button>
+      <label class="btn btn-sm" style="cursor:pointer;margin:0">
+        ⬆ Restaurer un fichier (.zip ou .json)
+        <input type="file" accept=".zip,.json" style="display:none" onchange="handleRestoreFile(this)">
+      </label>
+    </div>
+  </div>
   <div class="card" style="border-left:4px solid var(--forest)">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <img id="guide-logo" style="width:50px;height:50px;border-radius:50%;object-fit:cover">
@@ -1399,6 +1421,354 @@ async function loadData(){
   initFoyersFromPersonnes();refreshFoyerSelect();
   // Auto-fetch gazole price for today
   autoFetchGazole();
+  // Auto-backup check (weekly)
+  checkAutoBackup();
+}
+
+// ── BACKUP SYSTEM (complet : transport + documents + storage) ────────────────────────────
+// Liste de TOUTES les tables Supabase à sauvegarder (transport + documents)
+var ALL_BACKUP_TABLES=[
+  'lieux','personnes','semaines','archives','vehicules','prix_gazole',
+  'documents','sejours','sejours_personnes'
+];
+
+// Bucket(s) de storage à sauvegarder
+var ALL_BACKUP_BUCKETS=['documents'];
+
+function buildBackupJson(){
+  // Version "rapide" (sans storage), gardée pour compat
+  var backup={
+    version:1,
+    date:new Date().toISOString(),
+    counts:{
+      lieux:lieux.length,
+      personnes:personnes.length,
+      semaines:semaines.length,
+      archives:archives.length,
+      vehicules:vehicles.length,
+      foyers:foyers.length,
+      gazole:gazoleHistorique.length
+    },
+    data:{
+      lieux:lieux,
+      personnes:personnes,
+      semaines:semaines,
+      archives:archives,
+      vehicules:vehicles,
+      foyers:foyers,
+      prix_gazole:gazoleHistorique
+    }
+  };
+  return backup;
+}
+
+// Charge JSZip dynamiquement (CDN)
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload=function(){resolve(window.JSZip)};
+    s.onerror=function(){reject(new Error('Impossible de charger JSZip'))};
+    document.head.appendChild(s);
+  });
+}
+
+async function fetchAllFromTable(table){
+  // Récupère toutes les lignes d'une table avec pagination
+  var all=[];
+  var pageSize=1000;
+  var from=0;
+  while(true){
+    var url=SUPA_URL+'/rest/v1/'+table+'?select=*&order=id.asc&limit='+pageSize+'&offset='+from;
+    var res=await fetch(url,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    if(!res.ok){
+      if(res.status===404){return null} // table n'existe pas
+      throw new Error('Erreur fetch '+table+' : '+res.status);
+    }
+    var rows=await res.json();
+    all=all.concat(rows);
+    if(rows.length<pageSize) break;
+    from+=pageSize;
+  }
+  return all;
+}
+
+async function listStorageFiles(bucket,prefix){
+  // Liste récursive des fichiers d'un bucket
+  prefix=prefix||'';
+  var url=SUPA_URL+'/storage/v1/object/list/'+bucket;
+  var res=await fetch(url,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({prefix:prefix,limit:1000,offset:0})
+  });
+  if(!res.ok) return [];
+  var items=await res.json();
+  var files=[];
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    var fullPath=prefix?(prefix+'/'+it.name):it.name;
+    if(it.id){
+      // c'est un fichier
+      files.push({path:fullPath,size:it.metadata?it.metadata.size:0,contentType:it.metadata?it.metadata.mimetype:'application/octet-stream'});
+    } else {
+      // c'est un dossier, recurser
+      var sub=await listStorageFiles(bucket,fullPath);
+      files=files.concat(sub);
+    }
+  }
+  return files;
+}
+
+async function downloadStorageFile(bucket,path){
+  var url=SUPA_URL+'/storage/v1/object/'+bucket+'/'+path;
+  var res=await fetch(url,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  if(!res.ok) throw new Error('Erreur téléchargement '+path);
+  return await res.blob();
+}
+
+async function downloadBackupFull(silent){
+  try{
+    setPersist('⏳ Préparation sauvegarde...','neutral');
+    var JSZip=await loadJSZip();
+    var zip=new JSZip();
+    
+    // 1) Récupérer toutes les tables
+    var allTables={};
+    var counts={};
+    for(var ti=0;ti<ALL_BACKUP_TABLES.length;ti++){
+      var t=ALL_BACKUP_TABLES[ti];
+      setPersist('⏳ Sauvegarde table '+t+'...','neutral');
+      try{
+        var rows=await fetchAllFromTable(t);
+        if(rows!==null){
+          allTables[t]=rows;
+          counts[t]=rows.length;
+        }
+      } catch(e){
+        console.warn('Table '+t+' non sauvegardée :',e.message);
+      }
+    }
+    
+    // 2) Construire le manifest
+    var manifest={
+      version:2,
+      date:new Date().toISOString(),
+      supabase_url:SUPA_URL,
+      tables:Object.keys(allTables),
+      counts:counts,
+      buckets:[],
+      storage_files:{}
+    };
+    
+    // Ajouter le JSON des données
+    zip.file('data/database.json',JSON.stringify(allTables,null,2));
+    
+    // 3) Récupérer le storage
+    for(var bi=0;bi<ALL_BACKUP_BUCKETS.length;bi++){
+      var bucket=ALL_BACKUP_BUCKETS[bi];
+      setPersist('⏳ Listage fichiers '+bucket+'...','neutral');
+      try{
+        var files=await listStorageFiles(bucket);
+        manifest.buckets.push(bucket);
+        manifest.storage_files[bucket]=[];
+        for(var fi=0;fi<files.length;fi++){
+          var f=files[fi];
+          setPersist('⏳ Téléchargement '+(fi+1)+'/'+files.length+' : '+f.path,'neutral');
+          try{
+            var blob=await downloadStorageFile(bucket,f.path);
+            zip.file('storage/'+bucket+'/'+f.path,blob);
+            manifest.storage_files[bucket].push({path:f.path,size:f.size,contentType:f.contentType});
+          } catch(e){
+            console.warn('Fichier non récupéré : '+f.path,e);
+          }
+        }
+      } catch(e){
+        console.warn('Bucket '+bucket+' :',e);
+      }
+    }
+    
+    // 4) Ajouter le manifest
+    zip.file('manifest.json',JSON.stringify(manifest,null,2));
+    
+    // 5) Générer le ZIP
+    setPersist('⏳ Création du fichier ZIP...','neutral');
+    var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    var d=new Date();
+    var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'_'+String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download='lysardiere-backup-COMPLET-'+ts+'.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    localStorage.setItem('lys_last_backup',d.toISOString());
+    var totalFiles=Object.values(manifest.storage_files).reduce(function(s,arr){return s+arr.length},0);
+    setPersist('✅ Sauvegarde terminée','ok');
+    if(!silent){
+      lyAlert('Sauvegarde COMPLÈTE téléchargée :\n• '+Object.keys(allTables).length+' tables ('+Object.values(counts).reduce(function(s,n){return s+n},0)+' lignes au total)\n• '+totalFiles+' fichier'+(totalFiles>1?'s':'')+' du storage','success');
+    }
+    updateBackupStatus();
+  } catch(e){
+    setPersist('Erreur sauvegarde','err');
+    lyAlert('Erreur lors de la sauvegarde : '+e.message,'error');
+  }
+}
+
+// Alias pour le bouton (ancien nom)
+function downloadBackup(silent){
+  return downloadBackupFull(silent);
+}
+
+function checkAutoBackup(){
+  // Auto-prompt for backup if last one is older than 7 days
+  var lastStr=localStorage.getItem('lys_last_backup');
+  var shouldPrompt=false;
+  if(!lastStr){
+    shouldPrompt=true;
+  } else {
+    var last=new Date(lastStr);
+    var daysSince=(Date.now()-last.getTime())/(1000*60*60*24);
+    if(daysSince>=7) shouldPrompt=true;
+  }
+  if(shouldPrompt){
+    setTimeout(async function(){
+      var msg=lastStr?'Dernière sauvegarde il y a plus de 7 jours.':'Aucune sauvegarde locale détectée.';
+      if(await lyConfirm(msg+'\n\nTélécharger une sauvegarde COMPLÈTE maintenant ?\n(Toutes les tables ET les fichiers documents seront sauvegardés dans un fichier ZIP.)')){
+        downloadBackupFull();
+      } else {
+        localStorage.setItem('lys_last_backup',new Date(Date.now()-6*24*60*60*1000).toISOString());
+      }
+    },3000);
+  }
+}
+
+async function restoreBackup(file){
+  if(!file) return;
+  if(!await lyConfirm('⚠️ ATTENTION\n\nRestaurer une sauvegarde va REMPLACER toutes les données actuelles dans Supabase :\n• Toutes les tables (personnes, semaines, lieux, documents, etc.)\n• Tous les fichiers du storage\n\nLes données existantes qui ne sont PAS dans la sauvegarde seront SUPPRIMÉES.\n\nContinuer ?')) return;
+  
+  var isZip=file.name.endsWith('.zip');
+  
+  try{
+    setPersist('⏳ Lecture de la sauvegarde...','neutral');
+    
+    if(isZip){
+      // Version 2 : ZIP avec manifest + tables + storage
+      var JSZip=await loadJSZip();
+      var zip=await JSZip.loadAsync(file);
+      var manifestFile=zip.file('manifest.json');
+      if(!manifestFile){lyAlert('Fichier ZIP invalide : manifest.json manquant.','error');return}
+      var manifest=JSON.parse(await manifestFile.async('string'));
+      var dbFile=zip.file('data/database.json');
+      if(!dbFile){lyAlert('Fichier ZIP invalide : database.json manquant.','error');return}
+      var allTables=JSON.parse(await dbFile.async('string'));
+      
+      // 1) Restaurer les tables
+      var tableNames=Object.keys(allTables);
+      for(var ti=0;ti<tableNames.length;ti++){
+        var tbl=tableNames[ti];
+        setPersist('⏳ Restauration table '+tbl+'...','neutral');
+        var items=allTables[tbl]||[];
+        // Supprimer les lignes actuelles non présentes dans le backup
+        var current=await fetchAllFromTable(tbl);
+        var backupIds={};
+        items.forEach(function(it){if(it.id) backupIds[it.id]=true});
+        for(var ci=0;ci<(current||[]).length;ci++){
+          if(current[ci].id&&!backupIds[current[ci].id]){
+            await dbDelete(tbl,current[ci].id);
+          }
+        }
+        // Upsert toutes les lignes du backup
+        for(var bi=0;bi<items.length;bi++){
+          if(items[bi].id) await dbUpsert(tbl,items[bi].id,items[bi]);
+        }
+      }
+      
+      // 2) Restaurer le storage
+      var buckets=manifest.buckets||[];
+      for(var bki=0;bki<buckets.length;bki++){
+        var bucket=buckets[bki];
+        var bucketFiles=manifest.storage_files[bucket]||[];
+        for(var fi=0;fi<bucketFiles.length;fi++){
+          var fInfo=bucketFiles[fi];
+          setPersist('⏳ Restauration fichier '+(fi+1)+'/'+bucketFiles.length+'...','neutral');
+          var zipPath='storage/'+bucket+'/'+fInfo.path;
+          var zipEntry=zip.file(zipPath);
+          if(!zipEntry) continue;
+          var blob=await zipEntry.async('blob');
+          // Upload vers Supabase storage (upsert mode)
+          try{
+            await fetch(SUPA_URL+'/storage/v1/object/'+bucket+'/'+fInfo.path,{
+              method:'POST',
+              headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'x-upsert':'true','Content-Type':fInfo.contentType||'application/octet-stream'},
+              body:blob
+            });
+          } catch(e){console.warn('Upload storage echoué :',fInfo.path,e)}
+        }
+      }
+    } else {
+      // Version 1 : JSON simple (rétrocompatibilité)
+      var text=await file.text();
+      var backup=JSON.parse(text);
+      if(!backup.data){lyAlert('Fichier de sauvegarde invalide.','error');return}
+      var tables=Object.keys(backup.data);
+      for(var t=0;t<tables.length;t++){
+        var tbl=tables[t];
+        var items=backup.data[tbl]||[];
+        var current=await dbLoadAll(tbl);
+        var backupIds={};
+        items.forEach(function(it){backupIds[it.id]=true});
+        for(var ci=0;ci<(current||[]).length;ci++){
+          if(!backupIds[current[ci].id]){
+            await dbDelete(tbl,current[ci].id);
+          }
+        }
+        for(var bi=0;bi<items.length;bi++){
+          await dbUpsert(tbl,items[bi].id,items[bi]);
+        }
+      }
+    }
+    
+    setPersist('✅ Restauration terminée','ok');
+    lyAlert('Restauration terminée. La page va se recharger.','success');
+    setTimeout(function(){location.reload()},1500);
+  } catch(e){
+    setPersist('Erreur restauration','err');
+    lyAlert('Erreur : '+e.message,'error');
+  }
+}
+
+function handleRestoreFile(input){
+  if(input.files&&input.files[0]) restoreBackup(input.files[0]);
+  input.value='';
+}
+
+function updateBackupStatus(){
+  var el=document.getElementById('backup-status');
+  if(!el) return;
+  var lastStr=localStorage.getItem('lys_last_backup');
+  if(!lastStr){
+    el.textContent='⚠️ Aucune sauvegarde locale enregistrée';
+    el.style.color='var(--red)';
+    return;
+  }
+  var last=new Date(lastStr);
+  var daysSince=Math.floor((Date.now()-last.getTime())/(1000*60*60*24));
+  var dateStr=last.toLocaleDateString('fr-FR')+' à '+last.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(daysSince===0){
+    el.textContent='✅ Dernière sauvegarde : aujourd\'hui ('+dateStr+')';
+    el.style.color='var(--green)';
+  } else if(daysSince<7){
+    el.textContent='✅ Dernière sauvegarde : il y a '+daysSince+' jour'+(daysSince>1?'s':'')+' ('+dateStr+')';
+    el.style.color='var(--green)';
+  } else {
+    el.textContent='⚠️ Dernière sauvegarde : il y a '+daysSince+' jours ('+dateStr+')';
+    el.style.color='var(--copper)';
+  }
 }
 
 function getTodayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -1480,6 +1850,7 @@ function show(t){
   if(t==='stats'){renderStats()}
   if(t==='courrier'){}
   if(t==='manuel'){manRefresh()}
+  if(t==='guide'){updateBackupStatus()}
 }
 
 // ── FLOTTE ────────────────────────────────────
@@ -4111,17 +4482,30 @@ async function renderCourrier(){
         var mapKey=isFamille?(foyer+'|||'+prenom+' '+nom):foyer;
         
         // Find the actual stop where this person is in this convoi
-        // Match by old name (frozen in convoi) since stops reference old names
+        // Try matching by frozen name (in convoi) AND by current name (in case sync happened)
         var stopLieu=null;
         var frozenName=p.prenom+' '+(p.nom||'');
+        var currentName=prenom+' '+nom;
         c.stops.forEach(function(st){
           if(st.action==='depart'||st.action==='retour') return;
           var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
-          if(names.indexOf(frozenName)>=0 && st.pt && st.pt.nom){
-            stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
+          var matched=names.indexOf(frozenName)>=0||names.indexOf(currentName)>=0;
+          if(matched){
+            // Prefer fid lookup (most reliable - this is the lieu chosen by optimisation)
+            if(st.fid){
+              var lieuFromFid=getLieu(st.fid);
+              if(lieuFromFid){
+                stopLieu={nom:lieuFromFid.nom,adresse:lieuFromFid.adresse||''};
+                return;
+              }
+            }
+            // Fallback: use pt data from stop
+            if(st.pt&&st.pt.nom){
+              stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
+            }
           }
         });
-        // Fallback: use current person's lieu from DB
+        // Fallback: use current person's FIRST lieu from DB (least reliable)
         if(!stopLieu&&currentPers){
           var pLieux=getPersonLieux(currentPers);
           var lieuObj=getLieu(pLieux[0]);
