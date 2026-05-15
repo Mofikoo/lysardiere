@@ -2130,19 +2130,15 @@ function renderSemaineCard(s,idx,isArchive){
         +'</div>'
         +'<div class="timeline-wrap">'+c.stops.map(function(s2,si){
           var dotC=s2.action==='depart'||s2.action==='retour'?'var(--forest)':s2.action==='pickup'?'var(--green)':'var(--red)';
-          var heureStr=heuresSem[si]!==undefined?' <span class="tl-time" data-stopidx="'+si+'">'+fmtH(heuresSem[si])+'</span>':' <span class="tl-time" data-stopidx="'+si+'" style="display:none"></span>';
+          var heureStr=heuresSem[si]!==undefined?' <span class="tl-time">'+fmtH(heuresSem[si])+'</span>':'';
           var label='';
           if(s2.action==='depart') label='Départ La Lysardiere';
           else if(s2.action==='retour') label='Retour La Lysardiere';
           else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
           else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
           else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
-          var timeDetailHtml='<span class="tl-timedetail" data-stopidx="'+si+'">'+renderTimeDetail(si,rawArr,heuresSem,pqIdx)+'</span>';
-          // Editable hour input for each stop
-          var editHourHtml='';
-          var hVal=heuresSem[si]!==undefined?fmtH(heuresSem[si]):(si===0&&c.heureDepart?c.heureDepart:'');
-          editHourHtml=' <input type="time" data-stopidx="'+si+'" class="no-print" value="'+hVal+'" style="width:80px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="editSemHeure(\''+s.id+'\','+ci+','+si+',this.value)">';
-          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name" style="flex-wrap:wrap">'+s2.pt.nom+heureStr+timeDetailHtml+editHourHtml+'</div><div class="tl-detail">'+label+'</div></div></div>';
+          var timeDetailHtml=renderTimeDetail(si,rawArr,heuresSem,pqIdx);
+          var stopHtml='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content"><div class="tl-name" style="flex-wrap:wrap">'+s2.pt.nom+heureStr+timeDetailHtml+'</div><div class="tl-detail">'+label+'</div></div></div>';
           if(si===pqIdx) stopHtml+=PIQUENIQUE_HTML;
           return stopHtml;
         }).join('')+'</div>'
@@ -3820,30 +3816,56 @@ function triggerAutoRecalcOptim(dateStr){
 
 function renderTimelineStops(stops,cap,convoiIdx){
   var html='<div class="timeline-wrap">';
-  // Detect duplicates for merge button
   var nomCount={};
   stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.nom) nomCount[s.pt.nom]=(nomCount[s.pt.nom]||0)+1});
+  
+  // Compute hours for this convoi
+  var c=convoiIdx!==undefined?convoisOptimises[convoiIdx]:null;
+  var hData=c?computeHeures(c):{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
   
   stops.forEach(function(s,si){
     var dotC,pLine='',phaseHtml='';var sn=s.seats;
     if(s.action==='depart'){dotC='var(--forest)';phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à bord</span>'}
-    else if(s.action==='depot'){dotC='var(--red)';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'')}
-    else if(s.action==='rotation'){dotC=s.sameFoyer?'var(--green)':'var(--copper)';pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return p.prenom}).join(', ')+'&nbsp;<span style="color:var(--green);font-weight:600">Arr. : </span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(s.sameFoyer?'<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Même foyer</span>':'')}
-    else if(s.action==='pickup'){dotC='var(--green)';phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';pLine='<span style="color:var(--green);font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return p.prenom}).join(', ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'}
+    else if(s.action==='depot'){dotC='var(--red)';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer cette personne">'+p.prenom+'</button>'}).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'')}
+    else if(s.action==='rotation'){dotC=s.sameFoyer?'var(--green)':'var(--copper)';
+      pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')
+      +'&nbsp;<span style="color:var(--green);font-weight:600">Arr. : </span>'+(s.arrPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'arr\')" style="background:none;border:1px dashed var(--green);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--green)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')
+      +'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(s.sameFoyer?'<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Même foyer</span>':'')}
+    else if(s.action==='pickup'){dotC='var(--green)';phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';
+      pLine='<span style="color:var(--green);font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'arr\')" style="background:none;border:1px dashed var(--green);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--green)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'}
     else if(s.action==='retour'){dotC='var(--forest)';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à l\'arrivée</span>'}
-    var moveBtn='';
-    var delBtn='';
+    
+    // Hour display and edit for this stop
+    var heureHtml='';
+    if(convoiIdx!==undefined){
+      var hVal=hData.heures[si]!==undefined?fmtH(hData.heures[si]):(si===0&&c&&c.heureDepart?c.heureDepart:'');
+      var timeDetailStr=si>0&&si<stops.length-1?renderTimeDetail(si,hData.rawArrivals,hData.heures,hData.piqueniqueIdx):'';
+      if(si===0){
+        // Depart: use the main setH input (already in time-bar below)
+        heureHtml=hVal?'<span class="tl-time">'+hVal+'</span>':'';
+      } else {
+        heureHtml=timeDetailStr;
+        if(hVal) heureHtml+='<input type="time" class="no-print" value="'+hVal+'" style="width:76px;font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px" onchange="setStopH('+convoiIdx+','+si+',this.value)">';
+      }
+    }
+    
+    var moveBtn='';var delBtn='';
     if(convoiIdx!==undefined&&s.action!=='depart'&&s.action!=='retour'&&s.fid&&convoisOptimises.length>=1){
       moveBtn='<button class="btn btn-sm no-print" onclick="deplacerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;margin-left:6px" title="Déplacer cet arrêt">↔</button>';
       delBtn='<button class="btn btn-sm no-print" onclick="supprimerStop('+convoiIdx+','+si+')" style="font-size:9px;padding:2px 8px;background:var(--red);color:white;border:none" title="Supprimer cet arrêt">✕</button>';
     }
-    // Duplicate warning + merge button
     var dupBtn='';
     if(s.pt&&s.pt.nom&&nomCount[s.pt.nom]>1&&convoiIdx!==undefined){
-      dupBtn='<button class="btn btn-sm no-print" onclick="fusionnerDoublons('+convoiIdx+')" style="font-size:9px;padding:2px 8px;margin-left:4px;background:var(--red);color:white;border:none" title="Fusionner les arrêts en doublon">⚠ Fusionner</button>';
+      dupBtn='<button class="btn btn-sm no-print" onclick="fusionnerDoublons('+convoiIdx+')" style="font-size:9px;padding:2px 8px;margin-left:4px;background:var(--red);color:white;border:none">⚠ Fusionner</button>';
     }
-    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'+(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')+'<div class="tl-name">'+s.pt.nom+moveBtn+delBtn+dupBtn+'</div>'+(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')+(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')+'</div></div>';
-    // Insert stop button between stops (not after retour)
+    
+    html+='<div class="timeline-stop"><div class="tl-line"></div><div class="tl-marker" style="background:'+dotC+'">'+(si+1)+'</div><div class="tl-content">'
+      +(phaseHtml?'<div style="margin-bottom:3px">'+phaseHtml+'</div>':'')
+      +'<div class="tl-name">'+s.pt.nom+moveBtn+delBtn+dupBtn+'</div>'
+      +(s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div class="tl-address">'+s.pt.adresse+'</div>':'')
+      +(pLine?'<div class="tl-detail" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+pLine+'</div>':'')
+      +(heureHtml?'<div style="margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+heureHtml+'</div>':'')
+      +'</div></div>';
     if(convoiIdx!==undefined&&s.action!=='retour'&&si<stops.length-1){
       html+='<div class="no-print" style="text-align:center;margin:2px 0"><button class="btn btn-sm" onclick="insertStopInConvoi('+convoiIdx+','+(si+1)+')" style="font-size:9px;padding:2px 10px;opacity:0.4" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">+ Insérer un arrêt ici</button></div>';
     }
@@ -4116,7 +4138,116 @@ function renderMapSVG(convois){
 
 function buildMapsUrl(c){return buildMapsUrlFromConvoi(c)}
 function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});wps.push(LYS.lat+','+LYS.lng);return 'https://www.google.com/maps/dir/'+wps.join('/')}
-function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.heureDepart=val}
+function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c){c.heureDepart=val;if(!c.customHeures)c.customHeures={};c.customHeures[0]=parseInt(val.split(':')[0])*60+parseInt(val.split(':')[1]);var date=document.getElementById('ldate').value;renderOptim(date,[])}}
+
+function setStopH(convoiIdx,stopIdx,val){
+  var c=convoisOptimises[convoiIdx];if(!c) return;
+  if(!c.customHeures) c.customHeures={};
+  var pts=val.split(':');
+  c.customHeures[stopIdx]=parseInt(pts[0])*60+parseInt(pts[1]);
+  // Clear cascading customHeures after this stop
+  for(var k=stopIdx+1;k<c.stops.length;k++) delete c.customHeures[k];
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+}
+
+function deplacerPersonne(convoiIdx,stopIdx,prenom,nom,side){
+  var c=convoisOptimises[convoiIdx];
+  var stop=c.stops[stopIdx];
+  var personList=side==='dep'?(stop.depPers||[]):(stop.arrPers||[]);
+  var pers=personList.find(function(p){return p.prenom===prenom&&(p.nom||'')===nom});
+  if(!pers) return;
+
+  var html='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:8px">Déplacer '
+    +'<span style="color:'+(side==='dep'?'var(--red)':'var(--green)')+'">'+prenom+' '+nom+'</span></div>';
+  html+='<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">'
+    +(side==='dep'?'Départ':'Arrivée')+' à : <strong>'+stop.pt.nom+'</strong></div>';
+  html+='<div style="font-size:12px;font-weight:600;margin-bottom:8px">Vers quel convoi ?</div>';
+
+  convoisOptimises.forEach(function(dest,di){
+    if(di===convoiIdx) return;
+    // Find stops in dest with same or compatible lieu
+    var sameLieuStop=dest.stops.find(function(st){return st.fid===stop.fid&&st.action!=='depart'&&st.action!=='retour'});
+    var targetLabel=sameLieuStop?'<span style="color:var(--green);font-size:10px"> ✓ Même lieu</span>':'';
+    var newPeak=dest.peakSeats+1;
+    var fits=newPeak<=dest.vehicule.cap;
+    html+='<button class="btn btn-sm" style="margin:3px;display:block;width:100%;text-align:left;'+(fits?'':'opacity:0.5;cursor:not-allowed;')+'" '
+      +(fits?'onclick="execDeplacerPersonne('+convoiIdx+','+stopIdx+',\''+prenom.replace(/'/g,"\\'")+'\',\''+nom.replace(/'/g,"\\'")+'\',\''+side+'\','+di+')"':'')
+      +'>Convoi '+(di+1)+' — '+dest.vehicule.ico+' '+dest.vehicule.label+targetLabel+(fits?'':' — PLEIN')+'</button>';
+  });
+
+  html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
+
+  var overlay=document.createElement('div');
+  overlay.className='ly-modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px;max-width:420px;width:90%;box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto';
+  box.innerHTML=html;
+  overlay.appendChild(box);
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove()};
+  document.body.appendChild(overlay);
+}
+
+function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoiIdx){
+  document.querySelector('.ly-modal-overlay').remove();
+  var fromC=convoisOptimises[fromConvoiIdx];
+  var toC=convoisOptimises[toConvoiIdx];
+  var fromStop=fromC.stops[fromStopIdx];
+  var list=side==='dep'?(fromStop.depPers||[]):(fromStop.arrPers||[]);
+  var persIdx=list.findIndex(function(p){return p.prenom===prenom&&(p.nom||'')===nom});
+  if(persIdx<0) return;
+  var pers=list.splice(persIdx,1)[0];
+
+  // Find a compatible stop in dest or add to depart/arrivee list only
+  var destStop=toC.stops.find(function(st){return st.fid===fromStop.fid&&st.action!=='depart'&&st.action!=='retour'});
+  if(destStop){
+    // Add to existing stop at same lieu
+    if(side==='dep') destStop.depPers=(destStop.depPers||[]).concat([pers]);
+    else destStop.arrPers=(destStop.arrPers||[]).concat([pers]);
+    if(destStop.depPers&&destStop.depPers.length&&destStop.arrPers&&destStop.arrPers.length) destStop.action='rotation';
+  } else {
+    // Insert a new stop at the same position in dest
+    var newStop={action:side==='dep'?'depot':'pickup',pt:fromStop.pt,fid:fromStop.fid,
+      depPers:side==='dep'?[pers]:[],arrPers:side==='arr'?[pers]:[],seats:0};
+    // Insert before retour
+    toC.stops.splice(toC.stops.length-1,0,newStop);
+  }
+
+  // Remove person from from-convoi lists
+  if(side==='dep') fromC.depart=(fromC.depart||[]).filter(function(p){return !(p.prenom===prenom&&(p.nom||'')===nom)});
+  else fromC.arrivee=(fromC.arrivee||[]).filter(function(p){return !(p.prenom===prenom&&(p.nom||'')===nom)});
+  if(side==='dep') toC.depart=(toC.depart||[]).concat([pers]);
+  else toC.arrisee=(toC.arrivee||[]).concat([pers]);
+
+  // Cleanup empty stops in fromC
+  fromC.stops=fromC.stops.filter(function(st){
+    if(st.action==='depart'||st.action==='retour') return true;
+    return (st.depPers&&st.depPers.length)||(st.arrPers&&st.arrPers.length);
+  });
+
+  // Recalculate both
+  var p=getParams();
+  [fromC,toC].forEach(function(conv){
+    var seats=conv.depart?conv.depart.length:0;
+    if(conv.stops[0]) conv.stops[0].seats=seats;
+    for(var i=1;i<conv.stops.length-1;i++){
+      seats=seats-(conv.stops[i].depPers||[]).length+(conv.stops[i].arrPers||[]).length;
+      conv.stops[i].seats=seats;
+    }
+    if(conv.stops.length>1) conv.stops[conv.stops.length-1].seats=seats;
+    conv.peakSeats=peakSeatsStops(conv.stops);
+    conv.remplissage=Math.round(conv.peakSeats/conv.vehicule.cap*100);
+    conv.km=Math.round(routeLen(conv.stops.map(function(s){return s.pt})));
+    conv.dureeMin=Math.round(conv.km/p.vitesse*60);
+    conv.mapsEnrichi=false;conv.legDurations=null;conv.customHeures=null;
+  });
+
+  convoisOptimises=convoisOptimises.filter(function(cc){return cc.stops.length>2});
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert(prenom+' '+nom+' déplacé(e) vers le convoi '+(toConvoiIdx+1)+'.','success');
+}
 function setN(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.notes=val}
 function setConducteur(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c) c.conducteur=val.trim()}
 async function setPeage(cid,val){
