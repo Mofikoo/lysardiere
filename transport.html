@@ -1833,7 +1833,7 @@ function routeLen(pts){var d=0;for(var i=1;i<pts.length;i++) d+=dp(pts[i-1],pts[
 function bearing(from,to){var r=Math.PI/180,dL=(parseFloat(to.lng)-parseFloat(from.lng))*r,y=Math.sin(dL)*Math.cos(parseFloat(to.lat)*r),x=Math.cos(parseFloat(from.lat)*r)*Math.sin(parseFloat(to.lat)*r)-Math.sin(parseFloat(from.lat)*r)*Math.cos(parseFloat(to.lat)*r)*Math.cos(dL);return(Math.atan2(y,x)*180/Math.PI+360)%360}
 function angleDiff(a,b){var d=Math.abs(a-b)%360;return d>180?360-d:d}
 function fmtDur(min){return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0')}
-function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function fmtDate(d){if(!d) return '';try{return new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
 
 function show(t){
@@ -2152,9 +2152,12 @@ function toggleArchive(){var el=document.getElementById('archive-body');var arr=
 
 async function autoRecalcMapsConvoi(c){
   // Background recalc without blocking UI, returns true if updated
-  if(!window.google||!window.google.maps) return false;
+  if(!window.google||!window.google.maps){
+    console.warn('autoRecalcMapsConvoi: Maps not loaded');
+    return false;
+  }
   try{
-    await enrichirConvoisAvecMaps([c]);
+    await enrichirConvoisAvecMaps([c],true); // silent=true for background
     if(c.mapsEnrichi){
       c.dureeMin=c.legDurations.reduce(function(s,l){return s+l.min},0);
       c.km=c.legDurations.reduce(function(s,l){return s+l.km},0);
@@ -3109,7 +3112,14 @@ return{convois:convois,errors:errors}}
 async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;
 solutionHistory=[{convois:result.convois,errors:result.errors,km:result.convois.reduce(function(s,c){return s+c.km},0)}];
 currentSolutionIdx=0;
-renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');await attendreMaps();await enrichirConvoisAvecMaps(convoisOptimises);
+renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');
+var mapsReady=await attendreMaps();
+if(!mapsReady){
+  setPersist('❌ Google Maps non chargé (timeout)','err');
+  lyAlert('Google Maps n\'a pas pu être chargé en 10 secondes.\nLes durées affichées sont des estimations.\nVérifiez votre connexion internet ou rechargez la page.','error');
+} else {
+  await enrichirConvoisAvecMaps(convoisOptimises);
+}
 solutionHistory[0].km=convoisOptimises.reduce(function(s,c){return s+c.km},0);solutionHistory[0].convois=convoisOptimises;
 // Post-Maps: check if any convoi exceeds duration after real distances
 var postErrors=result.errors.slice();
@@ -3157,8 +3167,13 @@ async function reOptimiserTout(){
   window.scrollTo({top:0,behavior:'smooth'});
   
   setPersist('⏳ Calcul distances réelles...','neutral');
-  await attendreMaps();
-  await enrichirConvoisAvecMaps(convoisOptimises);
+  var mapsReady=await attendreMaps();
+  if(!mapsReady){
+    setPersist('❌ Google Maps non chargé (timeout)','err');
+    lyAlert('Google Maps n\'a pas pu être chargé en 10 secondes. Les durées sont estimées.','error');
+  } else {
+    await enrichirConvoisAvecMaps(convoisOptimises);
+  }
   solutionHistory[currentSolutionIdx].km=convoisOptimises.reduce(function(s,c){return s+c.km},0);
   solutionHistory[currentSolutionIdx].convois=convoisOptimises;
   
@@ -3646,12 +3661,16 @@ async function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
   setPersist('⏳ Recalcul Maps...','neutral');
-  await attendreMaps();
-  if(await autoRecalcMapsConvoi(c)){
+  var mapsReady=await attendreMaps();
+  if(!mapsReady){
+    setPersist('❌ Maps timeout','err');
+    lyAlert('Google Maps n\'a pas pu être chargé en 10 secondes. Les horaires affichés sont estimés.','error');
+  } else if(await autoRecalcMapsConvoi(c)){
     setPersist('✅ Horaires recalculés','ok');
     renderOptim(date,[]);
   } else {
-    setPersist('Horaires estimés (Maps indisponible)','neutral');
+    setPersist('❌ Recalcul Maps échoué','err');
+    lyAlert('Le recalcul Google Maps a échoué pour ce convoi. Les horaires sont estimés.','error');
   }
   lyAlert('Ordre des arrêts modifié.','success');
 }
@@ -3703,10 +3722,91 @@ function switchSolution(idx){
   var date=document.getElementById('ldate').value;
   renderOptim(date,solutionHistory[idx].errors);
 }
-function attendreMaps(){return new Promise(function(resolve){if(window.googleMapsReady){resolve();return}var interval=setInterval(function(){if(window.googleMapsReady){clearInterval(interval);resolve()}},200);setTimeout(function(){clearInterval(interval);resolve()},10000)})}
+function attendreMaps(){
+  return new Promise(function(resolve){
+    if(window.googleMapsReady){resolve(true);return}
+    var interval=setInterval(function(){
+      if(window.googleMapsReady){clearInterval(interval);resolve(true)}
+    },200);
+    setTimeout(function(){clearInterval(interval);resolve(false)},10000);
+  });
+}
 
 // ── GOOGLE MAPS ───────────────────────────────
-async function enrichirConvoisAvecMaps(convois){if(!window.google||!window.google.maps) return;const service=new google.maps.DistanceMatrixService();for(let i=0;i<convois.length;i++){const c=convois[i];const pts=[];for(const s of c.stops){const p=s.pt;if(!p) continue;const lat=parseFloat(p.lat);const lng=parseFloat(p.lng);if(!isNaN(lat)&&!isNaN(lng)) pts.push({lat,lng,nom:p.nom||''})}if(pts.length<2) continue;let totalKm=0,totalMin=0;const legDurations=[];for(let j=0;j<pts.length-1;j++){try{const result=await new Promise((resolve,reject)=>{service.getDistanceMatrix({origins:[{lat:pts[j].lat,lng:pts[j].lng}],destinations:[{lat:pts[j+1].lat,lng:pts[j+1].lng}],travelMode:google.maps.TravelMode.DRIVING,unitSystem:google.maps.UnitSystem.METRIC},(response,status)=>{if(status==='OK')resolve(response);else reject(status)})});const el=result.rows[0].elements[0];if(el&&el.status==='OK'){const km=el.distance.value/1000;const min=el.duration.value/60;totalKm+=km;totalMin+=min;legDurations.push({km:Math.round(km),min:Math.round(min),text:el.duration.text,from:pts[j].nom,to:pts[j+1].nom})}}catch(e){console.warn('Leg',j,'erreur:',e)}}if(legDurations.length>0){c.km=Math.round(totalKm);c.dureeMin=Math.round(totalMin);c.legDurations=legDurations;c.mapsEnrichi=true}}}
+async function enrichirConvoisAvecMaps(convois,silent){
+  if(!window.google||!window.google.maps){
+    if(!silent){
+      setPersist('❌ Google Maps non chargé','err');
+      lyAlert('Google Maps n\'est pas chargé. Vérifiez la connexion internet et l\'autorisation de domaine de la clé API.','error');
+    } else {
+      console.warn('Maps non chargé (silent mode)');
+    }
+    return {success:false,reason:'maps_not_loaded'};
+  }
+  const service=new google.maps.DistanceMatrixService();
+  var totalEnriched=0,totalFailed=0,errorMessages=[];
+  for(let i=0;i<convois.length;i++){
+    const c=convois[i];
+    const pts=[];
+    for(const s of c.stops){
+      const p=s.pt;if(!p) continue;
+      const lat=parseFloat(p.lat);const lng=parseFloat(p.lng);
+      if(!isNaN(lat)&&!isNaN(lng)) pts.push({lat,lng,nom:p.nom||''});
+    }
+    if(pts.length<2) continue;
+    let totalKm=0,totalMin=0;
+    const legDurations=[];
+    var convoiHadError=false;
+    for(let j=0;j<pts.length-1;j++){
+      try{
+        const result=await new Promise((resolve,reject)=>{
+          service.getDistanceMatrix({
+            origins:[{lat:pts[j].lat,lng:pts[j].lng}],
+            destinations:[{lat:pts[j+1].lat,lng:pts[j+1].lng}],
+            travelMode:google.maps.TravelMode.DRIVING,
+            unitSystem:google.maps.UnitSystem.METRIC
+          },(response,status)=>{
+            if(status==='OK')resolve(response);
+            else reject(status);
+          });
+        });
+        const el=result.rows[0].elements[0];
+        if(el&&el.status==='OK'){
+          const km=el.distance.value/1000;
+          const min=el.duration.value/60;
+          totalKm+=km;totalMin+=min;
+          legDurations.push({km:Math.round(km),min:Math.round(min),text:el.duration.text,from:pts[j].nom,to:pts[j+1].nom});
+        } else {
+          convoiHadError=true;
+          if(errorMessages.length<3) errorMessages.push('Convoi '+(i+1)+' tronçon '+pts[j].nom+'→'+pts[j+1].nom+' : '+(el?el.status:'pas de réponse'));
+        }
+      } catch(e){
+        convoiHadError=true;
+        if(errorMessages.length<3) errorMessages.push('Convoi '+(i+1)+' tronçon '+pts[j].nom+'→'+pts[j+1].nom+' : '+e);
+        console.warn('Leg',j,'erreur:',e);
+      }
+    }
+    if(legDurations.length>0){
+      c.km=Math.round(totalKm);c.dureeMin=Math.round(totalMin);
+      c.legDurations=legDurations;c.mapsEnrichi=true;
+      totalEnriched++;
+    } else {
+      totalFailed++;
+    }
+  }
+  if(totalFailed>0){
+    setPersist('⚠️ Maps : '+totalEnriched+' OK, '+totalFailed+' échec(s)','err');
+    if(!silent){
+      var msg=totalFailed+' convoi(s) n\'ont pas pu être enrichis par Maps.';
+      if(errorMessages.length) msg+='\n\nDétail :\n• '+errorMessages.join('\n• ');
+      msg+='\n\nVérifiez la clé API Google Maps, son autorisation de domaine, et que Distance Matrix API est activée.';
+      lyAlert(msg,'error');
+    } else {
+      console.warn('Maps partial failure:',errorMessages);
+    }
+  }
+  return {success:totalFailed===0,enriched:totalEnriched,failed:totalFailed};
+}
 
 // ── RENDU ─────────────────────────────────────
 function getBadgeSt(t){if(t==='rotation') return 'background:#FFF3E0;color:var(--copper-deep)';if(t==='depart_only') return 'background:var(--red-bg);color:var(--red)';return 'background:var(--green-bg);color:var(--green)'}
@@ -3803,13 +3903,22 @@ function triggerAutoRecalcOptim(dateStr){
   _autoRecalcTimer=setTimeout(async function(){
     var needsRecalc=convoisOptimises.filter(function(c){return !c.mapsEnrichi&&c.stops&&c.stops.length>1});
     if(!needsRecalc.length) return;
-    if(!window.google||!window.google.maps) return;
-    var updated=0;
+    if(!window.google||!window.google.maps){
+      setPersist('⚠️ Maps non chargé — horaires estimés','err');
+      console.warn('Auto-recalc Maps : Maps not loaded');
+      return;
+    }
+    setPersist('⏳ Recalcul Maps en arrière-plan ('+needsRecalc.length+')...','neutral');
+    var updated=0,failed=0;
     for(var i=0;i<needsRecalc.length;i++){
       if(await autoRecalcMapsConvoi(needsRecalc[i])) updated++;
+      else failed++;
     }
-    if(updated>0){
-      renderOptim(dateStr,[]);
+    if(updated>0) renderOptim(dateStr,[]);
+    if(failed>0){
+      setPersist('⚠️ Maps : '+updated+' OK / '+failed+' échec(s)','err');
+    } else if(updated>0){
+      setPersist('✅ Horaires recalculés ('+updated+')','ok');
     }
   },500); // debounce 500ms
 }
@@ -4138,13 +4247,40 @@ function renderMapSVG(convois){
 
 function buildMapsUrl(c){return buildMapsUrlFromConvoi(c)}
 function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});wps.push(LYS.lat+','+LYS.lng);return 'https://www.google.com/maps/dir/'+wps.join('/')}
-function setH(cid,val){var c=convoisOptimises.find(function(x){return x.id===cid});if(c){c.heureDepart=val;if(!c.customHeures)c.customHeures={};c.customHeures[0]=parseInt(val.split(':')[0])*60+parseInt(val.split(':')[1]);var date=document.getElementById('ldate').value;renderOptim(date,[])}}
+function setH(cid,val){
+  var c=convoisOptimises.find(function(x){return x.id===cid});
+  if(!c) return;
+  if(!val||!/^\d{1,2}:\d{2}$/.test(val)){
+    lyAlert('Heure invalide. Format attendu : HH:MM','error');
+    return;
+  }
+  var pts=val.split(':');
+  var h=parseInt(pts[0],10),m=parseInt(pts[1],10);
+  if(isNaN(h)||isNaN(m)||h<0||h>23||m<0||m>59){
+    lyAlert('Heure invalide.','error');
+    return;
+  }
+  c.heureDepart=val;
+  if(!c.customHeures)c.customHeures={};
+  c.customHeures[0]=h*60+m;
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+}
 
 function setStopH(convoiIdx,stopIdx,val){
   var c=convoisOptimises[convoiIdx];if(!c) return;
-  if(!c.customHeures) c.customHeures={};
+  if(!val||!/^\d{1,2}:\d{2}$/.test(val)){
+    lyAlert('Heure invalide. Format attendu : HH:MM','error');
+    return;
+  }
   var pts=val.split(':');
-  c.customHeures[stopIdx]=parseInt(pts[0])*60+parseInt(pts[1]);
+  var h=parseInt(pts[0],10),m=parseInt(pts[1],10);
+  if(isNaN(h)||isNaN(m)||h<0||h>23||m<0||m>59){
+    lyAlert('Heure invalide.','error');
+    return;
+  }
+  if(!c.customHeures) c.customHeures={};
+  c.customHeures[stopIdx]=h*60+m;
   // Clear cascading customHeures after this stop
   for(var k=stopIdx+1;k<c.stops.length;k++) delete c.customHeures[k];
   var date=document.getElementById('ldate').value;
@@ -4218,7 +4354,7 @@ function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoi
   if(side==='dep') fromC.depart=(fromC.depart||[]).filter(function(p){return !(p.prenom===prenom&&(p.nom||'')===nom)});
   else fromC.arrivee=(fromC.arrivee||[]).filter(function(p){return !(p.prenom===prenom&&(p.nom||'')===nom)});
   if(side==='dep') toC.depart=(toC.depart||[]).concat([pers]);
-  else toC.arrisee=(toC.arrivee||[]).concat([pers]);
+  else toC.arrivee=(toC.arrivee||[]).concat([pers]);
 
   // Cleanup empty stops in fromC
   fromC.stops=fromC.stops.filter(function(st){
@@ -4226,10 +4362,19 @@ function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoi
     return (st.depPers&&st.depPers.length)||(st.arrPers&&st.arrPers.length);
   });
 
-  // Recalculate both
+  // Recalculate both: seats from stops (not flat array, which may be stale)
   var p=getParams();
   [fromC,toC].forEach(function(conv){
-    var seats=conv.depart?conv.depart.length:0;
+    // Rebuild flat depart/arrivee from stops to keep them consistent
+    var allDep=[],allArr=[];
+    conv.stops.forEach(function(st){
+      if(st.action==='depart'||st.action==='retour') return;
+      (st.depPers||[]).forEach(function(pp){allDep.push(pp)});
+      (st.arrPers||[]).forEach(function(pp){allArr.push(pp)});
+    });
+    conv.depart=allDep;
+    conv.arrivee=allArr;
+    var seats=allDep.length;
     if(conv.stops[0]) conv.stops[0].seats=seats;
     for(var i=1;i<conv.stops.length-1;i++){
       seats=seats-(conv.stops[i].depPers||[]).length+(conv.stops[i].arrPers||[]).length;
