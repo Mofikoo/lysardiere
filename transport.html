@@ -1059,8 +1059,11 @@ input:focus, select:focus {
   </div>
   <div id="courrier-content"></div>
   <div id="courrier-actions" style="display:none;text-align:center;padding:1rem 0">
-    <button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genCourrierPdf()">Génèrer les courriers (PDF)</button>
-    <div style="font-size:11px;color:var(--text-light);margin-top:6px">Ouvre une fenêtre d'impression. Choisissez "Enregistrer au format PDF" comme destination.</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genCourrierPdf()">📄 Génèrer tous les courriers (PDF)</button>
+      <button class="btn btn-primary" style="font-size:13px;padding:11px 24px" onclick="toutImprimer()">🖨️ Tout imprimer</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:6px">PDF : ouvre une fenêtre d'impression. &nbsp;|&nbsp; Tout imprimer : envoie directement à l'imprimante.</div>
   </div>
 </div>
 
@@ -4934,10 +4937,14 @@ async function genCourrierPdf(singleKey){
       if(da!==db) return da.localeCompare(db);
       return a.localeCompare(b);
     });
-    // BUG1 FIX: detect if all persons share same lieu or have different lieux
-    var allLieux=pKeys.map(function(pk){return c.personnes[pk].lieu?c.personnes[pk].lieu.nom:''});
-    var uniqueLieux=[...new Set(allLieux.filter(Boolean))];
-    var singleLieu=uniqueLieux.length<=1?(c.personnes[pKeys[0]]&&c.personnes[pKeys[0]].lieu)||null:null;
+    // Build full lieu objects for unique lieux (for the header box)
+    var uniqueLieuObjs=[];
+    var seenNoms={};
+    pKeys.forEach(function(pk){
+      var l=c.personnes[pk].lieu;
+      if(l&&l.nom&&!seenNoms[l.nom]){seenNoms[l.nom]=true;uniqueLieuObjs.push(l);}
+    });
+    var singleLieu=uniqueLieuObjs.length<=1?uniqueLieuObjs[0]||null:null;
     // Build person cards - group persons with same aller/retour dates+heures
     var persCards='';
     // Collect all unique sejour combos (arr date+heure, dep date+heure)
@@ -4991,7 +4998,7 @@ async function genCourrierPdf(singleKey){
       else if(g.dep) sejour='Départ le '+dateRetourStr;
       var nomsStr=singleLieu
         ? g.noms.join(', ')
-        // Multiple lieux: show each person with their lieu
+        // Multiple lieux: show each person with their short lieu name only
         : g.noms.map(function(n,i){
             var l=g.lieux[i];
             return n+(l&&l.nom?' <span style="font-size:11px;font-weight:normal;color:#555">('+l.nom+')</span>':'');
@@ -5048,9 +5055,16 @@ async function genCourrierPdf(singleKey){
         +(singleLieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+singleLieu.adresse+'</div>':'')
         +'</div>'
         :
-        '<div style="border:2px solid #333;border-radius:6px;padding:12px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;font-size:12px;color:#666;page-break-inside:avoid">'
-        +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Lieu de rendez-vous</div>'
-        +'<div style="font-style:italic">Voir les lieux de chaque vacancier ci-dessous</div>'
+        '<div style="border:3px solid #000;border-radius:6px;margin:20px auto 28px;max-width:500px;background:#f8f8f8;page-break-inside:avoid;overflow:hidden">'
+        +'<div style="text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;padding:10px 24px 0">Lieux de rendez-vous Aller / Retour</div>'
+        +'<div style="display:flex;border-top:1px solid #ccc;margin-top:8px">'
+        +uniqueLieuObjs.map(function(l,i){
+          return '<div style="flex:1;padding:12px 16px;text-align:center'+(i>0?';border-left:2px solid #ccc':'')+'">'
+            +'<div style="font-size:15px;font-weight:bold">'+l.nom+'</div>'
+            +(l.adresse?'<div style="font-size:11px;color:#444;margin-top:3px">'+l.adresse+'</div>':'')
+            +'</div>';
+        }).join('')
+        +'</div>'
         +'</div>'
       )
       // Person cards
@@ -5058,15 +5072,45 @@ async function genCourrierPdf(singleKey){
       // Pique-nique warning
       +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>':'')
       // Footer
-      +'<div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#555;line-height:1.6;page-break-inside:avoid">'
+      +'<div style="margin-top:28px;padding-top:14px;border-top:1px solid #ddd;font-size:13px;color:#333;line-height:1.8;page-break-inside:avoid">'
       +'Veuillez bien noter l\'heure du rendez-vous et à être ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, à l\'expression de nos meilleures salutations.'
-      +'<br><br><b style="color:#222">Séverine LANDELLE</b></div>'
+      +'<br><br><b style="color:#000;font-size:14px">Séverine LANDELLE</b></div>'
       +'</div>';
   });
   var w=window.open('','_blank');
   w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
   w.document.close();
+  w.print();
+}
+
+async function toutImprimer(){
+  // Generate all courriers and open print dialog in one click
+  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu des courriers.','error');return}
+  var map=window._courrierData;
+  var keys=Object.keys(map).sort();
+  if(!keys.length){await lyAlert('Aucun courrier à imprimer.','error');return}
+  var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var pages='';
+  // Reuse genCourrierPdf logic — call it without opening a window, collect pages
+  var origOpen=window.open;
+  var capturedPages=null;
+  window.open=function(a,b){
+    // Intercept the window.open call — we handle it ourselves
+    return {
+      document:{write:function(html){capturedPages=html},close:function(){}},
+      print:function(){}
+    };
+  };
+  await genCourrierPdf();
+  window.open=origOpen;
+  if(!capturedPages){await lyAlert('Erreur lors de la génération.','error');return}
+  // Now open the real print window
+  var w=window.open('','_blank');
+  if(!w){await lyAlert('Veuillez autoriser les popups pour cette page.','error');return}
+  w.document.write(capturedPages);
+  w.document.close();
+  w.focus();
   w.print();
 }
 
