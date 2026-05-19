@@ -335,13 +335,30 @@ const TYPE_LABELS = { inscription:'📝 Inscription', confidentiel:'🔒 Confide
 
 let allPersonnes=[], allDocuments=[], allSejours=[], allSejoursPersonnes=[];
 
-function esc(str) { return (str||'').replace(/'/g, "\\'"); }
+function esc(str) { return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function escAttr(str) { return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r?\n/g,' '); }
 
 async function api(path, method='GET', body=null) {
   const opts = { method, headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type':'application/json', Prefer:'return=representation' } };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(SUPABASE_URL + path, opts);
-  if (!res.ok) return null;
+  let res;
+  try {
+    res = await fetch(SUPABASE_URL + path, opts);
+  } catch(networkErr) {
+    console.error('API network error:', path, networkErr);
+    alert(`❌ Erreur réseau : impossible de joindre Supabase.\n${networkErr.message||networkErr}\n\nVérifiez votre connexion internet.`);
+    return null;
+  }
+  if (!res.ok) {
+    let errBody='';
+    try { errBody = await res.text(); } catch(e){}
+    console.error('API HTTP error:', res.status, path, errBody);
+    // Don't alert on GET errors during init to avoid spam; alert on mutations
+    if (method !== 'GET') {
+      alert(`❌ Erreur Supabase (${res.status}) sur ${method} ${path.split('?')[0]}\n${errBody.slice(0,200)}`);
+    }
+    return null;
+  }
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
@@ -383,40 +400,40 @@ function buildArchivesSection() {
         const docs = allDocuments.filter(d => d.personne_id === p.id);
         const docsHtml = docs.map(doc => `
           <div class="doc-row">
-            <span class="doc-type-pill ${doc.type==='confidentiel'?'confidentiel':doc.type==='inscription'?'inscription':doc.type==='ordonnance'?'ordonnance':'divers'}">${TYPE_LABELS[doc.type]||doc.type}</span>
-            <span class="doc-filename">${doc.filename}</span>
+            <span class="doc-type-pill ${doc.type==='confidentiel'?'confidentiel':doc.type==='inscription'?'inscription':doc.type==='ordonnance'?'ordonnance':'divers'}">${TYPE_LABELS[doc.type]||esc(doc.type)}</span>
+            <span class="doc-filename">${esc(doc.filename)}</span>
             <span class="doc-date">${fmtDate(doc.email_date)}</span>
             <div class="doc-actions">
-              <button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button>
+              <button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button>
             </div>
           </div>`).join('') || '<p class="empty-sejour">Aucun document.</p>';
 
         const uid = `arch-${p.id}-${s.id}`;
         return `
           <div class="person-card">
-            <div class="person-header" onclick="toggleCard('${uid}')">
-              <div class="person-avatar">${initials(p.prenom,p.nom)}</div>
+            <div class="person-header" onclick="toggleCard('${escAttr(uid)}')">
+              <div class="person-avatar">${esc(initials(p.prenom,p.nom))}</div>
               <div class="person-info">
-                <div class="person-name">${p.prenom} ${p.nom}</div>
-                <div class="person-foyer">${p.foyer}</div>
+                <div class="person-name">${esc(p.prenom)} ${esc(p.nom)}</div>
+                <div class="person-foyer">${esc(p.foyer)}</div>
               </div>
               <span style="font-size:11px;color:var(--text-light)">${docs.length} doc${docs.length>1?'s':''}</span>
-              <span class="chevron" id="chev-${uid}">▶</span>
+              <span class="chevron" id="chev-${escAttr(uid)}">▶</span>
             </div>
-            <div class="person-docs" id="docs-${uid}">${docsHtml}</div>
+            <div class="person-docs" id="docs-${escAttr(uid)}">${docsHtml}</div>
           </div>`;
       }).join('') || '<p class="empty-sejour">Aucun vacancier.</p>';
 
       const uid = `arch-sejour-${s.id}`;
       return `
         <div class="sejour-block" style="opacity:0.85">
-          <div class="sejour-header" onclick="toggleSejour('${uid}')" style="background:linear-gradient(135deg,#4a5e5c,#6a7e7c)">
-            <h3>${s.nom}</h3>
+          <div class="sejour-header" onclick="toggleSejour('${escAttr(uid)}')" style="background:linear-gradient(135deg,#4a5e5c,#6a7e7c)">
+            <h3>${esc(s.nom)}</h3>
             <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
             <span class="sejour-count">${personnes.length} vacancier(s)</span>
-            <span class="sejour-chevron" id="schev-${uid}">▶</span>
+            <span class="sejour-chevron" id="schev-${escAttr(uid)}">▶</span>
           </div>
-          <div class="sejour-body" id="${uid}">${cardsHtml}</div>
+          <div class="sejour-body" id="${escAttr(uid)}">${cardsHtml}</div>
         </div>`;
     }).join('');
 
@@ -544,9 +561,12 @@ async function linkDocument(docId, personneId, typeForce=null) {
 }
 
 async function confirmLink(docId) {
-  const val = document.getElementById(`sel-${docId}`).value;
+  const selEl = document.getElementById(`sel-${docId}`);
+  const typeEl = document.getElementById(`type-${docId}`);
+  if (!selEl || !typeEl) { alert('Erreur interne : éléments manquants. Rechargez la page.'); return; }
+  const val = selEl.value;
   if (!val) return alert('Choisis un vacancier.');
-  const typeChoisi = document.getElementById(`type-${docId}`).value || null;
+  const typeChoisi = typeEl.value || null;
   await linkDocument(docId, val, typeChoisi);
 }
 
@@ -562,16 +582,26 @@ function closeModal() { document.getElementById('modalOverlay').classList.remove
 async function saveSejour() {
   const nom=document.getElementById('sejourNom').value.trim(), debut=document.getElementById('sejourDebut').value, fin=document.getElementById('sejourFin').value, categorie=document.getElementById('sejourCategorie').value;
   if (!nom||!debut||!fin) return alert('Remplis tous les champs.');
+  if (debut > fin) return alert('La date de fin doit être après la date de début.');
   await api('/rest/v1/sejours','POST',{nom,date_debut:debut,date_fin:fin,categorie});
   closeModal(); await init();
 }
 
 async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await init(); }
-async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await init(); }
+async function removeFromSejour(sid,pid) {
+  const sejour = allSejours.find(s=>s.id===sid);
+  const personne = allPersonnes.find(p=>p.id===pid);
+  const nom = personne ? `${personne.prenom} ${personne.nom}` : 'cette personne';
+  const sejourNom = sejour ? sejour.nom : 'ce séjour';
+  if (!confirm(`Retirer ${nom} de "${sejourNom}" ?`)) return;
+  await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE');
+  await init();
+}
 async function addPersonToSejour(sid) { const sel=document.getElementById(`add-sel-${sid}`); if(!sel.value) return; await addToSejour(sid,sel.value); }
 
 async function archiverSejour(sejourId) {
   const sejour = allSejours.find(s=>s.id===sejourId);
+  if (!sejour) { alert('Séjour introuvable. La page va se recharger.'); await init(); return; }
   if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
   await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
   const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
@@ -584,16 +614,23 @@ async function rejectSejour(spId)  { await api(`/rest/v1/sejours_personnes?id=eq
 
 function filterSearchSelect(docId, query) {
   const list = document.getElementById(`ss-list-${docId}`);
+  if (!list) return;
   const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   list.style.display = 'block';
   Array.from(list.children).forEach(item => { const name=(item.dataset.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); item.style.display=name.includes(q)?'block':'none'; });
 }
 function selectPerson(docId,personneId,label) {
-  document.getElementById(`sel-${docId}`).value=personneId;
-  document.querySelector(`#ss-${docId} .search-select-input`).value=label;
-  document.getElementById(`ss-list-${docId}`).style.display='none';
-  document.getElementById(`type-${docId}`).style.display = 'inline-block';
-  document.getElementById(`lier-${docId}`).style.display='inline-flex';
+  const sel=document.getElementById(`sel-${docId}`);
+  const inp=document.querySelector(`#ss-${docId} .search-select-input`);
+  const list=document.getElementById(`ss-list-${docId}`);
+  const type=document.getElementById(`type-${docId}`);
+  const lier=document.getElementById(`lier-${docId}`);
+  if (!sel||!inp||!list||!type||!lier) { console.warn('selectPerson: éléments DOM manquants pour doc',docId); return; }
+  sel.value=personneId;
+  inp.value=label;
+  list.style.display='none';
+  type.style.display = 'inline-block';
+  lier.style.display='inline-flex';
 }
 document.addEventListener('click', e => { if (!e.target.closest('.search-select')) document.querySelectorAll('.search-select-list').forEach(l=>l.style.display='none'); });
 
@@ -613,23 +650,23 @@ function buildPersonCard(p, sejourId=null) {
   const docRows=REQUIRED_TYPES.map(t=>{
     const typeDocs=docs.filter(d=>d.type===t);
     if (!typeDocs.length) return `<div class="doc-row"><span class="doc-type-pill missing">${TYPE_LABELS[t]}</span><span class="doc-missing">Document manquant</span></div>`;
-    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
   }).join('');
 
   const extraTypes=['ordonnance','divers','dossier_complet'];
-  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
+  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
 
   const unclassified=docs.filter(d=>!REQUIRED_TYPES.includes(d.type)&&!extraTypes.includes(d.type));
-  const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+  const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
 
-  const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">✅ Valider comme complet</button></div>`:'';
-  const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${p.id}','${p.prenom} ${p.nom}')">📄 Compiler tous les PDFs</button></div>` : '';
-  const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
+  const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${escAttr(p.id)}')">✅ Valider comme complet</button></div>`:'';
+  const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${escAttr(p.id)}','${escAttr(p.prenom+' '+p.nom)}')">📄 Compiler tous les PDFs</button></div>` : '';
+  const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${escAttr(sejourId)}','${escAttr(p.id)}')">Retirer</button>`:'';
   const uid=`${p.id}-${sejourId||'all'}`;
 
   const totalDocs = docs.length;
   const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
-  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${btnValider}${btnCompile}</div></div>`;
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${escAttr(uid)}')"><div class="person-avatar">${esc(initials(p.prenom,p.nom))}</div><div class="person-info"><div class="person-name">${esc(p.prenom)} ${esc(p.nom)}</div><div class="person-foyer">${esc(p.foyer)}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${escAttr(uid)}">▶</span></div><div class="person-docs" id="docs-${escAttr(uid)}">${docRows}${extraRows}${unclassifiedRows}${btnValider}${btnCompile}</div></div>`;
 }
 
 async function compilePDF(personneId, nom) {
@@ -660,6 +697,11 @@ async function compilePDF(personneId, nom) {
       console.warn(`Erreur sur ${doc.filename}:`, e);
       erreurs++;
     }
+  }
+
+  // Vérifier qu'au moins une page a été ajoutée avant d'uploader
+  if (merged.getPageCount() === 0) {
+    return alert(`❌ Compilation échouée : aucun document n'a pu être lu (${erreurs} erreur(s)).\nVérifiez que les PDFs ne sont pas corrompus.`);
   }
 
 const mergedBytes = await merged.save();
@@ -711,12 +753,12 @@ function buildSejoursSection(personnesFiltered) {
     const sejoursHtml=sejours.map(s=>{
       const personnes=getSejourPersonnes(s.id).filter(p=>personnesFiltered.some(pf=>pf.id===p.id));
       const others=personnesFiltered.filter(p=>!allSejoursPersonnes.some(sp=>sp.sejour_id===s.id&&sp.personne_id===p.id));
-      const options=others.map(p=>`<option value="${p.id}">${p.prenom} ${p.nom} — ${p.foyer}</option>`).join('');
+      const options=others.map(p=>`<option value="${escAttr(p.id)}">${esc(p.prenom)} ${esc(p.nom)} — ${esc(p.foyer)}</option>`).join('');
       const cards=personnes.length?personnes.map(p=>buildPersonCard(p,s.id)).join(''):`<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
       const uid=`sejour-${s.id}`;
       const estPasse=new Date(s.date_fin)<new Date();
-      const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
-      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
+      const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${escAttr(s.id)}')">📦 Archiver</button>`:'';
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${escAttr(uid)}')"><h3>${esc(s.nom)}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${escAttr(s.id)}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${escAttr(uid)}">▶</span></div><div class="sejour-body" id="${escAttr(uid)}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${escAttr(s.id)}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${escAttr(s.id)}')">Ajouter</button></div>`:''}</div></div>`;
     }).join('');
     return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
   }).join('');
@@ -757,6 +799,11 @@ async function imprimerSejour(sejourId) {
     }
   }
 
+  // Vérifier qu'au moins une page existe avant d'afficher la preview
+  if (merged.getPageCount() === 0) {
+    return alert(`❌ Impression impossible : aucun document n'a pu être lu (${erreurs} erreur(s)).\nVérifiez que des documents sont liés à ce séjour.`);
+  }
+
   const mergedBytes = await merged.save();
   const blob = new Blob([mergedBytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
@@ -770,13 +817,13 @@ async function imprimerSejour(sejourId) {
   overlay.classList.add('show');
   overlay.style.display = 'flex';
 
-  if (erreurs > 0) console.warn(`${erreurs} document(s) ignoré(s)`);
+  if (erreurs > 0) alert(`⚠️ ${erreurs} document(s) n'ont pas pu être lus et ont été ignorés.`);
 }
 
 function buildUnlinked() {
   const unlinked=getUnlinked();
   if (!unlinked.length) return '';
-  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${doc.id}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${doc.filename}</strong><span class="unlinked-meta">De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir PDF</button><div class="search-select" id="ss-${doc.id}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${doc.id}',this.value)" onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${doc.id}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${p.id}" data-name="${p.nom} ${p.prenom}" onclick="selectPerson('${doc.id}','${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')"><strong>${p.nom}</strong> ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span></div>`).join('')}</div><input type="hidden" id="sel-${doc.id}"></div><select class="link-select" id="type-${doc.id}" style="display:none;height:30px;font-size:11px">
+  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${escAttr(doc.id)}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${esc(doc.filename)}</strong><span class="unlinked-meta">De : ${esc(doc.email_from)} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir PDF</button><div class="search-select" id="ss-${escAttr(doc.id)}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${escAttr(doc.id)}',this.value)" onfocus="document.getElementById('ss-list-${escAttr(doc.id)}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${escAttr(doc.id)}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${escAttr(p.id)}" data-name="${escAttr(p.nom+' '+p.prenom)}" onclick="selectPerson('${escAttr(doc.id)}','${escAttr(p.id)}','${escAttr(p.nom+' '+p.prenom+' — '+(p.foyer||''))}')"><strong>${esc(p.nom)}</strong> ${esc(p.prenom)} <span style="color:var(--text-light);font-size:11px">— ${esc(p.foyer)}</span></div>`).join('')}</div><input type="hidden" id="sel-${escAttr(doc.id)}"></div><select class="link-select" id="type-${escAttr(doc.id)}" style="display:none;height:30px;font-size:11px">
   <option value="">Type auto</option>
   <option value="inscription">📝 Inscription</option>
   <option value="confidentiel">🔒 Confidentiel</option>
@@ -784,17 +831,27 @@ function buildUnlinked() {
   <option value="ordonnance">💊 Ordonnance</option>
   <option value="divers">📎 Divers</option>
 </select>
-<button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+<button class="btn btn-success btn-sm" id="lier-${escAttr(doc.id)}" style="display:none" onclick="confirmLink('${escAttr(doc.id)}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
   return `<div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">⚠️ À classer <span class="count">${unlinked.length}</span><span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span></div><div id="aclasser-container" style="display:none">${rows}</div>`;
 }
 
 function checkAlerts() {
   const newDocs=allDocuments.filter(d=>d.status==='new');
-  if (newDocs.length) { document.getElementById('alertText').textContent=`${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`; document.getElementById('alertBanner').classList.add('show'); }
+  const alertBanner=document.getElementById('alertBanner');
+  if (newDocs.length) {
+    document.getElementById('alertText').textContent=`${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`;
+    alertBanner.classList.add('show');
+  } else {
+    alertBanner.classList.remove('show');
+  }
   const toConfirm=allSejoursPersonnes.filter(sp=>sp.confirmed===false);
+  const banner=document.getElementById('confirmBanner');
   if (toConfirm.length) {
-    const banner=document.getElementById('confirmBanner'); banner.classList.add('show');
-    banner.innerHTML=`<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>`+toConfirm.map(sp=>{ const p=allPersonnes.find(x=>x.id===sp.personne_id),s=allSejours.find(x=>x.id===sp.sejour_id); if(!p||!s) return ''; return `<span><strong>${p.prenom} ${p.nom}</strong> → ${s.nom}</span><button class="btn btn-info btn-sm" onclick="confirmSejour('${sp.id}')">Confirmer</button><button class="btn btn-danger btn-sm" onclick="rejectSejour('${sp.id}')">Rejeter</button>`; }).join('');
+    banner.classList.add('show');
+    banner.innerHTML=`<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>`+toConfirm.map(sp=>{ const p=allPersonnes.find(x=>x.id===sp.personne_id),s=allSejours.find(x=>x.id===sp.sejour_id); if(!p||!s) return ''; return `<span><strong>${esc(p.prenom)} ${esc(p.nom)}</strong> → ${esc(s.nom)}</span><button class="btn btn-info btn-sm" onclick="confirmSejour('${escAttr(sp.id)}')">Confirmer</button><button class="btn btn-danger btn-sm" onclick="rejectSejour('${escAttr(sp.id)}')">Rejeter</button>`; }).join('');
+  } else {
+    banner.classList.remove('show');
+    banner.innerHTML='';
   }
 }
 
@@ -807,7 +864,7 @@ function checkNewDocsSinceLastVisit() {
   const byP={};
   newDocs.forEach(doc=>{ const k=doc.personne_nom||'— Non classé'; if(!byP[k]) byP[k]=[]; byP[k].push(doc.filename); });
   document.getElementById('newdocs-count').textContent=newDocs.length;
-  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${nom}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.join(', ')}</td></tr>`).join('');
+  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${esc(nom)}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.map(esc).join(', ')}</td></tr>`).join('');
   document.getElementById('newdocsOverlay').classList.add('show');
 }
 
@@ -857,13 +914,18 @@ function checkNouvelAn() {
 async function archiverAnnee(annee) {
   if (!confirm(`Archiver automatiquement tous les séjours et inscriptions de ${annee} ?`)) return;
   
-  // Archiver les séjours de l'année passée
-  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel&type=neq.dossier_complet`, 'PATCH', { archived: true });
-
-  // Archiver les documents de l'année passée SAUF les confidentielles
-  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
-  
-  await init();
+  try {
+    // 1) Archiver les séjours de l'année (PATCH sur /sejours, pas /documents !)
+    await api(`/rest/v1/sejours?date_debut=gte.${annee}-01-01&date_debut=lte.${annee}-12-31`, 'PATCH', { archived: true });
+    
+    // 2) Archiver les documents de l'année SAUF les confidentiels
+    await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
+    
+    await init();
+    alert(`✅ Année ${annee} archivée.`);
+  } catch(e) {
+    alert(`❌ Erreur lors de l'archivage : ${e.message||e}`);
+  }
 }
 
 function getFilteredPersonnes() {
@@ -883,11 +945,11 @@ async function openAddDocModal() {
   const list = document.getElementById('ss-list-doc');
   list.innerHTML = allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).map(p => `
   <div class="search-select-item"
-    data-id="${p.id}"
-    data-name="${p.nom} ${p.prenom}"
-    onclick="selectDocPerson('${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')">
-    <strong>${p.nom}</strong> ${p.prenom}
-    <span style="color:var(--text-light);font-size:11px"> — ${p.foyer}</span>
+    data-id="${escAttr(p.id)}"
+    data-name="${escAttr(p.nom+' '+p.prenom)}"
+    onclick="selectDocPerson('${escAttr(p.id)}','${escAttr(p.nom+' '+p.prenom+' — '+(p.foyer||''))}')">
+    <strong>${esc(p.nom)}</strong> ${esc(p.prenom)}
+    <span style="color:var(--text-light);font-size:11px"> — ${esc(p.foyer)}</span>
   </div>`).join('');
   document.getElementById('addDocOverlay').classList.add('show');
 }
@@ -980,7 +1042,13 @@ async function init() {
     listenersAdded=true;
   }
 }
-init();
+// AUTH GUARD: vérifier l'authentification avant tout
+if(sessionStorage.getItem('lys_auth')!=='1'&&localStorage.getItem('lys_auth')!=='1'){
+  window.location.href='index.html';
+} else {
+  if(localStorage.getItem('lys_auth')==='1') sessionStorage.setItem('lys_auth','1');
+  init();
+}
 </script>
 
 <!-- MODAL VACANCIER -->
