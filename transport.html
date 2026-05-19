@@ -4781,16 +4781,22 @@ async function renderCourrier(){
         var mapKey=isFamille?(foyer+'|||'+prenom+' '+nom):foyer;
         
         // Find the actual stop where this person is in this convoi
-        // Try matching by frozen name (in convoi) AND by current name (in case sync happened)
+        // Match by ID first, then by frozen/current name
         var stopLieu=null;
         var frozenName=p.prenom+' '+(p.nom||'');
         var currentName=prenom+' '+nom;
+        var persId=(currentPers||p).id;
         c.stops.forEach(function(st){
           if(st.action==='depart'||st.action==='retour') return;
-          var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
-          var matched=names.indexOf(frozenName)>=0||names.indexOf(currentName)>=0;
+          var stopPers=(st.depPers||[]).concat(st.arrPers||[]);
+          // Match by id first (most reliable), then by name
+          var matched=stopPers.some(function(x){
+            return (persId&&x.id&&x.id===persId)||
+              (x.prenom+' '+(x.nom||''))===frozenName||
+              (x.prenom+' '+(x.nom||''))===currentName;
+          });
           if(matched){
-            // Prefer fid lookup (most reliable - this is the lieu chosen by optimisation)
+            // Prefer fid lookup (lieu chosen by optimisation)
             if(st.fid){
               var lieuFromFid=getLieu(st.fid);
               if(lieuFromFid){
@@ -4804,29 +4810,30 @@ async function renderCourrier(){
             }
           }
         });
-        // Fallback: use current person's FIRST lieu from DB (least reliable)
+        // Fallback: if still no lieu found, use current person's DB lieu
+        // (only used when person was removed/re-added and stop matching failed)
         if(!stopLieu&&currentPers){
           var pLieux=getPersonLieux(currentPers);
-          var lieuObj=getLieu(pLieux[0]);
-          if(lieuObj) stopLieu={nom:lieuObj.nom,adresse:lieuObj.adresse||''};
+          // Try all lieux, not just first — take first valid one
+          for(var li=0;li<pLieux.length;li++){
+            var lieuObj=getLieu(pLieux[li]);
+            if(lieuObj){stopLieu={nom:lieuObj.nom,adresse:lieuObj.adresse||''};break}
+          }
         }
         if(!stopLieu) stopLieu={nom:'Lieu inconnu',adresse:''};
         
         var displayFoyer=isFamille?('Famille — '+prenom+' '+nom.toUpperCase()):foyer;
         if(!courrierMap[mapKey]){
-          courrierMap[mapKey]={foyer:displayFoyer,lieu:stopLieu,personnes:{}};
+          courrierMap[mapKey]={foyer:displayFoyer,personnes:{}};
         }
         // Use CURRENT name as key, but also dedup by id if available
         var persKey=prenom+' '+nom;
-        var persId=(currentPers||p).id;
         // Check if this person exists under a different name (old entry from before name change)
         if(persId&&!courrierMap[mapKey].personnes[persKey]){
-          // Scan for existing entry with same id
           var existingKey=Object.keys(courrierMap[mapKey].personnes).find(function(k){
             return courrierMap[mapKey].personnes[k]._id===persId;
           });
           if(existingKey&&existingKey!==persKey){
-            // Rename the old entry to the new name
             courrierMap[mapKey].personnes[persKey]=courrierMap[mapKey].personnes[existingKey];
             courrierMap[mapKey].personnes[persKey].prenom=prenom;
             courrierMap[mapKey].personnes[persKey].nom=nom;
@@ -4834,18 +4841,27 @@ async function renderCourrier(){
           }
         }
         if(!courrierMap[mapKey].personnes[persKey]){
+          // BUG1 FIX: each person stores their OWN lieu, not shared at foyer level
           courrierMap[mapKey].personnes[persKey]={prenom:prenom,nom:nom,_id:persId,trajets:[],lieu:stopLieu};
         }
         if(persId) courrierMap[mapKey].personnes[persKey]._id=persId;
-        if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
-        if(stopLieu&&stopLieu.nom!=='Lieu inconnu') courrierMap[mapKey].lieu=stopLieu;
+        // BUG3 FIX: always update lieu from stop (most recent/reliable wins)
+        // Only update if we found a real stop (not fallback DB lieu)
+        if(stopLieu&&stopLieu.nom!=='Lieu inconnu'){
+          courrierMap[mapKey].personnes[persKey].lieu=stopLieu;
+        }
         // Compute hour for this person at this stop
         var hData=computeHeures(c);
         var heure='';
         if(hData.heures.length){
           c.stops.forEach(function(st,si){
-            var names=(st.depPers||[]).concat(st.arrPers||[]).map(function(x){return x.prenom+' '+(x.nom||'')});
-            if(names.indexOf(frozenName)>=0 && hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
+            var stopPers=(st.depPers||[]).concat(st.arrPers||[]);
+            var matched=stopPers.some(function(x){
+              return (persId&&x.id&&x.id===persId)||
+                (x.prenom+' '+(x.nom||''))===frozenName||
+                (x.prenom+' '+(x.nom||''))===currentName;
+            });
+            if(matched&&hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
           });
         }
         // Avoid duplicate: check if same date+type already exists
@@ -4866,10 +4882,16 @@ async function renderCourrier(){
   var html='<div class="card"><div class="stitle">Apercu des courriers ('+keys.length+' courrier'+(keys.length>1?'s':'')+')</div>';
   keys.forEach(function(k,ki){
     var c=courrierMap[k];
-    var pKeys=Object.keys(c.personnes).sort();
+    // BUG2 FIX: sort persons by date of their FIRST trajet chronologically
+    var pKeys=Object.keys(c.personnes).sort(function(a,b){
+      var tA=c.personnes[a].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
+      var tB=c.personnes[b].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
+      var da=tA?tA.date:'';var db=tB?tB.date:'';
+      if(da!==db) return da.localeCompare(db);
+      return a.localeCompare(b); // alpha fallback
+    });
     html+='<div style="border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">'
-      +'<div style="font-weight:700;font-size:13px;color:var(--forest);margin-bottom:4px">'+c.foyer+'</div>'
-      +'<div style="font-size:11px;color:var(--text-mid);margin-bottom:8px">Lieu : '+c.lieu.nom+(c.lieu.adresse?' - '+c.lieu.adresse:'')+'</div>';
+      +'<div style="font-weight:700;font-size:13px;color:var(--forest);margin-bottom:8px">'+c.foyer+'</div>';
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
       var sorted=pers.trajets.slice().sort(function(a,b){
@@ -4879,7 +4901,9 @@ async function renderCourrier(){
         if(a.type==='depart'&&b.type==='arrivee') return 1;
         return 0;
       });
-      html+='<div style="margin-left:12px;margin-bottom:6px"><strong style="font-size:12px">'+pers.prenom+' '+pers.nom+'</strong>';
+      // BUG1 FIX: show this person's own lieu, not foyer-level lieu
+      var lieuLabel=pers.lieu&&pers.lieu.nom!=='Lieu inconnu'?('<span style="font-size:10px;color:var(--text-light);margin-left:4px">📍 '+pers.lieu.nom+'</span>'):'';
+      html+='<div style="margin-left:12px;margin-bottom:6px"><strong style="font-size:12px">'+pers.prenom+' '+pers.nom+'</strong>'+lieuLabel;
       sorted.forEach(function(t){
         html+=' <span class="badge" style="'+(t.type==='arrivee'?'background:var(--green-bg);color:var(--green)':'background:var(--red-bg);color:var(--red)')+'">'+(t.type==='arrivee'?'Arr':'Dep')+' '+fmtDate(t.date)+(t.heure?' '+t.heure:'')+'</span>';
       });
@@ -4902,7 +4926,18 @@ async function genCourrierPdf(singleKey){
   var pages='';
   keys.forEach(function(k){
     var c=map[k];
-    var pKeys=Object.keys(c.personnes).sort();
+    // BUG2 FIX: sort persons chronologically by first trajet date
+    var pKeys=Object.keys(c.personnes).sort(function(a,b){
+      var tA=c.personnes[a].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
+      var tB=c.personnes[b].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
+      var da=tA?tA.date:'';var db=tB?tB.date:'';
+      if(da!==db) return da.localeCompare(db);
+      return a.localeCompare(b);
+    });
+    // BUG1 FIX: detect if all persons share same lieu or have different lieux
+    var allLieux=pKeys.map(function(pk){return c.personnes[pk].lieu?c.personnes[pk].lieu.nom:''});
+    var uniqueLieux=[...new Set(allLieux.filter(Boolean))];
+    var singleLieu=uniqueLieux.length<=1?(c.personnes[pKeys[0]]&&c.personnes[pKeys[0]].lieu)||null:null;
     // Build person cards - group persons with same aller/retour dates+heures
     var persCards='';
     // Collect all unique sejour combos (arr date+heure, dep date+heure)
@@ -4938,8 +4973,10 @@ async function genCourrierPdf(singleKey){
       pairs.forEach(function(pair){
         if(!pair.arr&&!pair.dep) return;
         var groupKey=(pair.arr?pair.arr.date+'_'+(pair.arr.heure||''):'none')+'||'+(pair.dep?pair.dep.date+'_'+(pair.dep.heure||''):'none');
-        if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:pair.arr,dep:pair.dep,noms:[]};
+        if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:pair.arr,dep:pair.dep,noms:[],lieux:[]};
         sejourGroups[groupKey].noms.push(pers.prenom+' '+(pers.nom||'').toUpperCase());
+        // BUG1 FIX: store each person's lieu per group
+        sejourGroups[groupKey].lieux.push(pers.lieu||null);
       });
     });
     Object.keys(sejourGroups).forEach(function(gk){
@@ -4952,7 +4989,13 @@ async function genCourrierPdf(singleKey){
       if(g.arr&&g.dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
       else if(g.arr) sejour='Arrivée le '+dateAllerStr;
       else if(g.dep) sejour='Départ le '+dateRetourStr;
-      var nomsStr=g.noms.join(', ');
+      var nomsStr=singleLieu
+        ? g.noms.join(', ')
+        // Multiple lieux: show each person with their lieu
+        : g.noms.map(function(n,i){
+            var l=g.lieux[i];
+            return n+(l&&l.nom?' <span style="font-size:11px;font-weight:normal;color:#555">('+l.nom+')</span>':'');
+          }).join(', ');
       persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
         +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:4px">'
         +'<span style="font-size:15px;font-weight:bold;font-style:italic">'+nomsStr+'</span>'
@@ -4997,12 +5040,19 @@ async function genCourrierPdf(singleKey){
       +'<div style="margin-bottom:20px;font-size:14px"><b>Destinataire : '+c.foyer+'</b></div>'
       +'<div style="margin-bottom:20px">Madame, Monsieur,</div>'
       +'<div style="margin-bottom:20px;line-height:1.6">Suite à l\'inscription d\'une ou plusieurs personnes aux séjours de vacances organisés par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
-      // Lieu RDV - highlighted
-      +'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid">'
-      +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div>'
-      +'<div style="font-size:17px;font-weight:bold">'+c.lieu.nom+'</div>'
-      +(c.lieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+c.lieu.adresse+'</div>':'')
-      +'</div>'
+      // Lieu RDV - highlighted (BUG1 FIX: show per-person lieu if they differ)
+      +(singleLieu?
+        '<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid">'
+        +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div>'
+        +'<div style="font-size:17px;font-weight:bold">'+singleLieu.nom+'</div>'
+        +(singleLieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+singleLieu.adresse+'</div>':'')
+        +'</div>'
+        :
+        '<div style="border:2px solid #333;border-radius:6px;padding:12px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;font-size:12px;color:#666;page-break-inside:avoid">'
+        +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Lieu de rendez-vous</div>'
+        +'<div style="font-style:italic">Voir les lieux de chaque vacancier ci-dessous</div>'
+        +'</div>'
+      )
       // Person cards
       +persCards
       // Pique-nique warning
