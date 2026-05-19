@@ -4918,7 +4918,7 @@ async function renderCourrier(){
   html+='</div>';
   el.innerHTML=html;
   window._courrierData=courrierMap;
-  actions.style.display='none';
+  actions.style.display='block';
 }
 
 async function genCourrierPdf(singleKey){
@@ -5072,10 +5072,10 @@ async function genCourrierPdf(singleKey){
       // Pique-nique warning
       +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>':'')
       // Footer
-      +'<div style="margin-top:28px;padding-top:14px;border-top:1px solid #ddd;font-size:13px;color:#333;line-height:1.8;page-break-inside:avoid">'
+      +'<div style="margin-top:32px;padding-top:16px;border-top:2px solid #ccc;font-size:15px;color:#222;line-height:2;page-break-inside:avoid">'
       +'Veuillez bien noter l\'heure du rendez-vous et à être ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, à l\'expression de nos meilleures salutations.'
-      +'<br><br><b style="color:#000;font-size:14px">Séverine LANDELLE</b></div>'
+      +'<br><br><b style="color:#000;font-size:17px">Séverine LANDELLE</b></div>'
       +'</div>';
   });
   var w=window.open('','_blank');
