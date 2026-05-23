@@ -5309,7 +5309,7 @@ function manTogglePersList(stopId,listName){
 
 function manBuildPersSelector(s,listName,labelText,color,bgColor){
   var list=s[listName]||[];
-  var selectedNames=list.map(function(pid){var p=manGetPers(pid);return p.prenom+' '+p.nom}).join(', ');
+  var selectedNames=list.map(function(pid){var p=manGetPers(pid);return p?(p.prenom+' '+p.nom):'?'}).join(', ');
   var html='<div style="margin-top:8px">';
   html+='<div onclick="manTogglePersList(\''+s.id+'\',\''+listName+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:'+bgColor+';border:1px solid '+color+';border-radius:var(--radius-xs);user-select:none">';
   html+='<div><span style="font-weight:700;font-size:11px;color:'+color+'">'+labelText+'</span>';
@@ -5401,7 +5401,7 @@ function manRenderStops(){
   el.innerHTML=html;
 }
 
-function manGetPers(id){return personnes.find(function(p){return p.id===id})||{prenom:'?',nom:'',foyer:''}}
+function manGetPers(id){return personnes.find(function(p){return p.id===id})||null}
 
 async function manGenPreview(){
   var date=document.getElementById('man-date').value;
@@ -5418,8 +5418,8 @@ async function manGenPreview(){
   html+='<div class="timeline-wrap">';
   manStops.forEach(function(s,i){
     var dotC=s.action==='depot'?'var(--red)':s.action==='pickup'?'var(--green)':'var(--copper)';
-    var depNames=(s.depPersonnes||[]).map(function(id){return manGetPers(id).prenom});
-    var arrNames=(s.arrPersonnes||[]).map(function(id){return manGetPers(id).prenom});
+    var depNames=(s.depPersonnes||[]).map(function(id){var p=manGetPers(id);return p?p.prenom:'?'});
+    var arrNames=(s.arrPersonnes||[]).map(function(id){var p=manGetPers(id);return p?p.prenom:'?'});
     var detail='';
     if(s.action==='depot') detail='Départ : '+depNames.join(', ');
     else if(s.action==='pickup') detail='Arrivee : '+arrNames.join(', ');
@@ -5450,12 +5450,23 @@ function manBuildConvoi(){
 
   manStops.forEach(function(s,i){
     var lieu={nom:s.lieuNom||'Arrêt '+(i+1),adresse:s.lieuAdresse||'',lat:parseFloat(s.lieuLat)||null,lng:parseFloat(s.lieuLng)||null};
-    var depPers=(s.depPersonnes||[]).map(function(pid){var p=manGetPers(pid);return{prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''}});
-    var arrPers=(s.arrPersonnes||[]).map(function(pid){var p=manGetPers(pid);return{prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''}});
+    // Map persons with full data including id (needed for matching in courriers/semaines)
+    var depPers=(s.depPersonnes||[]).map(function(pid){
+      var p=manGetPers(pid);
+      if(!p||p.prenom==='?') return null;
+      return{id:pid,prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''};
+    }).filter(Boolean);
+    var arrPers=(s.arrPersonnes||[]).map(function(pid){
+      var p=manGetPers(pid);
+      if(!p||p.prenom==='?') return null;
+      return{id:pid,prenom:p.prenom,nom:p.nom||'',foyer:p.foyer||'',lieu:p.lieu||''};
+    }).filter(Boolean);
     depPers.forEach(function(p){allDep.push(p)});
     arrPers.forEach(function(p){allArr.push(p)});
     if(s.piquenique) piqueniqueIdx=i;
-    stops.push({pt:lieu,fid:'manual_'+i,action:s.action,depPers:depPers,arrPers:arrPers,seats:0,sameFoyer:false});
+    // Use lieuId as fid if from DB, else generate unique fid
+    var fid=s.lieuId||('manual_'+i+'_'+Date.now());
+    stops.push({pt:lieu,fid:fid,action:s.action,depPers:depPers,arrPers:arrPers,seats:0,sameFoyer:false});
   });
 
   var firstHeure=manStops.length&&manStops[0].heure?manStops[0].heure:'';
@@ -5471,6 +5482,15 @@ function manBuildConvoi(){
     if(stops[ki-1].pt.lat&&stops[ki].pt.lat) km+=Math.round(hav(stops[ki-1].pt.lat,stops[ki-1].pt.lng,stops[ki].pt.lat,stops[ki].pt.lng));
   }
 
+  // Calculate real peak seats from stops
+  var seats=allDep.length;
+  stops[0].seats=seats;
+  for(var si=1;si<stops.length;si++){
+    seats=seats-(stops[si].depPers||[]).length+(stops[si].arrPers||[]).length;
+    stops[si].seats=seats;
+  }
+  var peak=peakSeatsStops(stops);
+
   var convoi={
     id:'man'+Date.now(),
     vehicule:{id:veh.id,label:veh.label,cap:veh.cap,ico:veh.ico,type:veh.type},
@@ -5481,8 +5501,8 @@ function manBuildConvoi(){
     km:km,
     dureeMin:Math.max(dureeMin,0),
     maxDurMin:420,
-    peakSeats:Math.max(allDep.length,allArr.length),
-    remplissage:Math.round(Math.max(allDep.length,allArr.length)/veh.cap*100),
+    peakSeats:peak,
+    remplissage:Math.round(peak/veh.cap*100),
     depart:allDep,
     arrivee:allArr,
     stops:stops,
