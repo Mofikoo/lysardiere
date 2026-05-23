@@ -4297,15 +4297,22 @@ function deplacerPersonne(convoiIdx,stopIdx,prenom,nom,side){
   var pers=personList.find(function(p){return p.prenom===prenom&&(p.nom||'')===nom});
   if(!pers) return;
 
-  var html='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:8px">Déplacer '
+  var html='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:8px">Modifier '
     +'<span style="color:'+(side==='dep'?'var(--red)':'var(--green)')+'">'+prenom+' '+nom+'</span></div>';
   html+='<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">'
-    +(side==='dep'?'Départ':'Arrivée')+' à : <strong>'+stop.pt.nom+'</strong></div>';
-  html+='<div style="font-size:12px;font-weight:600;margin-bottom:8px">Vers quel convoi ?</div>';
+    +'Actuellement : <strong>'+(side==='dep'?'Départ':'Arrivée')+'</strong> à <strong>'+stop.pt.nom+'</strong></div>';
 
+  // Option 1: toggle dep↔arr within the same stop
+  var otherSide=side==='dep'?'arr':'dep';
+  var otherLabel=side==='dep'?'Changer en Arrivée ↔':'Changer en Départ ↔';
+  html+='<div style="font-size:12px;font-weight:600;margin-bottom:6px">Changer le type :</div>';
+  html+='<button class="btn btn-sm" style="margin-bottom:12px;width:100%;background:'+(side==='dep'?'var(--green-bg)':'var(--red-bg)')+';color:'+(side==='dep'?'var(--green)':'var(--red)')+';border:1px solid '+(side==='dep'?'var(--green)':'var(--red)')+'" onclick="execToggleDepArr('+convoiIdx+','+stopIdx+',\''+prenom.replace(/'/g,"\\'")+'\',\''+nom.replace(/'/g,"\\'")+'\',\''+side+'\')">'
+    +otherLabel+'</button>';
+
+  // Option 2: move to another convoi
+  html+='<div style="font-size:12px;font-weight:600;margin-bottom:6px">Ou déplacer vers un autre convoi :</div>';
   convoisOptimises.forEach(function(dest,di){
     if(di===convoiIdx) return;
-    // Find stops in dest with same or compatible lieu
     var sameLieuStop=dest.stops.find(function(st){return st.fid===stop.fid&&st.action!=='depart'&&st.action!=='retour'});
     var targetLabel=sameLieuStop?'<span style="color:var(--green);font-size:10px"> ✓ Même lieu</span>':'';
     var newPeak=dest.peakSeats+1;
@@ -4326,6 +4333,42 @@ function deplacerPersonne(convoiIdx,stopIdx,prenom,nom,side){
   overlay.appendChild(box);
   overlay.onclick=function(e){if(e.target===overlay) overlay.remove()};
   document.body.appendChild(overlay);
+}
+
+function execToggleDepArr(convoiIdx,stopIdx,prenom,nom,currentSide){
+  document.querySelector('.ly-modal-overlay').remove();
+  var c=convoisOptimises[convoiIdx];
+  var stop=c.stops[stopIdx];
+  var fromList=currentSide==='dep'?(stop.depPers||[]):(stop.arrPers||[]);
+  var toList=currentSide==='dep'?(stop.arrPers||[]):(stop.depPers||[]);
+  var idx=fromList.findIndex(function(p){return p.prenom===prenom&&(p.nom||'')===nom});
+  if(idx<0) return;
+  var pers=fromList.splice(idx,1)[0];
+  toList.push(pers);
+  if(currentSide==='dep') {stop.depPers=fromList;stop.arrPers=toList;}
+  else {stop.arrPers=fromList;stop.depPers=toList;}
+  
+  // Update stop action
+  var hasDep=stop.depPers&&stop.depPers.length;
+  var hasArr=stop.arrPers&&stop.arrPers.length;
+  if(hasDep&&hasArr) stop.action='rotation';
+  else if(hasDep) stop.action='depot';
+  else if(hasArr) stop.action='pickup';
+  
+  // Rebuild flat arrays from stops
+  var allDep=[],allArr=[];
+  c.stops.forEach(function(st){
+    if(st.action==='depart'||st.action==='retour') return;
+    (st.depPers||[]).forEach(function(p){allDep.push(p)});
+    (st.arrPers||[]).forEach(function(p){allArr.push(p)});
+  });
+  c.depart=allDep;c.arrivee=allArr;
+  c.type=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
+  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  lyAlert(prenom+' '+nom+' changé(e) en '+(currentSide==='dep'?'Arrivée':'Départ')+'.','success');
 }
 
 function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoiIdx){
@@ -5246,10 +5289,28 @@ function manTogglePiquenique(stopId,val){
 function manUpdateStop(id,field,val){
   var s=manStops.find(function(x){return x.id===id});
   if(!s) return;
+  var oldAction=s.action;
   s[field]=val;
   if(field==='action'){
-    if(val==='pickup'){s.depPersonnes=[];s.arrPersonnes=s.arrPersonnes||[]}
-    if(val==='depot'){s.arrPersonnes=[];s.depPersonnes=s.depPersonnes||[]}
+    // Migrate persons intelligently when type changes
+    // pickup→depot: move arrPersonnes to depPersonnes, keep depPersonnes
+    if(oldAction==='pickup'&&val==='depot'){
+      s.depPersonnes=(s.depPersonnes||[]).concat(s.arrPersonnes||[]);
+      // Deduplicate
+      s.depPersonnes=s.depPersonnes.filter(function(id,i,arr){return arr.indexOf(id)===i});
+      s.arrPersonnes=[];
+    }
+    // depot→pickup: move depPersonnes to arrPersonnes
+    if(oldAction==='depot'&&val==='pickup'){
+      s.arrPersonnes=(s.arrPersonnes||[]).concat(s.depPersonnes||[]);
+      s.arrPersonnes=s.arrPersonnes.filter(function(id,i,arr){return arr.indexOf(id)===i});
+      s.depPersonnes=[];
+    }
+    // anything→rotation: keep both lists
+    // rotation→pickup: clear depPersonnes
+    if(oldAction==='rotation'&&val==='pickup') s.depPersonnes=[];
+    // rotation→depot: clear arrPersonnes
+    if(oldAction==='rotation'&&val==='depot') s.arrPersonnes=[];
     manRenderStops();
   }
 }
@@ -5532,6 +5593,26 @@ async function manSaveToSemaines(){
   if(!manStops.length){await lyAlert('Ajoutez au moins un arrêt.','error');return}
   var built=manBuildConvoi();
   var convoi=built.convoi;
+  var vid=convoi.vehicule.id;
+  
+  // Check vehicle conflicts: same vehicle already used on overlapping semaines
+  var conflicts=[];
+  semaines.concat(archives).forEach(function(s){
+    if(!s.date||!s.convois) return;
+    // Check if date is within a semaine range (date ≥ s.date and ≤ s.date_fin, or same date)
+    if(s.date===date||s.date_fin===date||(s.date<=date&&(!s.date_fin||s.date_fin>=date))){
+      s.convois.forEach(function(c){
+        if(c.vehicule&&c.vehicule.id===vid&&c.vehicule.id!=='?'){
+          conflicts.push(s.date);
+        }
+      });
+    }
+  });
+  if(conflicts.length){
+    var msg='⚠️ CONFLIT DE VÉHICULE\n\n"'+convoi.vehicule.label+'" est déjà utilisé le '+fmtDate(date)+'.\n\nLe même véhicule ne peut pas être à deux endroits en même temps.\n\nContinuer quand même (créer le conflit) ?';
+    if(!await lyConfirm(msg)) return;
+  }
+  
   var existing=semaines.find(function(s){return s.date===date});
   if(existing){
     existing.convois.push(convoi);
