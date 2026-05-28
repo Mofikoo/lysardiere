@@ -786,6 +786,7 @@ input:focus, select:focus {
 </style>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4WUoSjSxrbRmCjRLF2prqhul4WjaaJ_c&callback=mapsLoaded"></script>
 <script>function mapsLoaded(){window.googleMapsReady=true}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -5116,21 +5117,28 @@ async function genCourrierPdf(singleKey){
   var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   var label=singleKey?window._courrierData[singleKey].foyer.replace(/[\s\/\\:*?"<>|]+/g,'_'):'tous';
   var filename='courriers-'+label+'-'+ts+'.pdf';
-  // Open in a hidden iframe, trigger browser print-to-pdf
-  // Use a temporary popup with auto-print and save dialog
-  var html='<!DOCTYPE html><html><head><title>'+filename+'</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'<script>window.onload=function(){window.print();setTimeout(function(){window.close()},1000)}<\/script></body></html>';
-  var blob=new Blob([html],{type:'text/html'});
-  var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
-  if(!w){
-    // Fallback: just download as .html if popup blocked
-    var a=document.createElement('a');
-    a.href=url;
-    a.download=filename.replace('.pdf','.html');
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    lyAlert('Popup bloquée. Le fichier a été téléchargé en .html. Autorisez les popups pour obtenir un PDF.','success');
+  setPersist('⏳ Génération PDF...','neutral');
+  // Create a hidden container for rendering
+  var container=document.createElement('div');
+  container.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;background:white;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222';
+  container.innerHTML=pages;
+  document.body.appendChild(container);
+  try{
+    await html2pdf().set({
+      margin:[15,15,15,15],
+      filename:filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,letterRendering:true},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['avoid-all','css']}
+    }).from(container).save();
+    setPersist('✅ PDF généré','ok');
+  } catch(e){
+    console.error('html2pdf error:',e);
+    setPersist('Erreur PDF','err');
+    lyAlert('Erreur lors de la génération du PDF : '+e.message+'\n\nEssayez le bouton Imprimer à la place.','error');
   }
-  setTimeout(function(){URL.revokeObjectURL(url)},30000);
+  document.body.removeChild(container);
 }
 
 async function imprimerCourriers(singleKey){
