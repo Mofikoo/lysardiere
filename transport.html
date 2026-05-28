@@ -1049,6 +1049,13 @@ input:focus, select:focus {
 
 <!-- COURRIER -->
 <div class="tab-pane" id="pane-courrier">
+  <div id="courrier-actions" style="display:none;margin-bottom:12px">
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genCourrierPdf()">⬇ Télécharger tous les courriers (PDF)</button>
+      <button class="btn btn-primary" style="font-size:13px;padding:11px 24px" onclick="imprimerCourriers()">🖨️ Imprimer tous les courriers</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:6px;text-align:center">Télécharger : enregistre un fichier HTML sur votre PC. &nbsp;|&nbsp; Imprimer : ouvre la boîte de dialogue d'impression.</div>
+  </div>
   <div class="card">
     <div class="stitle">Courrier - Plage de dates</div>
     <div class="cols2" style="margin-bottom:12px">
@@ -1058,13 +1065,6 @@ input:focus, select:focus {
     <div style="text-align:right"><button class="btn btn-primary" onclick="renderCourrier()">Afficher les vacanciers</button></div>
   </div>
   <div id="courrier-content"></div>
-  <div id="courrier-actions" style="display:none;text-align:center;padding:1rem 0">
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genCourrierPdf()">📄 Génèrer tous les courriers (PDF)</button>
-      <button class="btn btn-primary" style="font-size:13px;padding:11px 24px" onclick="toutImprimer()">🖨️ Tout imprimer</button>
-    </div>
-    <div style="font-size:11px;color:var(--text-light);margin-top:6px">PDF : ouvre une fenêtre d'impression. &nbsp;|&nbsp; Tout imprimer : envoie directement à l'imprimante.</div>
-  </div>
 </div>
 
 <!-- GUIDE -->
@@ -5018,7 +5018,10 @@ async function renderCourrier(){
       });
       html+='</div>';
     });
-    html+='<div style="text-align:right;margin-top:8px"><button class="btn btn-accent btn-sm" onclick="genCourrierPdf(\''+k.replace(/'/g,"\\'")+'\')">Générer PDF - '+c.foyer+'</button></div>';
+    html+='<div style="text-align:right;margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'
+      +'<button class="btn btn-accent btn-sm" onclick="genCourrierPdf(\''+k.replace(/'/g,"\\'")+'\')">⬇ PDF - '+c.foyer+'</button>'
+      +'<button class="btn btn-sm" onclick="imprimerCourriers(\''+k.replace(/'/g,"\\'")+'\')">🖨️ Imprimer</button>'
+      +'</div>';
     html+='</div>';
   });
   html+='</div>';
@@ -5027,15 +5030,15 @@ async function renderCourrier(){
   actions.style.display='block';
 }
 
-async function genCourrierPdf(singleKey){
-  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
+function buildCourrierPages(singleKey){
+  if(!window._courrierData) return null;
   var map=window._courrierData;
   var keys=singleKey?[singleKey]:Object.keys(map).sort();
+  if(!keys.length) return null;
   var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
   var pages='';
   keys.forEach(function(k){
     var c=map[k];
-    // BUG2 FIX: sort persons chronologically by first trajet date
     var pKeys=Object.keys(c.personnes).sort(function(a,b){
       var tA=c.personnes[a].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
       var tB=c.personnes[b].trajets.slice().sort(function(x,y){return(x.date||'').localeCompare(y.date||'')})[0];
@@ -5043,181 +5046,102 @@ async function genCourrierPdf(singleKey){
       if(da!==db) return da.localeCompare(db);
       return a.localeCompare(b);
     });
-    // Build full lieu objects for unique lieux (for the header box)
-    var uniqueLieuObjs=[];
-    var seenNoms={};
-    pKeys.forEach(function(pk){
-      var l=c.personnes[pk].lieu;
-      if(l&&l.nom&&!seenNoms[l.nom]){seenNoms[l.nom]=true;uniqueLieuObjs.push(l);}
-    });
+    var uniqueLieuObjs=[];var seenNoms={};
+    pKeys.forEach(function(pk){var l=c.personnes[pk].lieu;if(l&&l.nom&&!seenNoms[l.nom]){seenNoms[l.nom]=true;uniqueLieuObjs.push(l);}});
     var singleLieu=uniqueLieuObjs.length<=1?uniqueLieuObjs[0]||null:null;
-    // Build person cards - group persons with same aller/retour dates+heures
-    var persCards='';
-    // Collect all unique sejour combos (arr date+heure, dep date+heure)
     var sejourGroups={};
     pKeys.forEach(function(pk){
       var pers=c.personnes[pk];
-      var arrivees=pers.trajets.filter(function(t){return t.type==='arrivee'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
-      var departs=pers.trajets.filter(function(t){return t.type==='depart'}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
-      
-      // Pair each arrival with the next departure after it
-      var usedDep={};
-      var pairs=[];
-      arrivees.forEach(function(arr){
-        var bestDep=null;
-        for(var di=0;di<departs.length;di++){
-          if(usedDep[di]) continue;
-          if(departs[di].date>=arr.date){bestDep=di;break}
-        }
-        if(bestDep!==null){
-          pairs.push({arr:arr,dep:departs[bestDep]});
-          usedDep[bestDep]=true;
+      var sorted=pers.trajets.slice().sort(function(a,b){var dc=(a.date||'').localeCompare(b.date||'');if(dc!==0)return dc;if(a.type==='arrivee'&&b.type==='depart')return -1;if(a.type==='depart'&&b.type==='arrivee')return 1;return 0});
+      var pairs=[];var i=0;
+      while(i<sorted.length){
+        var t=sorted[i];
+        if(t.type==='arrivee'){
+          var next=sorted[i+1]&&sorted[i+1].type==='depart'?sorted[i+1]:null;
+          pairs.push({arr:t,dep:next});i+=next?2:1;
         } else {
-          pairs.push({arr:arr,dep:null});
+          pairs.push({arr:null,dep:t});i++;
         }
-      });
-      // Remaining departures without matching arrival
-      departs.forEach(function(dep,di){
-        if(!usedDep[di]) pairs.push({arr:null,dep:dep});
-      });
-      // If no pairs at all, create empty
-      if(!pairs.length) pairs.push({arr:null,dep:null});
-      
+      }
       pairs.forEach(function(pair){
         if(!pair.arr&&!pair.dep) return;
         var groupKey=(pair.arr?pair.arr.date+'_'+(pair.arr.heure||''):'none')+'||'+(pair.dep?pair.dep.date+'_'+(pair.dep.heure||''):'none');
         if(!sejourGroups[groupKey]) sejourGroups[groupKey]={arr:pair.arr,dep:pair.dep,noms:[],lieux:[]};
         sejourGroups[groupKey].noms.push(pers.prenom+' '+(pers.nom||'').toUpperCase());
-        // BUG1 FIX: store each person's lieu per group
         sejourGroups[groupKey].lieux.push(pers.lieu||null);
       });
     });
-    Object.keys(sejourGroups).forEach(function(gk){
+    var groupKeys=Object.keys(sejourGroups).sort();
+    var needPiquenique=pKeys.some(function(pk){var p=c.personnes[pk];return p.besoins&&(p.besoins.indexOf('médicament')>=0||p.besoins.indexOf('medicament')>=0)});
+    var personnesHtml='';
+    groupKeys.forEach(function(gk){
       var g=sejourGroups[gk];
-      var dateAllerStr=g.arr?fmtDateCourrier(g.arr.date):'';
-      var dateRetourStr=g.dep?fmtDateCourrier(g.dep.date):'';
-      var heureAller=g.arr&&g.arr.heure?g.arr.heure:'--:--';
-      var heureRetour=g.dep&&g.dep.heure?g.dep.heure:'--:--';
-      var sejour='';
-      if(g.arr&&g.dep) sejour='Du '+dateAllerStr+' au '+dateRetourStr;
-      else if(g.arr) sejour='Arrivée le '+dateAllerStr;
-      else if(g.dep) sejour='Départ le '+dateRetourStr;
-      var nomsStr=singleLieu
-        ? g.noms.join(', ')
-        // Multiple lieux: show each person with their short lieu name only
-        : g.noms.map(function(n,i){
-            var l=g.lieux[i];
-            return n+(l&&l.nom?' <span style="font-size:11px;font-weight:normal;color:#555">('+l.nom+')</span>':'');
-          }).join(', ');
-      persCards+='<div style="border:2px solid #333;border-radius:4px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid">'
-        +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:4px">'
-        +'<span style="font-size:15px;font-weight:bold;font-style:italic">'+nomsStr+'</span>'
-        +'<span style="font-size:12px;font-weight:bold;background:#eee;padding:2px 10px;border-radius:3px;white-space:nowrap">'+sejour+'</span>'
-        +'</div>'
-        +'<table style="width:100%;font-size:13px;border-collapse:collapse">'
-        +'<tr>'
-        +'<td style="padding:6px 0;width:50%;vertical-align:top">'
-        +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Aller</div>'
-        +'<div>'+(g.arr?'le <b>'+dateAllerStr+'</b>':'')+'</div>'
-        +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureAller+'</div>'
-        +'</td>'
-        +'<td style="padding:6px 0;width:50%;vertical-align:top;border-left:2px solid #ddd;padding-left:16px">'
-        +'<div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Retour</div>'
-        +'<div>'+(g.dep?'le <b>'+dateRetourStr+'</b>':'')+'</div>'
-        +'<div style="font-size:22px;font-weight:bold;color:#000;margin-top:2px">'+heureRetour+'</div>'
-        +'</td>'
-        +'</tr></table></div>';
+      var nomsStr=singleLieu?g.noms.join(', '):g.noms.map(function(n,i){var l=g.lieux[i];return n+(l&&l.nom?' <span style="font-size:11px;font-weight:normal;color:#555">('+l.nom+')</span>':'')}).join(', ');
+      var dateRange='';
+      if(g.arr&&g.dep) dateRange='Du '+fmtDate(g.arr.date)+' au '+fmtDate(g.dep.date);
+      else if(g.arr) dateRange='Arrivée '+fmtDate(g.arr.date);
+      else dateRange='Départ '+fmtDate(g.dep.date);
+      personnesHtml+='<div style="border:1px solid #ccc;border-radius:4px;padding:12px 16px;margin-bottom:10px;page-break-inside:avoid">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<strong style="font-size:14px">'+nomsStr+'</strong>'
+        +'<span style="font-size:11px;color:#666;white-space:nowrap;margin-left:16px">'+dateRange+'</span></div>'
+        +(g.arr?'<div style="display:flex;gap:40px"><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:2px">Aller</div><div style="font-size:10px;color:#444">le '+new Date(g.arr.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div><div style="font-size:20px;font-weight:bold">'+g.arr.heure+'</div></div>':'<div>')
+        +(g.dep?'<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:2px">Retour</div><div style="font-size:10px;color:#444">le '+new Date(g.dep.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div><div style="font-size:20px;font-weight:bold">'+g.dep.heure+'</div></div>':'<div>')
+        +'</div></div>';
     });
-    // Pique-nique check
-    var needPiquenique=false;
-    pKeys.forEach(function(pk){
-      c.personnes[pk].trajets.forEach(function(t){
-        if(t.type==='arrivee'&&t.heure){
-          var pts=t.heure.split(':');
-          var mins=parseInt(pts[0])*60+parseInt(pts[1]);
-          if(mins<765) needPiquenique=true;
-        }
-      });
-    });
-    pages+='<div style="page-break-after:always;padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;max-width:100%;color:#222">'
-      // Header
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #333">'
-      +'<div style="display:flex;align-items:flex-start;gap:16px">'
-      +'<img src="'+LOGO_URL+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover">'
-      +'<div>'
-      +'<div style="font-size:20px;font-weight:bold;letter-spacing:1px">LA LYSARDIERE</div>'
-      +'<div style="font-size:11px;color:#555;margin-top:4px;line-height:1.6">64 Route de Sainte Mondane<br>24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13<br>Siret : 79926743000012 &mdash; N&deg; Atout France : IM0241400012</div>'
-      +'</div></div>'
+    pages+='<div style="max-width:800px;margin:0 auto;padding:10mm 0;font-family:Arial,Helvetica,sans-serif;page-break-after:always">'
+      +'<div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #000">'
+      +'<div style="font-size:11px;color:#333;line-height:1.5"><b>La Lysardière</b><br>84 Route de Sainte Mondane<br>24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13<br><span style="font-size:10px;color:#666">Siret : 79926743000012 — N° Atout France : IM024140012</span></div>'
       +'</div>'
-      // Destinataire
-      +'<div style="margin-bottom:20px;font-size:14px"><b>Destinataire : '+c.foyer+'</b></div>'
-      +'<div style="margin-bottom:20px">Madame, Monsieur,</div>'
-      +'<div style="margin-bottom:20px;line-height:1.6">Suite à l\'inscription d\'une ou plusieurs personnes aux séjours de vacances organisés par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
-      // Lieu RDV - highlighted (BUG1 FIX: show per-person lieu if they differ)
-      +(singleLieu?
-        '<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid">'
-        +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div>'
-        +'<div style="font-size:17px;font-weight:bold">'+singleLieu.nom+'</div>'
-        +(singleLieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+singleLieu.adresse+'</div>':'')
-        +'</div>'
-        :
-        '<div style="border:3px solid #000;border-radius:6px;margin:20px auto 28px;max-width:500px;background:#f8f8f8;page-break-inside:avoid;overflow:hidden">'
-        +'<div style="text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;padding:10px 24px 0">Lieux de rendez-vous Aller / Retour</div>'
-        +'<div style="display:flex;border-top:1px solid #ccc;margin-top:8px">'
-        +uniqueLieuObjs.map(function(l,i){
-          return '<div style="flex:1;padding:12px 16px;text-align:center'+(i>0?';border-left:2px solid #ccc':'')+'">'
-            +'<div style="font-size:15px;font-weight:bold">'+l.nom+'</div>'
-            +(l.adresse?'<div style="font-size:11px;color:#444;margin-top:3px">'+l.adresse+'</div>':'')
-            +'</div>';
-        }).join('')
-        +'</div>'
-        +'</div>'
-      )
-      // Person cards
-      +persCards
-      // Pique-nique warning
+      +'<div style="margin-bottom:20px"><b style="font-size:15px">Destinataire : '+c.foyer+'</b></div>'
+      +'<div style="font-size:14px;margin-bottom:8px">Madame, Monsieur,</div>'
+      +'<div style="font-size:14px;margin-bottom:20px">Suite à l\'inscription d\'une ou plusieurs personnes aux séjours de vacances organisés par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
+      +(singleLieu?'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div><div style="font-size:17px;font-weight:bold">'+singleLieu.nom+'</div>'+(singleLieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+singleLieu.adresse+'</div>':'')+'</div>':'<div style="border:3px solid #000;border-radius:6px;margin:20px auto 28px;max-width:500px;background:#f8f8f8;page-break-inside:avoid;overflow:hidden"><div style="text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;padding:10px 24px 0">Lieux de rendez-vous Aller / Retour</div><div style="display:flex;border-top:1px solid #ccc;margin-top:8px">'+uniqueLieuObjs.map(function(l,i){return '<div style="flex:1;padding:12px 16px;text-align:center'+(i>0?';border-left:2px solid #ccc':'')+'">'+'<div style="font-size:15px;font-weight:bold">'+l.nom+'</div>'+(l.adresse?'<div style="font-size:11px;color:#444;margin-top:3px">'+l.adresse+'</div>':'')+'</div>'}).join('')+'</div></div>')
+      +personnesHtml
       +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>':'')
-      // Footer
       +'<div style="margin-top:32px;padding-top:16px;border-top:2px solid #ccc;font-size:15px;color:#222;line-height:2;page-break-inside:avoid">'
       +'Veuillez bien noter l\'heure du rendez-vous et à être ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, à l\'expression de nos meilleures salutations.'
       +'<br><br><b style="color:#000;font-size:17px">Séverine LANDELLE</b></div>'
       +'</div>';
   });
+  return pages;
+}
+
+async function genCourrierPdf(singleKey){
+  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
+  var pages=buildCourrierPages(singleKey);
+  if(!pages){await lyAlert('Aucun courrier à générer.','error');return}
+  var html='<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>';
+  // Download directly as .html file that opens/prints as PDF
+  var blob=new Blob([html],{type:'text/html'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var d=new Date();
+  var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var label=singleKey?window._courrierData[singleKey].foyer.replace(/\s+/g,'_'):'tous';
+  a.href=url;
+  a.download='courriers-'+label+'-'+ts+'.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function imprimerCourriers(singleKey){
+  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
+  var pages=buildCourrierPages(singleKey);
+  if(!pages){await lyAlert('Aucun courrier à imprimer.','error');return}
   var w=window.open('','_blank');
+  if(!w){await lyAlert('Autorisez les popups pour cette page.','error');return}
   w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
   w.document.close();
+  w.focus();
   w.print();
 }
 
 async function toutImprimer(){
-  // Generate all courriers and open print dialog in one click
-  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu des courriers.','error');return}
-  var map=window._courrierData;
-  var keys=Object.keys(map).sort();
-  if(!keys.length){await lyAlert('Aucun courrier à imprimer.','error');return}
-  var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  var pages='';
-  // Reuse genCourrierPdf logic — call it without opening a window, collect pages
-  var origOpen=window.open;
-  var capturedPages=null;
-  window.open=function(a,b){
-    // Intercept the window.open call — we handle it ourselves
-    return {
-      document:{write:function(html){capturedPages=html},close:function(){}},
-      print:function(){}
-    };
-  };
-  await genCourrierPdf();
-  window.open=origOpen;
-  if(!capturedPages){await lyAlert('Erreur lors de la génération.','error');return}
-  // Now open the real print window
-  var w=window.open('','_blank');
-  if(!w){await lyAlert('Veuillez autoriser les popups pour cette page.','error');return}
-  w.document.write(capturedPages);
-  w.document.close();
-  w.focus();
-  w.print();
+  await imprimerCourriers();
 }
 
 function genPdfStructures(){
