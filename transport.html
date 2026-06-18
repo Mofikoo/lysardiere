@@ -2892,7 +2892,7 @@ function swapOptimize(solution,params){
   if(clusters.length<2) return solution;
   var improved=true;
   var maxIter=80;
-  while(improved&&maxIter-->0){
+  while(improved && maxIter-- > 0){
     improved=false;
     for(var i=0;i<clusters.length;i++){
       for(var j=i+1;j<clusters.length;j++){
@@ -4155,28 +4155,20 @@ function insertStopSearchPers(side){
   var el=document.getElementById('insert-stop-'+side+'-results');
   if(!q||q.length<1){el.innerHTML='';return}
   var selected=side==='dep'?window._insertStopDep:window._insertStopArr;
+  var selectedIds=selected.map(function(p){return p.id}).filter(Boolean);
   var selectedNames=selected.map(function(p){return p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase()});
-  // Search in current convoi's passengers
-  var convoiIdx=window._insertStopConvoiIdx;
-  var c=convoisOptimises[convoiIdx];
-  var available=[];
-  var seen={};
-  c.stops.forEach(function(s){
-    (s.depPers||[]).concat(s.arrPers||[]).forEach(function(p){
-      var key=p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase();
-      if(seen[key]) return;
-      seen[key]=true;
-      if(selectedNames.indexOf(key)>=0) return;
-      if((p.prenom+' '+(p.nom||'')+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0){
-        available.push(p);
-      }
-    });
-  });
+  // Search the FULL personnes database, not just the current convoi
+  var available=personnes.filter(function(p){
+    if(p.id&&selectedIds.indexOf(p.id)>=0) return false;
+    var key=p.prenom.toLowerCase()+'|'+(p.nom||'').toLowerCase();
+    if(selectedNames.indexOf(key)>=0) return false;
+    return (p.prenom+' '+(p.nom||'')+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0;
+  }).sort(function(a,b){return a.nom.localeCompare(b.nom)});
   el.innerHTML=available.map(function(p){
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border-light)">'
       +'<span>'+p.prenom+' '+(p.nom||'')+(p.foyer?' <span style="color:var(--forest);font-size:9px">('+p.foyer+')</span>':'')+'</span>'
       +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;background:'+(side==='dep'?'var(--red)':'var(--green)')+';color:white;border:none" '
-      +'onclick="insertStopAddPers(\''+side+'\',null,\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\''+(p.foyer||'').replace(/'/g,"\\'")+'\')">+</button></div>';
+      +'onclick="insertStopAddPers(\''+side+'\',\''+p.id+'\')">+</button></div>';
   }).join('')||'<div style="font-size:11px;color:var(--text-light)">Aucun résultat.</div>';
 }
 
@@ -4191,7 +4183,7 @@ function insertStopAddPers(side,persId,prenom,nom,foyer){
   var list=side==='dep'?window._insertStopDep:window._insertStopArr;
   var key=prenom.toLowerCase()+'|'+(nom||'').toLowerCase();
   if(list.some(function(x){return x.prenom.toLowerCase()+'|'+(x.nom||'').toLowerCase()===key})) return;
-  list.push({prenom:prenom,nom:nom||'',foyer:foyer||''});
+  list.push({id:persId||null,prenom:prenom,nom:nom||'',foyer:foyer||''});
   // Refresh display
   var el=document.getElementById('insert-stop-'+side+'-selected');
   el.innerHTML=list.map(function(pp,i){
