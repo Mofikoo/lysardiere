@@ -5082,7 +5082,7 @@ function buildCourrierPages(singleKey){
         +(g.dep?'<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:2px">Retour</div><div style="font-size:10px;color:#444">le '+new Date(g.dep.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div><div style="font-size:20px;font-weight:bold">'+g.dep.heure+'</div></div>':'<div>')
         +'</div></div>';
     });
-    pages+='<div style="max-width:800px;margin:0 auto;padding:10mm 0;font-family:Arial,Helvetica,sans-serif;page-break-after:always">'
+    pages+='<div style="max-width:800px;margin:0 auto;padding:4mm 0 8mm;font-family:Arial,Helvetica,sans-serif;page-break-after:always">'
       +'<div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #000">'
       +'<div style="font-size:11px;color:#333;line-height:1.5"><b>La Lysardière</b><br>84 Route de Sainte Mondane<br>24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13<br><span style="font-size:10px;color:#666">Siret : 79926743000012 — N° Atout France : IM024140012</span></div>'
       +'</div>'
@@ -5091,7 +5091,7 @@ function buildCourrierPages(singleKey){
       +'<div style="font-size:14px;margin-bottom:20px">Suite à l\'inscription d\'une ou plusieurs personnes aux séjours de vacances organisés par la Lysardière, voici le lieu et les horaires de rendez-vous aller/retour :</div>'
       +(singleLieu?'<div style="border:3px solid #000;border-radius:6px;padding:16px 24px;text-align:center;margin:20px auto 28px;max-width:450px;background:#f8f8f8;page-break-inside:avoid"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px">Lieu de rendez-vous Aller / Retour</div><div style="font-size:17px;font-weight:bold">'+singleLieu.nom+'</div>'+(singleLieu.adresse?'<div style="font-size:13px;color:#444;margin-top:4px">'+singleLieu.adresse+'</div>':'')+'</div>':'<div style="border:3px solid #000;border-radius:6px;margin:20px auto 28px;max-width:500px;background:#f8f8f8;page-break-inside:avoid;overflow:hidden"><div style="text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#666;padding:10px 24px 0">Lieux de rendez-vous Aller / Retour</div><div style="display:flex;border-top:1px solid #ccc;margin-top:8px">'+uniqueLieuObjs.map(function(l,i){return '<div style="flex:1;padding:12px 16px;text-align:center'+(i>0?';border-left:2px solid #ccc':'')+'">'+'<div style="font-size:15px;font-weight:bold">'+l.nom+'</div>'+(l.adresse?'<div style="font-size:11px;color:#444;margin-top:3px">'+l.adresse+'</div>':'')+'</div>'}).join('')+'</div></div>')
       +personnesHtml
-      +(needPiquenique?'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>':'')
+      +'<div style="border:2px solid #c00;border-radius:4px;padding:10px 16px;margin-top:16px;background:#fff0f0;font-size:12px;page-break-inside:avoid"><b style="color:#c00">IMPORTANT :</b> Merci de fournir un <b>pique-nique à l\'ALLER</b> si le rendez-vous est avant 12h45, et d\'y ajouter les <b>médicaments du midi</b> (s\'il y a).</div>'
       +'<div style="margin-top:32px;padding-top:16px;border-top:2px solid #ccc;font-size:15px;color:#222;line-height:2;page-break-inside:avoid">'
       +'Veuillez bien noter l\'heure du rendez-vous et à être ponctuel afin de ne pas perturber l\'organisation et le confort des vacanciers.'
       +'<br><br>Nous vous prions de croire, Madame, Monsieur, à l\'expression de nos meilleures salutations.'
@@ -5114,7 +5114,7 @@ async function genCourrierPdf(singleKey){
   var fullHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;background:white}</style></head><body>'+pages+'</body></html>';
   try{
     await html2pdf().set({
-      margin:[15,15,15,15],
+      margin:[10,12,15,12],
       filename:filename,
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,letterRendering:true,backgroundColor:'#ffffff'},
@@ -5135,7 +5135,7 @@ async function imprimerCourriers(singleKey){
   if(!pages){await lyAlert('Aucun courrier à imprimer.','error');return}
   var w=window.open('','_blank');
   if(!w){await lyAlert('Autorisez les popups pour cette page.','error');return}
-  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:20mm 15mm 20mm 15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:10mm 12mm 15mm 12mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
   w.document.close();
   w.focus();
   w.print();
