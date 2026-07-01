@@ -1907,13 +1907,47 @@ function restoreCustomHeuresAfterReorder(c,saved){
   c.customHeures={};
   c.stops.forEach(function(s,newIdx){
     // Find this stop in the saved list by fid+nom+action
-    var match=saved.stops.find(function(sv){
-      return sv.action===s.action&&((sv.fid&&s.fid&&sv.fid===s.fid)||(sv.nom&&s.pt&&sv.nom===s.pt.nom));
-    });
-    if(match&&match.h!==undefined){
-      c.customHeures[newIdx]=match.h;
+    // Use findIndex to avoid duplicates issue - match first unused
+    var matchIdx=-1;
+    for(var i=0;i<saved.stops.length;i++){
+      var sv=saved.stops[i];
+      if(!sv._used && sv.action===s.action&&((sv.fid&&s.fid&&sv.fid===s.fid)||(sv.nom&&s.pt&&sv.nom===s.pt.nom))){
+        matchIdx=i;
+        break;
+      }
+    }
+    if(matchIdx>=0){
+      saved.stops[matchIdx]._used=true;
+      if(saved.stops[matchIdx].h!==undefined){
+        c.customHeures[newIdx]=saved.stops[matchIdx].h;
+      }
     }
   });
+}
+
+// Helper: specifically for insertions - shift customHeures indices >= insertAtIdx by +1
+function shiftCustomHeuresAfterInsert(c,insertAtIdx){
+  if(!c.customHeures) return;
+  var newH={};
+  Object.keys(c.customHeures).forEach(function(k){
+    var idx=parseInt(k);
+    if(idx>=insertAtIdx) newH[idx+1]=c.customHeures[idx];
+    else newH[idx]=c.customHeures[idx];
+  });
+  c.customHeures=newH;
+}
+
+// Helper: specifically for deletions - shift customHeures indices > removedIdx by -1
+function shiftCustomHeuresAfterRemove(c,removedIdx){
+  if(!c.customHeures) return;
+  var newH={};
+  Object.keys(c.customHeures).forEach(function(k){
+    var idx=parseInt(k);
+    if(idx===removedIdx) return; // skip deleted stop's hour
+    else if(idx>removedIdx) newH[idx-1]=c.customHeures[idx];
+    else newH[idx]=c.customHeures[idx];
+  });
+  c.customHeures=newH;
 }
 
 function computeHeures(c){
@@ -4120,8 +4154,8 @@ async function supprimerStop(convoiIdx,stopIdx){
   if(nbPers>0) msg+='\n'+nbPers+' passager'+(nbPers>1?'s':'')+' ser'+(nbPers>1?'ont':'a')+' retiré'+(nbPers>1?'s':'')+' du convoi.';
   if(!await lyConfirm(msg)) return;
   
-  // Save custom hours before removing stop (indices will shift)
-  var savedH=saveCustomHeuresByStop(c);
+  // Shift customHeures to remove the deleted stop's slot
+  shiftCustomHeuresAfterRemove(c,stopIdx);
   
   // Remove the stop
   c.stops.splice(stopIdx,1);
@@ -4292,8 +4326,8 @@ function execInsertStop(convoiIdx,insertAtIdx){
     sameFoyer:false
   };
   
-  // Save custom hours before modifying stop array
-  var savedH=saveCustomHeuresByStop(c);
+  // Shift customHeures indices to make room for the new stop
+  shiftCustomHeuresAfterInsert(c,insertAtIdx);
   
   // Insert at position
   c.stops.splice(insertAtIdx,0,newStop);
@@ -4315,11 +4349,6 @@ function execInsertStop(convoiIdx,insertAtIdx){
     return (s.depPers&&s.depPers.length)||(s.arrPers&&s.arrPers.length);
   });
   
-  // Restore custom hours with updated indices
-  restoreCustomHeuresAfterReorder(c,savedH);
-  
-  // Recalculate all from scratch
-  
   // Update convoi totals from stops
   var newDep=[],newArr=[];
   c.stops.forEach(function(s){
@@ -4329,6 +4358,15 @@ function execInsertStop(convoiIdx,insertAtIdx){
   });
   c.depart=newDep;
   c.arrivee=newArr;
+  
+  // Recalculate seats for each stop (fixes "X à bord" display)
+  var seatCount=newDep.length;
+  c.stops[0].seats=seatCount;
+  for(var si=1;si<c.stops.length;si++){
+    seatCount=seatCount-(c.stops[si].depPers||[]).length+(c.stops[si].arrPers||[]).length;
+    c.stops[si].seats=seatCount;
+  }
+  
   c.peakSeats=peakSeatsStops(c.stops);
   c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
   c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
