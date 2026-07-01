@@ -1872,6 +1872,36 @@ async function delVehicle(id){if(!await lyConfirm('Supprimer ce véhicule ?')) r
 // heures[i] = "heure RDV" pour chaque arrêt
 // rawArrivals[i] = heure d'arrivee brute exacte
 // Le convoi repart de l'heure RDV de chaque arrêt
+
+// Helper: save customHeures keyed by stop identity (fid+action) instead of index
+// Use this before reordering stops to preserve manual hours
+function saveCustomHeuresByStop(c){
+  if(!c.customHeures||!c.stops) return {};
+  var saved={};
+  c.stops.forEach(function(s,i){
+    if(c.customHeures[i]!==undefined){
+      var key=(s.fid||s.pt&&s.pt.nom||'stop')+'_'+s.action+'_'+i;
+      saved[key]=c.customHeures[i];
+    }
+  });
+  return {byIndex:Object.assign({},c.customHeures),stops:c.stops.map(function(s,i){return {fid:s.fid,nom:s.pt&&s.pt.nom,action:s.action,h:c.customHeures[i]}})};
+}
+
+// Helper: rebuild customHeures after stop reorder using saved stop identities
+function restoreCustomHeuresAfterReorder(c,saved){
+  if(!saved||!saved.stops) return;
+  c.customHeures={};
+  c.stops.forEach(function(s,newIdx){
+    // Find this stop in the saved list by fid+nom+action
+    var match=saved.stops.find(function(sv){
+      return sv.action===s.action&&((sv.fid&&s.fid&&sv.fid===s.fid)||(sv.nom&&s.pt&&sv.nom===s.pt.nom));
+    });
+    if(match&&match.h!==undefined){
+      c.customHeures[newIdx]=match.h;
+    }
+  });
+}
+
 function computeHeures(c){
   if(!c.heureDepart) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
   var parts=c.heureDepart.split(':');
@@ -3512,7 +3542,7 @@ function rebuildConvoi(convoi,removeFid,removePt,addNode,p){
     convoi.peakSeats=peakSeatsStops(newStops);
     convoi.remplissage=Math.round(convoi.peakSeats/convoi.vehicule.cap*100);
     convoi.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
-    convoi.mapsEnrichi=false;convoi.legDurations=null;convoi.customHeures=null;
+    convoi.mapsEnrichi=false;convoi.legDurations=null;
   } else {
     convoi.stops=[{action:'depart',pt:LYS,seats:0},{action:'retour',pt:LYS,seats:0}];
     convoi.km=0;convoi.dureeMin=0;convoi.depart=[];convoi.arrivee=[];convoi.peakSeats=0;convoi.remplissage=0;
@@ -3600,7 +3630,7 @@ function retirerPassager(convoiIdx,prenom,nom,side){
     c.depart=dep;c.arrivee=arr;c.peakSeats=peakSeatsStops(newStops);
     c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
     c.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
-    c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+    c.mapsEnrichi=false;c.legDurations=null;
   }
   convoisOptimises=convoisOptimises.filter(function(cc){return cc.stops.length>2||(cc.depart&&cc.depart.length)||(cc.arrivee&&cc.arrivee.length)});
   var date=document.getElementById('ldate').value;
@@ -3680,7 +3710,7 @@ function fusionnerDoublons(convoiIdx){
   c.peakSeats=peakSeatsStops(newStops);
   c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
   c.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
-  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  c.mapsEnrichi=false;c.legDurations=null;
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
   lyAlert('Doublons fusionnés dans le convoi '+(convoiIdx+1)+'.','success');
@@ -3703,16 +3733,20 @@ function addToConvoi(convoi,node,p){
   convoi.peakSeats=peakSeatsStops(newStops);
   convoi.remplissage=Math.round(convoi.peakSeats/convoi.vehicule.cap*100);
   convoi.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
-  convoi.mapsEnrichi=false;convoi.legDurations=null;convoi.customHeures=null;
+  convoi.mapsEnrichi=false;convoi.legDurations=null;
 }
 
 async function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
   document.querySelector('.ly-modal-overlay').remove();
   var c=convoisOptimises[convoiIdx];
+  // Save custom hours keyed by stop identity before reordering
+  var savedH=saveCustomHeuresByStop(c);
   // Swap the two stops
   var tmp=c.stops[stopIdxA];
   c.stops[stopIdxA]=c.stops[stopIdxB];
   c.stops[stopIdxB]=tmp;
+  // Restore custom hours with new indices
+  restoreCustomHeuresAfterReorder(c,savedH);
   // Recalculate seats
   var seats=c.stops[0].seats;
   for(var i=1;i<c.stops.length-1;i++){
@@ -3724,7 +3758,7 @@ async function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
   c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
   c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
   c.dureeMin=Math.round(c.km/getParams().vitesse*60);
-  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  c.mapsEnrichi=false;c.legDurations=null;
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
   setPersist('⏳ Recalcul Maps...','neutral');
@@ -4068,8 +4102,14 @@ async function supprimerStop(convoiIdx,stopIdx){
   if(nbPers>0) msg+='\n'+nbPers+' passager'+(nbPers>1?'s':'')+' ser'+(nbPers>1?'ont':'a')+' retiré'+(nbPers>1?'s':'')+' du convoi.';
   if(!await lyConfirm(msg)) return;
   
+  // Save custom hours before removing stop (indices will shift)
+  var savedH=saveCustomHeuresByStop(c);
+  
   // Remove the stop
   c.stops.splice(stopIdx,1);
+  
+  // Restore custom hours with updated indices
+  restoreCustomHeuresAfterReorder(c,savedH);
   
   // Recalculate depart/arrivee from remaining stops
   var newDep=[],newArr=[];
@@ -4094,7 +4134,7 @@ async function supprimerStop(convoiIdx,stopIdx){
   c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
   c.dureeMin=Math.round(c.km/getParams().vitesse*60);
   c.type=(newDep.length&&newArr.length)?'rotation':newDep.length?'depart_only':'arrivee_only';
-  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  c.mapsEnrichi=false;c.legDurations=null;
   
   // Remove convoi if empty (only depart+retour left)
   if(c.stops.length<=2){
@@ -4232,6 +4272,9 @@ function execInsertStop(convoiIdx,insertAtIdx){
     sameFoyer:false
   };
   
+  // Save custom hours before modifying stop array
+  var savedH=saveCustomHeuresByStop(c);
+  
   // Insert at position
   c.stops.splice(insertAtIdx,0,newStop);
   
@@ -4252,14 +4295,10 @@ function execInsertStop(convoiIdx,insertAtIdx){
     return (s.depPers&&s.depPers.length)||(s.arrPers&&s.arrPers.length);
   });
   
+  // Restore custom hours with updated indices
+  restoreCustomHeuresAfterReorder(c,savedH);
+  
   // Recalculate all from scratch
-  var seats=c.depart?c.depart.length:0;
-  c.stops[0].seats=seats;
-  for(var i=1;i<c.stops.length-1;i++){
-    seats=seats-(c.stops[i].depPers||[]).length+(c.stops[i].arrPers||[]).length;
-    c.stops[i].seats=seats;
-  }
-  c.stops[c.stops.length-1].seats=seats;
   
   // Update convoi totals from stops
   var newDep=[],newArr=[];
@@ -4275,7 +4314,7 @@ function execInsertStop(convoiIdx,insertAtIdx){
   c.km=Math.round(routeLen(c.stops.map(function(s){return s.pt})));
   c.dureeMin=Math.round(c.km/p.vitesse*60);
   c.type=(c.depart.length&&c.arrivee.length)?'rotation':c.depart.length?'depart_only':'arrivee_only';
-  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  c.mapsEnrichi=false;c.legDurations=null;
   
   // Capacity warning
   if(c.peakSeats>c.vehicule.cap){
@@ -4420,7 +4459,7 @@ function execToggleDepArr(convoiIdx,stopIdx,prenom,nom,currentSide){
   });
   c.depart=allDep;c.arrivee=allArr;
   c.type=(allDep.length&&allArr.length)?'rotation':allDep.length?'depart_only':'arrivee_only';
-  c.mapsEnrichi=false;c.legDurations=null;c.customHeures=null;
+  c.mapsEnrichi=false;c.legDurations=null;
   
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
@@ -4487,7 +4526,7 @@ function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoi
     conv.remplissage=Math.round(conv.peakSeats/conv.vehicule.cap*100);
     conv.km=Math.round(routeLen(conv.stops.map(function(s){return s.pt})));
     conv.dureeMin=Math.round(conv.km/p.vitesse*60);
-    conv.mapsEnrichi=false;conv.legDurations=null;conv.customHeures=null;
+    conv.mapsEnrichi=false;conv.legDurations=null;
   });
 
   convoisOptimises=convoisOptimises.filter(function(cc){return cc.stops.length>2});
