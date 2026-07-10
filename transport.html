@@ -4062,8 +4062,41 @@ function ajouterPassager(persId,side){
   
   var targetConvoi=convoisOptimises[bestConvoi];
   
-  // Check capacity
-  if(!capacityCheck(targetConvoi,1)) return;
+  // Check capacity: simulate real peak with the person added at their specific stop
+  var simStops=targetConvoi.stops.map(function(s){
+    return {action:s.action,depPers:(s.depPers||[]).slice(),arrPers:(s.arrPers||[]).slice(),seats:s.seats};
+  });
+  if(existingStop){
+    var simStop=simStops.find(function(s){
+      return s.fid===existingStop.fid&&s.action===existingStop.action||
+        (s.pt&&existingStop.pt&&s.pt.nom===existingStop.pt.nom&&s.action===existingStop.action);
+    });
+    // Rebuild existingStop reference for simStop
+    simStops.forEach(function(s,i){
+      if(targetConvoi.stops[i]===existingStop) simStop=s;
+    });
+    if(simStop){
+      if(side==='arr') simStop.arrPers=simStop.arrPers.concat([persObj]);
+      else simStop.depPers=simStop.depPers.concat([persObj]);
+    }
+  } else {
+    // New stop: simulate adding before retour
+    var newSimStop={action:side==='arr'?'pickup':'depot',depPers:side==='dep'?[persObj]:[],arrPers:side==='arr'?[persObj]:[]};
+    simStops.splice(simStops.length-1,0,newSimStop);
+  }
+  // Recalculate seats through all stops
+  var simSeats=targetConvoi.depart?targetConvoi.depart.length:0;
+  simStops[0].seats=simSeats;
+  for(var si=1;si<simStops.length;si++){
+    simSeats=simSeats-(simStops[si].depPers||[]).length+(simStops[si].arrPers||[]).length;
+    simStops[si].seats=simSeats;
+  }
+  var simPeak=0;
+  simStops.forEach(function(s){if(s.seats>simPeak) simPeak=s.seats;});
+  if(simPeak>targetConvoi.vehicule.cap){
+    lyAlert('⛔ CAPACITÉ DÉPASSÉE\n\nMême en tenant compte des rotations, le pic atteindrait '+simPeak+'/'+targetConvoi.vehicule.cap+' places.','error');
+    return;
+  }
   
   // If the lieu already exists as a stop, add person directly — no Maps recalc, no reorder
   var existingStop=targetConvoi.stops.find(function(s){
