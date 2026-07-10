@@ -1898,11 +1898,13 @@ function show(t){
 
 // ── FLOTTE ────────────────────────────────────
 function renderFlotte(){
+  var scrollY=window.scrollY;
   var sorted=vehicles.slice().sort(function(a,b){if(a.type===b.type) return a.label.localeCompare(b.label);return a.type==='trafic'?-1:1});
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun véhicule.</div>';return}
   el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';var f=getVehicleFlags(v);var tags='';if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de péage</span>';if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
+  window.scrollTo({top:scrollY,behavior:'instant'});
 }
 async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){await lyAlert('Nom requis.','error');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
 async function delVehicle(id){if(!await lyConfirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
@@ -2176,18 +2178,31 @@ function scrollToSemaine(dateStr){
 }
 
 function renderSemaines(){
+  // Save state before re-render
+  var openIds=[];
+  document.querySelectorAll('.semaine-body.open').forEach(function(el){if(el.id) openIds.push(el.id)});
+  var archiveOpen=document.getElementById('archive-body')&&document.getElementById('archive-body').classList.contains('open');
+  var scrollY=window.scrollY;
+  
   var actives=semaines,archs=archives;
   document.getElementById('sem-count').textContent=actives.length;
   document.getElementById('archive-count').textContent=archs.length;
-  
-  // Calendar view
   renderSemainesCalendar(actives.concat(archs));
-  
   var el=document.getElementById('semaines-list');
   if(!actives.length){el.innerHTML='<div class="empty">Aucune semaine. Lancez une optimisation puis sauvegardez-la.</div>';}
   else{el.innerHTML=actives.map(function(s,idx){return renderSemaineCard(s,idx,false)}).join('')}
   var arcSec=document.getElementById('archive-section');
   if(archs.length>0){arcSec.style.display='block';document.getElementById('archive-list').innerHTML=archs.map(function(s,idx){return renderSemaineCard(s,idx,true)}).join('')}else{arcSec.style.display='none'}
+  
+  // Restore open state
+  openIds.forEach(function(id){
+    var bodyEl=document.getElementById(id);
+    if(bodyEl){bodyEl.classList.add('open');var arr=document.getElementById('arr-'+id);if(arr)arr.textContent='▲';}
+  });
+  if(archiveOpen){var ab=document.getElementById('archive-body');if(ab)ab.classList.add('open');var aa=document.getElementById('archive-arrow');if(aa)aa.textContent='▲';}
+  
+  // Restore scroll position
+  window.scrollTo({top:scrollY,behavior:'instant'});
 }
 
 function renderSemaineCard(s,idx,isArchive){
@@ -2515,12 +2530,15 @@ var id='sem'+Date.now();var data={id:id,date:date,type:document.getElementById('
 
 // ── LIEUX ─────────────────────────────────────
 function renderLieux(){
+  var scrollY=window.scrollY;
   document.getElementById('lc').textContent=lieux.length;var el=document.getElementById('ll');
   if(!lieux.length){el.innerHTML='<div class="empty">Aucun lieu.</div>';return}
   el.innerHTML=lieux.map(function(f){
     var ok=hasGPS(f),d=ok?Math.round(dLys(f)):null,b=ok?Math.round(bearing(LYS,f)):null;
     if(editingLieuId===f.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+f.nom+'</div><div class="cols2" style="margin-bottom:8px"><div><label>Nom</label><input id="el-n-'+f.id+'" value="'+esc(f.nom)+'"></div><div><label>Ville</label><input id="el-v-'+f.id+'" value="'+esc(f.ville||'')+'"></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Adresse</label><input id="el-a-'+f.id+'" value="'+esc(f.adresse)+'"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label>Lat</label><input type="number" step="0.0001" id="el-lat-'+f.id+'" value="'+(f.lat||'')+'"></div><div><label>Lng</label><input type="number" step="0.0001" id="el-lng-'+f.id+'" value="'+(f.lng||'')+'"></div></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingLieuId=null;renderLieux()">Annuler</button><button class="btn btn-primary btn-sm" onclick="saveLieu(\''+f.id+'\')">Enregistrer</button></div></div>'}
     return '<div class="item-row"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div><div style="font-size:11px;color:var(--text-light)">'+f.adresse+(f.ville?' · '+f.ville:'')+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+(ok?'<span class="badge" style="background:var(--green-bg);color:var(--green)">'+d+'km · '+b+'°</span>':'<span class="badge" style="background:var(--red-bg);color:var(--red)">GPS manquant</span>')+'<button class="btn btn-edit btn-sm" onclick="editingLieuId=\''+f.id+'\';renderLieux()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delLieu(\''+f.id+'\')">✕</button></div></div>'}).join('');
+  window.scrollTo({top:scrollY,behavior:'instant'});
+  if(editingLieuId){var editEl=document.querySelector('.item-row.editing');if(editEl) editEl.scrollIntoView({block:'nearest',behavior:'instant'});}
 }
 async function addLieu(){var nom=document.getElementById('ln').value.trim(),adresse=document.getElementById('la').value.trim();if(!nom||!adresse){await lyAlert('Nom et adresse requis.','error');return}var lat=parseFloat(document.getElementById('llat').value),lng=parseFloat(document.getElementById('llng').value);var f={id:'f'+Date.now(),nom:nom,ville:document.getElementById('lv').value.trim(),adresse:adresse,lat:isNaN(lat)?null:lat,lng:isNaN(lng)?null:lng};setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('lieux',f.id,f);lieux.push(f);['ln','lv','la','llat','llng'].forEach(function(id){document.getElementById(id).value=''});updatePersistBadge();renderLieux()}
 async function saveLieu(id){var f=getLieu(id);if(!f) return;f.nom=document.getElementById('el-n-'+id).value.trim()||f.nom;f.ville=document.getElementById('el-v-'+id).value.trim();f.adresse=document.getElementById('el-a-'+id).value.trim()||f.adresse;var lat=parseFloat(document.getElementById('el-lat-'+id).value),lng=parseFloat(document.getElementById('el-lng-'+id).value);if(!isNaN(lat)) f.lat=lat;if(!isNaN(lng)) f.lng=lng;setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('lieux',id,f);editingLieuId=null;updatePersistBadge();renderLieux()}
@@ -2538,6 +2556,7 @@ function getSelectedLieux(containerId){
 function setSort(s){currentSort=s;document.querySelectorAll('.sort-btn').forEach(function(b){b.classList.remove('active')});document.getElementById('sort-'+s).classList.add('active');renderPersonnes()}
 function getSorted(){var s=personnes.slice();if(currentSort==='prenom') s.sort(function(a,b){return a.prenom.localeCompare(b.prenom)});else if(currentSort==='nom') s.sort(function(a,b){return(a.nom||'').localeCompare(b.nom||'')});else if(currentSort==='foyer') s.sort(function(a,b){return(a.foyer||'').localeCompare(b.foyer||'')});else if(currentSort==='lieu'){s.sort(function(a,b){var la=getLieu(a.lieu),lb=getLieu(b.lieu);return(la?la.nom:'').localeCompare(lb?lb.nom:'')})}return s}
 function renderPersonnes(){
+  var scrollY=window.scrollY;
   document.getElementById('pcount').textContent=personnes.length;var el=document.getElementById('pl');
   if(!personnes.length){el.innerHTML='<div class="empty">Aucune personne.</div>';return}
   var searchVal=(document.getElementById('search-pers')?document.getElementById('search-pers').value:'').toLowerCase();
@@ -2548,6 +2567,9 @@ function renderPersonnes(){
     var f={nom:getPersonLieuLabel(p)},gi=personnes.indexOf(p);
     if(editingPersonneId===p.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+p.prenom+' '+p.nom+'</div><div class="cols4" style="margin-bottom:8px"><div><label>Prenom</label><input id="ep-pp-'+p.id+'" value="'+esc(p.prenom)+'"></div><div><label>Nom</label><input id="ep-pn-'+p.id+'" value="'+esc(p.nom||'')+'"></div><div><label>Foyer</label><input id="ep-pfoyer-'+p.id+'" value="'+esc(p.foyer||'')+'"></div><div><label>Lieu(x) de RDV</label><div id="ep-pf-container-'+p.id+'" style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:6px 8px;max-height:100px;overflow-y:auto;font-size:11px">'+lieux.map(function(l){var checked=getPersonLieux(p).indexOf(l.id)>=0;return '<label style="display:flex;align-items:center;gap:4px;padding:2px 0;cursor:pointer"><input type="checkbox" value="'+l.id+'"'+(checked?' checked':'')+' style="width:auto;flex-shrink:0">'+l.nom+'</label>'}).join('')+'</div></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Besoins</label><select id="ep-pb-'+p.id+'"><option value=""'+(p.besoins===''?' selected':'')+'>Aucun</option><option value="fauteuil"'+(p.besoins==='fauteuil'?' selected':'')+'>Fauteuil</option><option value="deambulateur"'+(p.besoins==='deambulateur'?' selected':'')+'>Deambulateur</option></select></div><div><label>Notes</label><input id="ep-pnotes-'+p.id+'" value="'+esc(p.notes||'')+'"></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingPersonneId=null;renderPersonnes()">Annuler</button><button class="btn btn-primary btn-sm" onclick="savePersonne(\''+p.id+'\')">Enregistrer</button></div></div>'}
     return '<div class="item-row"><div class="av" style="background:'+col(gi)+'18;color:'+col(gi)+'">'+initials(p)+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+p.prenom+' '+p.nom+'</div><div style="font-size:11px;color:var(--text-light);display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+(p.foyer?'<span class="foyer-badge">'+p.foyer+'</span>':'')+'<span>'+f.nom+'</span></div>'+(p.notes?'<div style="font-size:11px;color:var(--text-mid);margin-top:3px;font-style:italic">'+p.notes+'</div>':'')+'</div>'+(p.besoins?'<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);flex-shrink:0">'+p.besoins+'</span>':'')+'<button class="btn btn-edit btn-sm" onclick="editingPersonneId=\''+p.id+'\';renderPersonnes()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delP(\''+p.id+'\')">Supprimer</button></div>'}).join('');
+  window.scrollTo({top:scrollY,behavior:'instant'});
+  // Scroll editing row into view if it exists
+  if(editingPersonneId){var editEl=document.querySelector('.item-row.editing');if(editEl) editEl.scrollIntoView({block:'nearest',behavior:'instant'});}
 }
 function normPrenom(s){s=s.trim();if(!s)return '';return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
 function normMaj(s){return s.trim().toUpperCase()}
@@ -2582,12 +2604,13 @@ function isDuplicatePersonne(prenom,nom,foyer,excludeId){
 }
 // ── FOYERS ─────────────────────────────────
 function renderFoyers(){
+  var scrollY=window.scrollY;
   var q=(document.getElementById('search-foyer')||{value:''}).value.toLowerCase().trim();
   var filtered=foyers.filter(function(f){return !q||f.nom.toLowerCase().indexOf(q)>=0});
   filtered.sort(function(a,b){return a.nom.localeCompare(b.nom)});
   document.getElementById('foyer-count').textContent=foyers.length;
   var el=document.getElementById('foyers-list');
-  if(!filtered.length){el.innerHTML='<div class="empty">Aucun foyer.'+(foyers.length?'':' Cliquez "Synchroniser depuis les personnes" pour importer.')+'</div>';return}
+  if(!filtered.length){el.innerHTML='<div class="empty">Aucun foyer.'+(foyers.length?'':' Cliquez "Synchroniser depuis les personnes" pour importer.')+'</div>';window.scrollTo({top:scrollY,behavior:'instant'});return}
   el.innerHTML=filtered.map(function(f){
     var nbPers=personnes.filter(function(p){return(p.foyer||'').toUpperCase()===f.nom.toUpperCase()}).length;
     return '<div class="item-row" style="padding:8px 14px"><div style="flex:1;min-width:0">'
@@ -2596,6 +2619,7 @@ function renderFoyers(){
       +'</div>'
       +'<button class="btn btn-danger btn-sm" onclick="delFoyer(\''+f.id+'\')">✕</button></div>';
   }).join('');
+  window.scrollTo({top:scrollY,behavior:'instant'});
 }
 
 async function addFoyer(){
@@ -4004,6 +4028,7 @@ async function enrichirConvoisAvecMaps(convois,silent){
 function getBadgeSt(t){if(t==='rotation') return 'background:#FFF3E0;color:var(--copper-deep)';if(t==='depart_only') return 'background:var(--red-bg);color:var(--red)';return 'background:var(--green-bg);color:var(--green)'}
 
 function renderOptim(dateStr,errors){
+  var scrollY=window.scrollY; // preserve scroll for edits
   var d=dateStr||'';var dateLabel=fmtDate(d);var el=document.getElementById('optim-content');
   var tDep=convoisOptimises.reduce(function(s,c){return s+c.depart.length},0);
   var tArr=convoisOptimises.reduce(function(s,c){return s+c.arrivee.length},0);
@@ -4085,6 +4110,7 @@ function renderOptim(dateStr,errors){
     +'<button class="btn btn-accent" style="font-size:13px;padding:11px 24px" onclick="genFiches()">Valider → Fiches</button></div>';
   }
   el.innerHTML=html;
+  window.scrollTo({top:scrollY,behavior:'instant'});
   // Auto-recalc Maps for any convoi that lost its Maps data
   triggerAutoRecalcOptim(dateStr);
 }
