@@ -1661,18 +1661,40 @@ async function downloadBackupFull(silent){
     zip.file('data/database.json',JSON.stringify(allTables,null,2));
     zip.file('manifest.json',JSON.stringify(manifest,null,2));
     
-    // 4) Générer le ZIP — nom fixe pour écraser le précédent automatiquement
+    // 4) Générer le ZIP
     setPersist('⏳ Création du fichier ZIP...','neutral');
     var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');
-    // Nom fixe = même fichier écrasé à chaque fois dans le dossier téléchargements
-    a.href=url;
-    a.download='lysardiere-backup-LATEST.zip';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Try File System Access API (Chrome/Edge) — lets user pick a file to overwrite
+    var saved=false;
+    if(window.showSaveFilePicker){
+      try{
+        var fileHandle=await window.showSaveFilePicker({
+          suggestedName:'lysardiere-backup-LATEST.zip',
+          types:[{description:'Fichier ZIP',accept:{'application/zip':['.zip']}}]
+        });
+        var writable=await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        saved=true;
+      } catch(e){
+        if(e.name==='AbortError') return; // User cancelled
+        console.warn('showSaveFilePicker failed, using fallback:',e);
+      }
+    }
+    
+    // Fallback (Safari/Firefox/blocked): download with date in name
+    if(!saved){
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      var dStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      a.href=url;
+      a.download='lysardiere-backup-'+dStr+'.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url)},5000);
+    }
     
     // 5) Sauvegarder date + hash
     localStorage.setItem('lys_last_backup',d.toISOString());
