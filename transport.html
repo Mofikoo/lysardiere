@@ -1157,9 +1157,9 @@ input:focus, select:focus {
       </div>
     </div>
     <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:14px">
-      Télécharge un fichier ZIP contenant <strong>TOUTES</strong> les données des deux applications :
+      Télécharge un fichier ZIP contenant toutes les données de l'application transport :
       <br>• <strong>Transport</strong> : lieux, personnes, semaines, archives, véhicules, prix gazole
-      <br>• <strong>Documents</strong> : fiches vacanciers, séjours, et tous les fichiers PDF/images joints
+      <br>• <strong>Documents</strong> : fiches vacanciers, séjours (données Supabase uniquement, sans les fichiers PDF)
       <br>Une sauvegarde automatique est proposée chaque semaine. La restauration recrée tout fidèlement.
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1515,7 +1515,7 @@ var ALL_BACKUP_TABLES=[
 ];
 
 // Bucket(s) de storage à sauvegarder
-var ALL_BACKUP_BUCKETS=['documents'];
+var ALL_BACKUP_BUCKETS=[];
 
 function buildBackupJson(){
   // Version "rapide" (sans storage), gardée pour compat
@@ -1610,6 +1610,13 @@ async function downloadStorageFile(bucket,path){
   return await res.blob();
 }
 
+async function hashData(obj){
+  var str=JSON.stringify(obj);
+  var buf=new TextEncoder().encode(str);
+  var hashBuf=await crypto.subtle.digest('SHA-256',buf);
+  return Array.from(new Uint8Array(hashBuf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+
 async function downloadBackupFull(silent){
   try{
     setPersist('⏳ Préparation sauvegarde...','neutral');
@@ -1624,19 +1631,26 @@ async function downloadBackupFull(silent){
       setPersist('⏳ Sauvegarde table '+t+'...','neutral');
       try{
         var rows=await fetchAllFromTable(t);
-        if(rows!==null){
-          allTables[t]=rows;
-          counts[t]=rows.length;
-        }
-      } catch(e){
-        console.warn('Table '+t+' non sauvegardée :',e.message);
-      }
+        if(rows!==null){allTables[t]=rows;counts[t]=rows.length;}
+      } catch(e){console.warn('Table '+t+' non sauvegardée :',e.message);}
     }
     
-    // 2) Construire le manifest
+    // 2) Comparer avec le hash précédent — si rien n'a changé, ne pas re-télécharger
+    var currentHash=await hashData(allTables);
+    var prevHash=localStorage.getItem('lys_backup_hash');
+    if(prevHash&&prevHash===currentHash&&!silent){
+      var lastStr=localStorage.getItem('lys_last_backup');
+      var lastDate=lastStr?new Date(lastStr).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+      lyAlert('✅ Aucune modification depuis la dernière sauvegarde du '+lastDate+'.\n\nAucun téléchargement nécessaire.','success');
+      setPersist('✅ Données inchangées','ok');
+      return;
+    }
+    
+    // 3) Construire le manifest
+    var d=new Date();
     var manifest={
       version:2,
-      date:new Date().toISOString(),
+      date:d.toISOString(),
       supabase_url:SUPA_URL,
       tables:Object.keys(allTables),
       counts:counts,
@@ -1644,55 +1658,30 @@ async function downloadBackupFull(silent){
       storage_files:{}
     };
     
-    // Ajouter le JSON des données
     zip.file('data/database.json',JSON.stringify(allTables,null,2));
-    
-    // 3) Récupérer le storage
-    for(var bi=0;bi<ALL_BACKUP_BUCKETS.length;bi++){
-      var bucket=ALL_BACKUP_BUCKETS[bi];
-      setPersist('⏳ Listage fichiers '+bucket+'...','neutral');
-      try{
-        var files=await listStorageFiles(bucket);
-        manifest.buckets.push(bucket);
-        manifest.storage_files[bucket]=[];
-        for(var fi=0;fi<files.length;fi++){
-          var f=files[fi];
-          setPersist('⏳ Téléchargement '+(fi+1)+'/'+files.length+' : '+f.path,'neutral');
-          try{
-            var blob=await downloadStorageFile(bucket,f.path);
-            zip.file('storage/'+bucket+'/'+f.path,blob);
-            manifest.storage_files[bucket].push({path:f.path,size:f.size,contentType:f.contentType});
-          } catch(e){
-            console.warn('Fichier non récupéré : '+f.path,e);
-          }
-        }
-      } catch(e){
-        console.warn('Bucket '+bucket+' :',e);
-      }
-    }
-    
-    // 4) Ajouter le manifest
     zip.file('manifest.json',JSON.stringify(manifest,null,2));
     
-    // 5) Générer le ZIP
+    // 4) Générer le ZIP — nom fixe pour écraser le précédent automatiquement
     setPersist('⏳ Création du fichier ZIP...','neutral');
     var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    var d=new Date();
-    var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'_'+String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');
+    // Nom fixe = même fichier écrasé à chaque fois dans le dossier téléchargements
     a.href=url;
-    a.download='lysardiere-backup-COMPLET-'+ts+'.zip';
+    a.download='lysardiere-backup-LATEST.zip';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
+    // 5) Sauvegarder date + hash
     localStorage.setItem('lys_last_backup',d.toISOString());
-    var totalFiles=Object.values(manifest.storage_files).reduce(function(s,arr){return s+arr.length},0);
+    localStorage.setItem('lys_backup_hash',currentHash);
+    
+    var totalRows=Object.values(counts).reduce(function(s,n){return s+n},0);
     setPersist('✅ Sauvegarde terminée','ok');
     if(!silent){
-      lyAlert('Sauvegarde COMPLÈTE téléchargée :\n• '+Object.keys(allTables).length+' tables ('+Object.values(counts).reduce(function(s,n){return s+n},0)+' lignes au total)\n• '+totalFiles+' fichier'+(totalFiles>1?'s':'')+' du storage','success');
+      lyAlert('Sauvegarde téléchargée :\n• '+Object.keys(allTables).length+' tables, '+totalRows+' lignes au total\n• Fichier : lysardiere-backup-LATEST.zip\n(Le fichier précédent est écrasé automatiquement si vous gardez le même nom.)','success');
     }
     updateBackupStatus();
   } catch(e){
@@ -1707,7 +1696,6 @@ function downloadBackup(silent){
 }
 
 function checkAutoBackup(){
-  // Auto-prompt for backup if last one is older than 7 days
   var lastStr=localStorage.getItem('lys_last_backup');
   var shouldPrompt=false;
   if(!lastStr){
@@ -1719,8 +1707,29 @@ function checkAutoBackup(){
   }
   if(shouldPrompt){
     setTimeout(async function(){
-      var msg=lastStr?'Dernière sauvegarde il y a plus de 7 jours.':'Aucune sauvegarde locale détectée.';
-      if(await lyConfirm(msg+'\n\nTélécharger une sauvegarde COMPLÈTE maintenant ?\n(Toutes les tables ET les fichiers documents seront sauvegardés dans un fichier ZIP.)')){
+      // Quick hash check before prompting — no need to bug the user if nothing changed
+      var prevHash=localStorage.getItem('lys_backup_hash');
+      if(prevHash&&lastStr){
+        try{
+          // Fetch only personnes + semaines for a quick check (lightweight)
+          var quickTables={};
+          for(var i=0;i<ALL_BACKUP_TABLES.length;i++){
+            var rows=await fetchAllFromTable(ALL_BACKUP_TABLES[i]);
+            if(rows) quickTables[ALL_BACKUP_TABLES[i]]=rows;
+          }
+          var currentHash=await hashData(quickTables);
+          if(currentHash===prevHash){
+            // Nothing changed — just update the timestamp silently
+            localStorage.setItem('lys_last_backup',new Date().toISOString());
+            updateBackupStatus();
+            return;
+          }
+        } catch(e){
+          console.warn('Hash check failed:',e);
+        }
+      }
+      var msg=lastStr?'Dernière sauvegarde il y a plus de 7 jours et des modifications ont été détectées.':'Aucune sauvegarde locale détectée.';
+      if(await lyConfirm(msg+'\n\nTélécharger une sauvegarde maintenant ?')){
         downloadBackupFull();
       } else {
         localStorage.setItem('lys_last_backup',new Date(Date.now()-6*24*60*60*1000).toISOString());
