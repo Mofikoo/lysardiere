@@ -826,6 +826,23 @@ input:focus, select:focus {
   </div>
   <div id="semaines-calendar" class="card no-print" style="padding:14px 18px;margin-bottom:12px"></div>
   <div id="semaines-list"><div class="empty">Aucune semaine. Lancez une optimisation puis sauvegardez-la.</div></div>
+
+  <!-- Section MER -->
+  <div class="archive-section no-print" id="mer-section" style="display:none">
+    <div class="archive-header" onclick="toggleMer()" style="border-left:4px solid #0ea5e9">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:#0ea5e9;display:flex;align-items:center;justify-content:center;color:white;font-size:16px">🌊</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#0284c7">Mer</div>
+          <div style="font-size:12px;color:var(--text-light)"><span id="mer-count">0</span> séjour(s) balnéaire(s)</div>
+        </div>
+      </div>
+      <span style="font-size:16px;color:#0284c7" id="mer-arrow">&#9660;</span>
+    </div>
+    <div class="archive-body" id="mer-body"><div id="mer-list"></div></div>
+  </div>
+
+  <!-- Section Archives -->
   <div class="archive-section no-print" id="archive-section" style="display:none">
     <div class="archive-header" onclick="toggleArchive()">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1088,7 +1105,13 @@ input:focus, select:focus {
       <div><label>Date début</label><input type="date" id="courrier-debut"></div>
       <div><label>Date fin</label><input type="date" id="courrier-fin"></div>
     </div>
-    <div style="text-align:right"><button class="btn btn-primary" onclick="renderCourrier()">Afficher les vacanciers</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="courrier-mer-only" style="width:auto">
+        <span>🌊 Séjours Mer uniquement</span>
+      </label>
+      <button class="btn btn-primary" onclick="renderCourrier()">Afficher les vacanciers</button>
+    </div>
   </div>
   <div id="courrier-actions" style="display:none;margin-bottom:12px;text-align:center">
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
@@ -2205,31 +2228,43 @@ function renderSemaines(){
   var openIds=[];
   document.querySelectorAll('.semaine-body.open').forEach(function(el){if(el.id) openIds.push(el.id)});
   var archiveOpen=document.getElementById('archive-body')&&document.getElementById('archive-body').classList.contains('open');
+  var merOpen=document.getElementById('mer-body')&&document.getElementById('mer-body').classList.contains('open');
   var scrollY=window.scrollY;
-  
-  var actives=semaines,archs=archives;
+
+  var actives=semaines.filter(function(s){return s.categorie!=='mer'});
+  var merSems=semaines.filter(function(s){return s.categorie==='mer'});
+  var archs=archives;
+
   document.getElementById('sem-count').textContent=actives.length;
   document.getElementById('archive-count').textContent=archs.length;
-  renderSemainesCalendar(actives.concat(archs));
+  document.getElementById('mer-count').textContent=merSems.length;
+
+  renderSemainesCalendar(semaines.concat(archs));
+
   var el=document.getElementById('semaines-list');
   if(!actives.length){el.innerHTML='<div class="empty">Aucune semaine. Lancez une optimisation puis sauvegardez-la.</div>';}
   else{el.innerHTML=actives.map(function(s,idx){return renderSemaineCard(s,idx,false)}).join('')}
+
+  // Mer section
+  var merSec=document.getElementById('mer-section');
+  if(merSems.length>0){merSec.style.display='block';document.getElementById('mer-list').innerHTML=merSems.map(function(s,idx){return renderSemaineCard(s,idx,false,true)}).join('')}else{merSec.style.display='none'}
+
   var arcSec=document.getElementById('archive-section');
   if(archs.length>0){arcSec.style.display='block';document.getElementById('archive-list').innerHTML=archs.map(function(s,idx){return renderSemaineCard(s,idx,true)}).join('')}else{arcSec.style.display='none'}
-  
-  // Restore open state
+
+  // Restore open states
   openIds.forEach(function(id){
     var bodyEl=document.getElementById(id);
     if(bodyEl){bodyEl.classList.add('open');var arr=document.getElementById('arr-'+id);if(arr)arr.textContent='▲';}
   });
   if(archiveOpen){var ab=document.getElementById('archive-body');if(ab)ab.classList.add('open');var aa=document.getElementById('archive-arrow');if(aa)aa.textContent='▲';}
-  
-  // Restore scroll position
+  if(merOpen){var mb=document.getElementById('mer-body');if(mb)mb.classList.add('open');var ma=document.getElementById('mer-arrow');if(ma)ma.textContent='▲';}
+
   window.scrollTo({top:scrollY,behavior:'instant'});
 }
 
-function renderSemaineCard(s,idx,isArchive){
-  var prefix=isArchive?'arc':'sem';
+function renderSemaineCard(s,idx,isArchive,isMer){
+  var prefix=isArchive?'arc':(isMer?'mer':'sem');
   var tKm=s.convois.reduce(function(a,c){return a+c.km},0);
   var tDep=s.convois.reduce(function(a,c){return a+c.depart.length},0);
   var tArr=s.convois.reduce(function(a,c){return a+c.arrivee.length},0);
@@ -2238,11 +2273,13 @@ function renderSemaineCard(s,idx,isArchive){
   s.convois.forEach(function(c){if(c.conducteur){conducteursSummary+=(conducteursSummary?' | ':'')+c.vehicule.label+' : '+c.conducteur}});
   var numCircle=isArchive
     ?'<div style="width:40px;height:40px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;flex-shrink:0">Arc</div>'
-    :'<div style="width:40px;height:40px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:Fraunces,serif;font-weight:700;font-size:15px;flex-shrink:0">'+(semaines.length-idx)+'</div>';
+    :isMer
+    ?'<div style="width:40px;height:40px;border-radius:50%;background:#0ea5e9;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;flex-shrink:0">🌊</div>'
+    :'<div style="width:40px;height:40px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:Fraunces,serif;font-weight:700;font-size:15px;flex-shrink:0">'+(semaines.filter(function(x){return x.categorie!=='mer'}).length-idx)+'</div>';
   return '<div class="semaine-card" id="semcard-'+s.id+'"><div class="semaine-header no-print" onclick="toggleSem(\''+prefix+'-'+idx+'\')">'
     +'<div style="display:flex;align-items:center;gap:12px;width:100%">'+numCircle
     +'<div style="flex:1;min-width:0">'
-    +'<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+fmtDate(s.date)+'</div>'
+    +'<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+fmtDate(s.date)+(isMer?'<span style="margin-left:6px;font-size:10px;background:#e0f2fe;color:#0284c7;padding:1px 6px;border-radius:8px">Mer</span>':'')+'</div>'
     +'<div style="font-size:11px;color:var(--text-light);margin-top:2px">'+s.convois.length+' convois - '+tDep+' dep. - '+tArr+' arr. - '+tKm+'km - '+typeLabel+'</div>'
     +(conducteursSummary?'<div style="font-size:10px;color:var(--forest-mid);margin-top:1px">'+conducteursSummary+'</div>':'')
     +'</div>'
@@ -2251,8 +2288,13 @@ function renderSemaineCard(s,idx,isArchive){
     +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;width:100%">'
     +(isArchive
       ?'<button class="btn btn-sm btn-success no-print" onclick="event.stopPropagation();desarchiver(\''+s.id+'\')">Restaurer</button>'
-      :'<button class="btn btn-sm btn-archive no-print" onclick="event.stopPropagation();archiver(\''+s.id+'\')">Archiver</button>'
-       +'<button class="btn btn-sm btn-info no-print" onclick="event.stopPropagation();chargerSemaine(\''+s.id+'\','+(isArchive?'true':'false')+')">Recharger</button>'
+      :(!isMer
+        ?'<button class="btn btn-sm btn-archive no-print" onclick="event.stopPropagation();archiver(\''+s.id+'\')">Archiver</button>'
+         +'<button class="btn btn-sm no-print" onclick="event.stopPropagation();classerMer(\''+s.id+'\',true)" style="background:#0ea5e9;color:white;border:none">🌊 Classer en Mer</button>'
+         +'<button class="btn btn-sm btn-info no-print" onclick="event.stopPropagation();chargerSemaine(\''+s.id+'\',false)">Recharger</button>'
+        :'<button class="btn btn-sm no-print" onclick="event.stopPropagation();classerMer(\''+s.id+'\',false)" style="background:var(--copper);color:white;border:none">↩ Retirer de Mer</button>'
+         +'<button class="btn btn-sm btn-info no-print" onclick="event.stopPropagation();chargerSemaine(\''+s.id+'\',false)">Recharger</button>'
+      )
     )
     +'<button class="btn btn-sm no-print" onclick="event.stopPropagation();imprimerSemaine(\''+s.id+'\')">Imprimer</button>'
     +'<button class="btn btn-sm btn-primary no-print" onclick="event.stopPropagation();exporterPdfSemaine(\''+s.id+'\')">Export PDF</button>'
@@ -2309,6 +2351,17 @@ function renderSemaineCard(s,idx,isArchive){
 
 function toggleSem(id){var el=document.getElementById(id);var arr=document.getElementById('arr-'+id);if(el.classList.contains('open')){el.classList.remove('open');if(arr)arr.textContent='\u25BC'}else{el.classList.add('open');if(arr)arr.textContent='\u25B2'}}
 function toggleArchive(){var el=document.getElementById('archive-body');var arr=document.getElementById('archive-arrow');if(el.classList.contains('open')){el.classList.remove('open');arr.textContent='\u25BC'}else{el.classList.add('open');arr.textContent='\u25B2'}}
+function toggleMer(){var el=document.getElementById('mer-body');var arr=document.getElementById('mer-arrow');if(el.classList.contains('open')){el.classList.remove('open');arr.textContent='\u25BC'}else{el.classList.add('open');arr.textContent='\u25B2'}}
+
+async function classerMer(id,isMer){
+  var s=semaines.find(function(x){return x.id===id});
+  if(!s) return;
+  s.categorie=isMer?'mer':undefined;
+  if(!isMer) delete s.categorie;
+  await dbUpsert('semaines',id,s);
+  renderSemaines();
+  lyAlert(isMer?'Séjour classé en 🌊 Mer.':'Séjour retiré de la section Mer.','success');
+}
 
 async function autoRecalcMapsConvoi(c){
   // Background recalc without blocking UI, returns true if updated
@@ -5232,11 +5285,20 @@ async function renderCourrier(){
   var debut=document.getElementById('courrier-debut').value;
   var fin=document.getElementById('courrier-fin').value;
   if(!debut||!fin){await lyAlert('Sélectionnez une plage de dates.','error');return}
+  var merOnly=document.getElementById('courrier-mer-only')&&document.getElementById('courrier-mer-only').checked;
   var el=document.getElementById('courrier-content');
   var actions=document.getElementById('courrier-actions');
   var allSem=semaines.concat(archives);
-  var filtered=allSem.filter(function(s){return s.date>=debut&&s.date<=fin});
-  if(!filtered.length){el.innerHTML='<div class="empty">Aucun trajet dans cette plage de dates.</div>';actions.style.display='none';return}
+  var filtered=allSem.filter(function(s){
+    if(s.date<debut||s.date>fin) return false;
+    if(merOnly&&s.categorie!=='mer') return false;
+    return true;
+  });
+  if(!filtered.length){
+    el.innerHTML='<div class="empty">Aucun trajet'+(merOnly?' de catégorie Mer':'')+' dans cette plage de dates.</div>';
+    actions.style.display='none';
+    return;
+  }
   // Group by foyer: each unique foyer gets one courrier
   var courrierMap={};
   filtered.forEach(function(s){
