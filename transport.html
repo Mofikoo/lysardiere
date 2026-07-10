@@ -2168,7 +2168,9 @@ function renderSemainesCalendar(allSem){
   allSem.forEach(function(s){
     if(!s.date) return;
     var isArchive=archives.indexOf(s)>=0;
-    if(!dateMap[s.date]) dateMap[s.date]={convois:0,dep:0,arr:0,isArchive:isArchive};
+    var isMer=s.categorie==='mer';
+    if(!dateMap[s.date]) dateMap[s.date]={convois:0,dep:0,arr:0,isArchive:isArchive,isMer:isMer};
+    else if(isMer) dateMap[s.date].isMer=true;
     dateMap[s.date].convois+=s.convois.length;
     dateMap[s.date].dep+=s.convois.reduce(function(a,c){return a+(c.depart||[]).length},0);
     dateMap[s.date].arr+=s.convois.reduce(function(a,c){return a+(c.arrivee||[]).length},0);
@@ -2196,7 +2198,7 @@ function renderSemainesCalendar(allSem){
     var dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var data=dateMap[dateStr];
     var isToday=dateStr===todayStr;
-    var bg=data?(data.isArchive?'var(--purple)':'var(--forest)'):'transparent';
+    var bg=data?(data.isArchive?'var(--purple)':data.isMer?'#0ea5e9':'var(--forest)'):'transparent';
     var color=data?'white':'var(--text-mid)';
     var border=isToday?'2px solid var(--copper)':'2px solid transparent';
     var tooltip=data?(data.convois+' convoi'+(data.convois>1?'s':'')+', '+data.dep+' dép, '+data.arr+' arr'):'';
@@ -4656,10 +4658,7 @@ function execInsertStop(convoiIdx,insertAtIdx){
     sameFoyer:false
   };
   
-  // Shift customHeures indices to make room for the new stop
-  shiftCustomHeuresAfterInsert(c,insertAtIdx);
-  
-  // Insert at position
+  // Insert at position (BEFORE shifting customHeures - we need to track all changes)
   c.stops.splice(insertAtIdx,0,newStop);
   
   // Remove moved persons from their original stops
@@ -4673,6 +4672,31 @@ function execInsertStop(convoiIdx,insertAtIdx){
       if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
     });
   });
+  
+  // Identify which stops will be removed (empty ones except depart/retour)
+  var removedIndices=[];
+  c.stops.forEach(function(s,si){
+    if(s.action==='depart'||s.action==='retour') return;
+    if(!(s.depPers&&s.depPers.length)&&!(s.arrPers&&s.arrPers.length)) removedIndices.push(si);
+  });
+  
+  // Now compute the final customHeures mapping accounting for insert + removals
+  // Start with original customHeures, shift up for insert, then shift down for each removal
+  var newH={};
+  if(c.customHeures){
+    Object.keys(c.customHeures).forEach(function(k){
+      var idx=parseInt(k);
+      // Shift up for the inserted stop
+      var newIdx=idx>=insertAtIdx?idx+1:idx;
+      // Shift down for each removal that comes before or at this position
+      removedIndices.forEach(function(ri){
+        if(ri<=newIdx) newIdx--;
+      });
+      if(newIdx>=0) newH[newIdx]=c.customHeures[idx];
+    });
+  }
+  c.customHeures=newH;
+  
   // Remove empty stops (except depart/retour)
   c.stops=c.stops.filter(function(s){
     if(s.action==='depart'||s.action==='retour') return true;
