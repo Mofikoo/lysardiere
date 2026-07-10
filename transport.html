@@ -803,15 +803,12 @@ input:focus, select:focus {
     <span class="persist-badge" id="persist-status">⏳ Connexion...</span>
   </div>
   <div class="nav-bar">
-    <button class="nb" id="btn-personnes" onclick="show('personnes')">Personnes</button>
-    <button class="nb" id="btn-foyers" onclick="show('foyers')">Foyers</button>
-    <button class="nb" id="btn-lieux" onclick="show('lieux')">Lieux de RDV</button>
+    <button class="nb" id="btn-vacanciers" onclick="show('vacanciers')">Vacanciers</button>
     <button class="nb" id="btn-saisie" onclick="show('saisie')">Trajets</button>
     <button class="nb" id="btn-manuel" onclick="show('manuel')">Trajet Manuel</button>
     <button class="nb" id="btn-optim" onclick="show('optim')">Optimisation</button>
     <button class="nb" id="btn-fiches" onclick="show('fiches')">Fiches</button>
     <button class="nb active" id="btn-semaines" onclick="show('semaines')">Semaines</button>
-    <button class="nb" id="btn-flotte" onclick="show('flotte')">Flotte</button>
     <button class="nb" id="btn-stats" onclick="show('stats')">Statistiques</button>
     <button class="nb" id="btn-courrier" onclick="show('courrier')">Courrier</button>
     <button class="nb" id="btn-guide" onclick="show('guide')">Guide</button>
@@ -846,6 +843,7 @@ input:focus, select:focus {
 
 <!-- LIEUX DE RDV -->
 <div class="tab-pane" id="pane-lieux">
+  <div style="margin-bottom:10px"><button class="btn btn-sm" onclick="show('vacanciers')" style="font-size:11px;padding:4px 12px;opacity:0.7">← Vacanciers</button></div>
   <div class="card">
     <div class="stitle">Ajouter un lieu de rendez-vous</div>
     <div class="cols2" style="margin-bottom:12px">
@@ -864,8 +862,38 @@ input:focus, select:focus {
   <div class="card"><div class="stitle">Lieux enregistrés (<span id="lc">0</span>)</div><div id="ll"></div></div>
 </div>
 
+<!-- VACANCIERS HUB -->
+<div class="tab-pane" id="pane-vacanciers">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px">
+    <div style="font-family:Fraunces,serif;font-size:22px;font-weight:700;color:var(--forest);margin-bottom:8px">Gestion des vacanciers</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:520px;width:100%">
+      <button onclick="show('personnes')" style="background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:32px 20px;cursor:pointer;text-align:center;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor='var(--forest)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+        <span style="font-size:36px">👤</span>
+        <span style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:var(--forest)">Personnes</span>
+        <span style="font-size:11px;color:var(--text-light)">Gérer les vacanciers</span>
+      </button>
+      <button onclick="show('foyers')" style="background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:32px 20px;cursor:pointer;text-align:center;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor='var(--forest)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+        <span style="font-size:36px">🏠</span>
+        <span style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:var(--forest)">Foyers</span>
+        <span style="font-size:11px;color:var(--text-light)">Gérer les structures</span>
+      </button>
+      <button onclick="show('lieux')" style="background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:32px 20px;cursor:pointer;text-align:center;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor='var(--forest)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+        <span style="font-size:36px">📍</span>
+        <span style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:var(--forest)">Lieux de RDV</span>
+        <span style="font-size:11px;color:var(--text-light)">Points de ramassage</span>
+      </button>
+      <button onclick="show('flotte')" style="background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:32px 20px;cursor:pointer;text-align:center;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:var(--shadow-sm)" onmouseover="this.style.borderColor='var(--forest)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+        <span style="font-size:36px">🚐</span>
+        <span style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:var(--forest)">Flotte</span>
+        <span style="font-size:11px;color:var(--text-light)">Gérer les véhicules</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- PERSONNES -->
 <div class="tab-pane" id="pane-personnes">
+  <div style="margin-bottom:10px"><button class="btn btn-sm" onclick="show('vacanciers')" style="font-size:11px;padding:4px 12px;opacity:0.7">← Vacanciers</button></div>
   <div class="card">
     <div class="stitle">Ajouter une personne</div>
     <div class="cols4" style="margin-bottom:12px">
@@ -901,6 +929,8 @@ input:focus, select:focus {
 
 <!-- FOYERS -->
 <div class="tab-pane" id="pane-foyers">
+  <div style="margin-bottom:10px"><button class="btn btn-sm" onclick="show('vacanciers')" style="font-size:11px;padding:4px 12px;opacity:0.7">← Vacanciers</button></div>
+
   <div class="card">
     <div class="stitle">Ajouter un foyer</div>
     <div class="cols2" style="margin-bottom:12px">
@@ -993,6 +1023,8 @@ input:focus, select:focus {
 
 <!-- FLOTTE -->
 <div class="tab-pane" id="pane-flotte">
+  <div style="margin-bottom:10px"><button class="btn btn-sm" onclick="show('vacanciers')" style="font-size:11px;padding:4px 12px;opacity:0.7">← Vacanciers</button></div>
+
   <div class="card">
     <div class="stitle">Ajouter un véhicule</div>
     <div class="cols3" style="margin-bottom:12px">
@@ -1845,7 +1877,14 @@ function show(t){
   document.querySelectorAll('.tab-pane').forEach(function(e){e.classList.remove('active')});
   document.querySelectorAll('.nb').forEach(function(e){e.classList.remove('active')});
   document.getElementById('pane-'+t).classList.add('active');
-  document.getElementById('btn-'+t).classList.add('active');
+  // Sub-pages of Vacanciers highlight the Vacanciers nav button
+  var vacanciersSubs=['personnes','foyers','lieux','flotte'];
+  if(vacanciersSubs.indexOf(t)>=0){
+    document.getElementById('btn-vacanciers').classList.add('active');
+  } else {
+    var btn=document.getElementById('btn-'+t);
+    if(btn) btn.classList.add('active');
+  }
   if(t==='personnes'){refreshLieuSelect();refreshFoyerSelect();renderPersonnes()}
   if(t==='foyers'){renderFoyers()}
   if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
