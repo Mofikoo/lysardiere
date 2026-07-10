@@ -4028,25 +4028,23 @@ function ajouterPassager(persId,side){
   var lieu=getLieu(lieuId);
   if(!lieu||!hasGPS(lieu)){lyAlert('Cette personne n\'a pas de lieu de RDV avec GPS.','error');return}
   
-  // Find the convoi with the most compatible angle
-  var bestConvoi=-1,bestExtra=Infinity;
+  var persObj={prenom:pers.prenom,nom:pers.nom,foyer:pers.foyer||'',id:pers.id};
   var newNode={fid:lieuId,lat:parseFloat(lieu.lat),lng:parseFloat(lieu.lng),nom:lieu.nom,adresse:lieu.adresse||'',
-    depPers:side==='dep'?[{prenom:pers.prenom,nom:pers.nom,foyer:pers.foyer||'',id:pers.id}]:[],
-    arrPers:side==='arr'?[{prenom:pers.prenom,nom:pers.nom,foyer:pers.foyer||'',id:pers.id}]:[],
+    depPers:side==='dep'?[persObj]:[],
+    arrPers:side==='arr'?[persObj]:[],
     distLys:dLys(lieu),cap:bearing(LYS,lieu)};
   
+  // Find the best convoi
+  var bestConvoi=-1,bestExtra=Infinity;
   convoisOptimises.forEach(function(c,ci){
-    // Check if this lieu is already in this convoi
     var alreadyHere=c.stops.some(function(s){return s.fid===lieuId||(s.pt&&s.pt.nom===lieu.nom)});
     if(alreadyHere){bestConvoi=ci;bestExtra=-999;return}
-    // Check angle
     var angleOk=true;
     c.stops.forEach(function(s){
       if(s.action==='depart'||s.action==='retour') return;
       if(s.pt&&s.pt.lat&&angleDiff(bearing(LYS,s.pt),newNode.cap)>p.capMax) angleOk=false;
     });
     if(!angleOk) return;
-    // Check capacity simulation
     var cluster=[];
     c.stops.forEach(function(s){
       if(s.action==='depart'||s.action==='retour') return;
@@ -4062,7 +4060,36 @@ function ajouterPassager(persId,side){
   
   if(bestConvoi<0){lyAlert('Aucun convoi compatible trouvé. Isolez cette personne dans un nouveau véhicule.','error');return}
   
-  addToConvoi(convoisOptimises[bestConvoi],newNode,p);
+  var targetConvoi=convoisOptimises[bestConvoi];
+  
+  // Check capacity
+  if(!capacityCheck(targetConvoi,1)) return;
+  
+  // If the lieu already exists as a stop, add person directly — no Maps recalc, no reorder
+  var existingStop=targetConvoi.stops.find(function(s){
+    return s.fid===lieuId||(s.pt&&s.pt.nom===lieu.nom&&s.action!=='depart'&&s.action!=='retour');
+  });
+  
+  if(existingStop){
+    if(side==='arr'){
+      existingStop.arrPers=(existingStop.arrPers||[]).concat([persObj]);
+      targetConvoi.arrivee=(targetConvoi.arrivee||[]).concat([persObj]);
+    } else {
+      existingStop.depPers=(existingStop.depPers||[]).concat([persObj]);
+      targetConvoi.depart=(targetConvoi.depart||[]).concat([persObj]);
+    }
+    if((existingStop.depPers||[]).length&&(existingStop.arrPers||[]).length) existingStop.action='rotation';
+    else if((existingStop.depPers||[]).length) existingStop.action='depot';
+    else existingStop.action='pickup';
+    targetConvoi.peakSeats=peakSeatsStops(targetConvoi.stops);
+    targetConvoi.remplissage=Math.round(targetConvoi.peakSeats/targetConvoi.vehicule.cap*100);
+    targetConvoi.type=(targetConvoi.depart.length&&targetConvoi.arrivee.length)?'rotation':targetConvoi.depart.length?'depart_only':'arrivee_only';
+    // NO Maps invalidation — circuit unchanged
+  } else {
+    // New lieu: need full rebuild + Maps recalc
+    addToConvoi(targetConvoi,newNode,p);
+  }
+  
   var date=document.getElementById('ldate').value;
   renderOptim(date,[]);
   lyAlert(pers.prenom+' '+pers.nom+' ajouté(e) au convoi '+(bestConvoi+1)+' ('+(side==='dep'?'départ':'arrivée')+').','success');
@@ -4646,8 +4673,44 @@ function execInsertStop(convoiIdx,insertAtIdx){
   if(!capacityCheck(c,nbNew)) return;
   
   document.querySelector('.ly-modal-overlay').remove();
+  var p=getParams();
   
-  // Create the new stop
+  // Smart: if the same lieu already exists as a stop in this convoi, 
+  // add persons to it directly without creating a new stop or invalidating Maps
+  var existingStop=c.stops.find(function(s){
+    if(s.action==='depart'||s.action==='retour') return false;
+    return s.fid===lieuId;
+  });
+  
+  if(existingStop){
+    // Just add persons to the existing stop — no index changes, no Maps recalc
+    arrPers.forEach(function(p){
+      if(!(existingStop.arrPers||[]).some(function(x){return x.id===p.id||(x.prenom===p.prenom&&x.nom===p.nom)})){
+        existingStop.arrPers=(existingStop.arrPers||[]).concat([p]);
+      }
+    });
+    depPers.forEach(function(p){
+      if(!(existingStop.depPers||[]).some(function(x){return x.id===p.id||(x.prenom===p.prenom&&x.nom===p.nom)})){
+        existingStop.depPers=(existingStop.depPers||[]).concat([p]);
+      }
+    });
+    if((existingStop.depPers||[]).length&&(existingStop.arrPers||[]).length) existingStop.action='rotation';
+    else if((existingStop.depPers||[]).length) existingStop.action='depot';
+    else if((existingStop.arrPers||[]).length) existingStop.action='pickup';
+    existingStop.sameFoyer=false;
+    // Add to flat lists
+    depPers.forEach(function(p){if(!(c.depart||[]).some(function(x){return x.id===p.id})) c.depart=(c.depart||[]).concat([p])});
+    arrPers.forEach(function(p){if(!(c.arrivee||[]).some(function(x){return x.id===p.id})) c.arrivee=(c.arrivee||[]).concat([p])});
+    c.peakSeats=peakSeatsStops(c.stops);
+    c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
+    // NO Maps invalidation — circuit hasn't changed
+    var date=document.getElementById('ldate').value;
+    renderOptim(date,[]);
+    lyAlert('Personne(s) ajoutée(s) à l\'arrêt existant '+lieu.nom+'.','success');
+    return;
+  }
+  
+  // No existing stop for this lieu: create a new stop
   var newStop={
     action:action,
     pt:{lat:parseFloat(lieu.lat),lng:parseFloat(lieu.lng),nom:lieu.nom,adresse:lieu.adresse||''},
