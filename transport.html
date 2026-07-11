@@ -2326,6 +2326,7 @@ function renderSemaineCard(s,idx,isArchive,isMer){
          +'<button class="btn btn-sm no-print" onclick="event.stopPropagation();classerMer(\''+s.id+'\',true)" style="background:#0ea5e9;color:white;border:none">🌊 Classer en Mer</button>'
          +'<button class="btn btn-sm btn-info no-print" onclick="event.stopPropagation();chargerSemaine(\''+s.id+'\',false)">Recharger</button>'
         :'<button class="btn btn-sm no-print" onclick="event.stopPropagation();classerMer(\''+s.id+'\',false)" style="background:var(--copper);color:white;border:none">↩ Retirer de Mer</button>'
+         +'<button class="btn btn-sm btn-archive no-print" onclick="event.stopPropagation();archiver(\''+s.id+'\')">Archiver</button>'
          +'<button class="btn btn-sm btn-info no-print" onclick="event.stopPropagation();chargerSemaine(\''+s.id+'\',false)">Recharger</button>'
       )
     )
