@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Fiche d'inscription — La Lysardière</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root {
+  --forest: #18534F;
+  --forest-mid: #2a6b66;
+  --mint: #ECF8F6;
+  --copper: #C77B5A;
+  --red-section: #C0392B;
+  --orange-section: #E67E22;
+  --bg: #F7F3EC;
+  --card: #ffffff;
+  --border: #E5E0D6;
+  --border-light: #F0EBE2;
+  --text: #1A2E2C;
+  --text-mid: #5C6B6A;
+  --text-light: #8A9695;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 8px rgba(24,83,79,0.08);
+  --shadow-lg: 0 8px 32px rgba(24,83,79,0.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* ── HEADER ── */
+.header{background:var(--forest);color:white;padding:18px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+.header-logo{font-family:Fraunces,serif;font-size:22px;font-weight:700;color:white}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase}
+.header-badge{margin-left:auto;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 14px;font-size:11px;color:white}
+
+/* ── STEPPER ── */
+.stepper-wrap{background:white;border-bottom:1px solid var(--border);padding:0;overflow-x:auto}
+.stepper{display:flex;min-width:900px;padding:0 24px}
+.step-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 4px;cursor:pointer;position:relative;transition:background 0.15s}
+.step-item:not(.active):hover{background:var(--mint)}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-bottom:4px;transition:all 0.2s}
+.step-item.done .step-num{background:var(--forest);color:white}
+.step-item.active .step-num{background:var(--copper);color:white;box-shadow:0 2px 8px rgba(199,123,90,0.4)}
+.step-item.todo .step-num{background:var(--border);color:var(--text-light)}
+.step-label{font-size:10px;color:var(--text-light);text-align:center;max-width:80px;line-height:1.3}
+.step-item.active .step-label{color:var(--copper);font-weight:600}
+.step-item.done .step-label{color:var(--forest)}
+.step-connector{position:absolute;top:23px;left:50%;width:100%;height:2px;background:var(--border);z-index:0}
+.step-item.done .step-connector{background:var(--forest)}
+
+/* ── MAIN CONTAINER ── */
+.main{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+
+/* ── SECTION CARDS ── */
+.form-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px}
+.form-card-title{font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--mint)}
+.section-header{font-weight:700;font-size:13px;color:var(--red-section);text-transform:uppercase;letter-spacing:0.5px;margin:20px 0 10px;padding-bottom:4px;border-bottom:2px solid var(--red-section)}
+.section-header.orange{color:var(--orange-section);border-color:var(--orange-section)}
+.section-header.forest{color:var(--forest);border-color:var(--forest)}
+
+/* ── FORM ELEMENTS ── */
+label.field-label{display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px}
+label.field-label .req{color:var(--red-section)}
+input[type=text],input[type=date],input[type=tel],input[type=email],input[type=number],select,textarea{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:white;
+  transition:border-color 0.15s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--forest);box-shadow:0 0 0 3px rgba(24,83,79,0.08)}
+input.error,select.error,textarea.error{border-color:var(--red-section);background:#fff5f5}
+textarea{resize:vertical;min-height:80px}
+.field-row{display:grid;gap:12px;margin-bottom:14px}
+.field-row.cols2{grid-template-columns:1fr 1fr}
+.field-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.field-row.cols4{grid-template-columns:1fr 1fr 1fr 1fr}
+.field-group{display:flex;flex-direction:column}
+
+/* ── RADIO / CHECKBOX ── */
+.radio-group,.check-group{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:4px 0}
+.radio-opt,.check-opt{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+.radio-opt input,.check-opt input{width:16px;height:16px;cursor:pointer;accent-color:var(--forest);flex-shrink:0}
+
+/* ── GRILLE OUI/NON ── */
+.yn-row{display:grid;grid-template-columns:1fr auto auto;gap:0;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light)}
+.yn-row:last-child{border-bottom:none}
+.yn-label{font-size:13px;color:var(--text)}
+.yn-cols{display:flex;gap:24px}
+.yn-opt{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer}
+.yn-opt input{accent-color:var(--forest);width:15px;height:15px}
+
+/* ── GRILLE 4 COLONNES (hygiène) ── */
+.hygiene-table{width:100%;border-collapse:collapse;margin:8px 0}
+.hygiene-table th{font-size:11px;font-weight:700;color:var(--text-mid);text-align:center;padding:6px 4px;background:var(--mint);border:1px solid var(--border)}
+.hygiene-table th.left{text-align:left}
+.hygiene-table td{padding:6px 4px;border:1px solid var(--border-light);text-align:center;font-size:12px}
+.hygiene-table td.label{text-align:left;font-size:12px;padding-left:8px}
+.hygiene-table td input[type=radio]{width:16px;height:16px;accent-color:var(--forest)}
+.hygiene-table tr.sub td.label{padding-left:20px;color:var(--text-mid);font-size:11px}
+.hygiene-table tr:nth-child(even) td{background:#fafaf9}
+
+/* ── CONDITIONAL FIELD ── */
+.conditional{background:var(--mint);border-radius:var(--radius-sm);padding:10px 14px;margin:6px 0 8px;border-left:3px solid var(--forest)}
+.conditional.hidden{display:none}
+
+/* ── PROGRESS BAR ── */
+.progress-bar-wrap{background:var(--border-light);border-radius:4px;height:4px;margin:8px 0}
+.progress-bar-fill{height:4px;border-radius:4px;background:var(--forest);transition:width 0.4s}
+
+/* ── NAVIGATION BUTTONS ── */
+.nav-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.06)}
+.btn{padding:10px 22px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+.btn-primary{background:var(--forest);color:white}
+.btn-primary:hover{background:var(--forest-mid)}
+.btn-secondary{background:var(--border);color:var(--text-mid)}
+.btn-secondary:hover{background:#ddd}
+.btn-submit{background:var(--copper);color:white;font-size:15px;padding:12px 32px}
+.btn-submit:hover{background:#b56b4a}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* ── STEP PAGES ── */
+.step-page{display:none}
+.step-page.active{display:block}
+
+/* ── ALERTS ── */
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px}
+.alert-error{background:#fff5f5;border:1px solid #f5c6c6;color:var(--red-section)}
+.alert-success{background:var(--mint);border:1px solid #b8e4df;color:var(--forest)}
+.alert-info{background:#f0f9ff;border:1px solid #b3d9f5;color:#0369a1}
+
+/* ── IMPORTANT NOTE ── */
+.note-important{background:#fff9e6;border:2px solid var(--orange-section);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#7c4c00;margin:10px 0}
+.note-important strong{color:var(--red-section)}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-area{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:24px;text-align:center;cursor:pointer;transition:all 0.15s}
+.photo-upload-area:hover{border-color:var(--forest);background:var(--mint)}
+.photo-preview{max-width:120px;max-height:160px;border-radius:6px;object-fit:cover;margin-top:10px}
+
+/* ── SEJOUR TYPE SELECTOR ── */
+.sejour-type-card{border:2px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all 0.15s;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.sejour-type-card:hover{border-color:var(--forest);background:var(--mint)}
+.sejour-type-card.selected{border-color:var(--forest);background:var(--mint);box-shadow:0 0 0 3px rgba(24,83,79,0.1)}
+.sejour-type-card .icon{font-size:28px;flex-shrink:0}
+.sejour-type-card .info strong{font-size:14px;color:var(--forest)}
+.sejour-type-card .info p{font-size:12px;color:var(--text-light);margin-top:2px}
+
+/* ── SEJOUR LIST (checkboxes with price) ── */
+.sejour-list-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border-light);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:background 0.1s}
+.sejour-list-item:hover{background:var(--mint)}
+.sejour-list-item.selected{background:var(--mint);border-color:var(--forest)}
+.sejour-list-item label{display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;font-size:13px}
+.sejour-list-item .price{font-size:12px;color:var(--forest);font-weight:700;flex-shrink:0}
+
+/* ── CONFIRMATION PAGE ── */
+.confirmation-box{text-align:center;padding:40px 24px}
+.confirmation-icon{font-size:64px;margin-bottom:16px}
+.confirmation-title{font-family:Fraunces,serif;font-size:24px;color:var(--forest);margin-bottom:8px}
+.confirmation-sub{color:var(--text-mid);font-size:14px;margin-bottom:28px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .field-row.cols2,.field-row.cols3,.field-row.cols4{grid-template-columns:1fr}
+  .header-badge{display:none}
+  .main{padding:16px 12px 80px}
+}
+
+/* ── PRINT ── */
+@media print{
+  .nav-bar,.stepper-wrap,.header{display:none}
+  .step-page{display:block!important}
+  .form-card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header-logo">La Lysardière</div>
+    <div class="header-sub">Fiche d'inscription en ligne</div>
+  </div>
+  <div class="header-badge">🔒 Confidentiel</div>
+</div>
+
+<!-- STEPPER -->
+<div class="stepper-wrap">
+  <div class="stepper" id="stepper"></div>
+</div>
+
+<!-- PROGRESS -->
+<div style="background:white;padding:0 24px 0">
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:11%"></div></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ════════ ÉTAPE 1 : TYPE DE SÉJOUR ════════ -->
+  <div class="step-page active" id="step-1">
+    <div class="form-card">
+      <div class="form-card-title">Choisissez le type de séjour</div>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Sélectionnez le formulaire correspondant au séjour de votre vacancier.</p>
+
+      <div class="sejour-type-card" onclick="selectTypeSejour('weekend_theme')" id="card-weekend_theme">
+        <div class="icon">🎭</div>
+        <div class="info"><strong>Week-ends à thèmes</strong><p>3 jours — à partir de 10h, se terminent vers 17h30</p></div>
+      </div>
+      <div class="sejour-type-card" onclick="selectTypeSejour('mini_sejour')" id="card-mini_sejour">
+        <div class="icon">🌿</div>
+        <div class="info"><strong>Les Mini Séjours</strong><p>5 jours — à partir de 10h, se terminent vers 17h30</p></div>
+      </div>
+      <div class="sejour-type-card" onclick="selectTypeSejour('weekend_ordinaire')" id="card-weekend_ordinaire">
+        <div class="icon">🏡</div>
+        <div class="info"><strong>Week-end et séjour ordinaire</strong><p>Dates choisies — arrivée le matin, départ vers 17h30</p></div>
+      </div>
+      <div class="sejour-type-card" onclick="selectTypeSejour('sejour')" id="card-sejour">
+        <div class="icon">📋</div>
+        <div class="info"><strong>Fiche d'inscription séjour</strong><p>Séjours longs — Dordogne ou Mer</p></div>
+      </div>
+
+      <div id="error-type" class="alert alert-error" style="display:none;margin-top:14px">Veuillez choisir un type de séjour.</div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 2 : FICHE D'INSCRIPTION ════════ -->
+  <div class="step-page" id="step-2">
+    <!-- Contenu dynamique selon type de séjour -->
+    <div id="fiche-inscription-content"></div>
+  </div>
+
+  <!-- ════════ ÉTAPE 3 : FICHE CONFIDENTIELLE P.1 ════════ -->
+  <div class="step-page" id="step-3">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 1/6</div>
+      <div class="note-important">
+        Merci de bien vouloir compléter intégralement les 6 pages de la fiche confidentielle. <strong>Tous les champs sont obligatoires.</strong>
+      </div>
+
+      <!-- Identité vacancier -->
+      <div class="field-row cols3">
+        <div class="field-group">
+          <label class="field-label">Nom du vacancier <span class="req">*</span></label>
+          <input type="text" id="conf-nom" placeholder="NOM">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Prénom <span class="req">*</span></label>
+          <input type="text" id="conf-prenom" placeholder="Prénom">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Âge <span class="req">*</span></label>
+          <input type="number" id="conf-age" placeholder="ex: 35" min="1" max="120">
+        </div>
+      </div>
+      <div class="field-row cols2">
+        <div class="field-group">
+          <label class="field-label">Nom et date du séjour <span class="req">*</span></label>
+          <input type="text" id="conf-sejour-nom" placeholder="ex: Mini séjour Périgord du 7 au 11 mai">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Autonomie <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="conf-autonomie" value="bonne"> Bonne</label>
+            <label class="radio-opt"><input type="radio" name="conf-autonomie" value="moyenne"> Moyenne</label>
+            <label class="radio-opt"><input type="radio" name="conf-autonomie" value="petite"> Petite</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloc infirmière + mobilité -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Besoin d'une infirmière lors du séjour ?</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-infirmiere" value="oui" onchange="toggleConditional('cond-infirmiere',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-infirmiere" value="non" onchange="toggleConditional('cond-infirmiere',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-infirmiere">
+          <div class="field-row" style="margin-bottom:0">
+            <div class="field-group">
+              <label class="field-label">Moment(s) nécessaire(s) <span class="req">*</span></label>
+              <div class="check-group">
+                <label class="check-opt"><input type="checkbox" id="conf-infirm-matin"> Matin</label>
+                <label class="check-opt"><input type="checkbox" id="conf-infirm-midi"> Midi</label>
+                <label class="check-opt"><input type="checkbox" id="conf-infirm-soir"> Soir</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Si oui, de qui s'agit-il ? <span class="req">*</span></label>
+              <input type="text" id="conf-infirmiere-detail" placeholder="Précisez">
+            </div>
+          </div>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Inscription en couple ?</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-couple" value="oui" onchange="toggleConditional('cond-couple',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-couple" value="non" onchange="toggleConditional('cond-couple',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-couple">
+          <div class="field-row" style="margin-bottom:0">
+            <div class="field-group">
+              <label class="field-label">Partage la même chambre ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-meme-chambre" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-meme-chambre" value="non"> Non</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Personne en fauteuil roulant</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-fauteuil" value="oui" onchange="toggleConditional('cond-fauteuil-sortie',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-fauteuil" value="non" onchange="toggleConditional('cond-fauteuil-sortie',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-fauteuil-sortie">
+          <label class="check-opt"><input type="checkbox" id="conf-fauteuil-sortie"> En sortie uniquement</label>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Personne en déambulateur</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-deambulateur" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-deambulateur" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Monte les escaliers</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-escaliers" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-escaliers" value="non"> Non</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Astreinte urgence -->
+      <div class="section-header">Personne d'astreinte à contacter en cas d'urgence (soir / week-end)</div>
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
+        <div class="field-row" style="margin-bottom:10px">
+          <div class="field-group">
+            <label class="field-label">Qui contacter ? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="conf-astreinte-type" value="responsable_inscription" onchange="toggleAstreinte('astreinte_autre',false)"> Responsable inscription</label>
+              <label class="radio-opt"><input type="radio" name="conf-astreinte-type" value="responsable_legal" onchange="toggleAstreinte('astreinte_autre',false)"> Responsable légal</label>
+              <label class="radio-opt"><input type="radio" name="conf-astreinte-type" value="autre" onchange="toggleAstreinte('astreinte_autre',true)"> Autre personne</label>
+            </div>
+          </div>
+        </div>
+        <div class="conditional hidden" id="astreinte_autre">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Prénom <span class="req">*</span></label>
+              <input type="text" id="astreinte-prenom" placeholder="Prénom">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Nom <span class="req">*</span></label>
+              <input type="text" id="astreinte-nom" placeholder="Nom">
+            </div>
+          </div>
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Téléphone <span class="req">*</span></label>
+              <input type="tel" id="astreinte-tel" placeholder="06...">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Mail <span class="req">*</span></label>
+              <input type="email" id="astreinte-mail" placeholder="mail@exemple.fr">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description personnalité -->
+      <div class="section-header">Description de la personnalité du vacancier (obligatoire)</div>
+      <textarea id="conf-personnalite" placeholder="Décrivez la personnalité du vacancier de façon détaillée..." rows="6" style="margin-bottom:14px"></textarea>
+
+      <!-- Partie 1 : Habitudes de vie -->
+      <div class="section-header orange">Partie 1 : Habitudes de vie</div>
+      <div class="field-group" style="margin-bottom:14px">
+        <label class="field-label">Vie quotidienne (recommandations médicales, toilettes, habitudes...) <span class="req">*</span></label>
+        <textarea id="conf-vie-quotidienne" placeholder="Décrivez les habitudes de vie quotidienne..." rows="4"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Comportement (relation avec des inconnus, encadrants, autres vacanciers, participation aux activités...) <span class="req">*</span></label>
+        <textarea id="conf-comportement" placeholder="Décrivez le comportement habituel..." rows="4"></textarea>
+      </div>
+
+      <!-- Photo -->
+      <div class="section-header">Photo du vacancier (recommandée)</div>
+      <div class="photo-upload-area" onclick="document.getElementById('conf-photo-input').click()">
+        <div style="font-size:32px;margin-bottom:6px">📷</div>
+        <div style="font-size:13px;color:var(--text-mid)">Cliquez pour ajouter une photo</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px">JPG, PNG — max 5 Mo — non obligatoire</div>
+        <img id="conf-photo-preview" class="photo-preview" style="display:none">
+      </div>
+      <input type="file" id="conf-photo-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 4 : FICHE CONFIDENTIELLE P.2 ════════ -->
+  <div class="step-page" id="step-4">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 2/6</div>
+
+      <div class="section-header">Partie 2 : La Vie Quotidienne — Hygiène</div>
+
+      <!-- Tableau hygiène -->
+      <table class="hygiene-table">
+        <thead>
+          <tr>
+            <th class="left" style="width:40%">Activité</th>
+            <th>Seul(e)</th>
+            <th>Stimulation verbale</th>
+            <th>Aide partielle</th>
+            <th>Aide totale</th>
+          </tr>
+        </thead>
+        <tbody id="hygiene-body">
+          <!-- généré par JS -->
+        </tbody>
+      </table>
+
+      <div class="yn-row">
+        <span class="yn-label">Est-ce qu'une présence physique est nécessaire lors de la douche ?</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-presence-douche" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-presence-douche" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">A besoin d'un timer lors de la douche ?</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-timer-douche" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-timer-douche" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Sait gérer son linge propre et son linge sale ?</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-linge" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-linge" value="non"> Non</label>
+        </div>
+      </div>
+
+      <div class="field-group" style="margin:12px 0">
+        <label class="field-label">Informations complémentaires sur les habitudes de toilette (protocoles) <span class="req">*</span></label>
+        <textarea id="conf-toilette-info" placeholder="Précisez les protocoles et habitudes spécifiques..." rows="3"></textarea>
+      </div>
+
+      <!-- Stomie / Pistolet -->
+      <div class="yn-row">
+        <span class="yn-label">Poche de stomie</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-stomie" value="oui" onchange="toggleConditional('cond-stomie',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-stomie" value="non" onchange="toggleConditional('cond-stomie',false)"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Pistolet</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-pistolet" value="oui" onchange="toggleConditional('cond-pistolet',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-pistolet" value="non" onchange="toggleConditional('cond-pistolet',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-stomie">
+        <label class="field-label">A besoin d'aide pour l'utiliser <span class="req">*</span></label>
+        <input type="text" id="conf-stomie-aide" placeholder="Précisez l'aide nécessaire">
+      </div>
+      <div class="conditional hidden" id="cond-pistolet">
+        <label class="field-label">A besoin d'aide pour l'utiliser <span class="req">*</span></label>
+        <input type="text" id="conf-pistolet-aide" placeholder="Précisez l'aide nécessaire">
+      </div>
+
+      <!-- Énurésies -->
+      <div class="section-header orange">Énurésies</div>
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
+        <div class="yn-row">
+          <span class="yn-label">Énurésies</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-enurese" value="jour" onchange="showEnureseDetails()"> Jour</label>
+            <label class="yn-opt"><input type="radio" name="conf-enurese" value="nuit" onchange="showEnureseDetails()"> Nuit</label>
+            <label class="yn-opt"><input type="radio" name="conf-enurese" value="non" onchange="hideEnureseDetails()"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-enurese">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Fréquence des changes <span class="req">*</span></label>
+              <input type="text" id="conf-enurese-freq" placeholder="ex: 2 fois par jour">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Type de change (à fournir) <span class="req">*</span></label>
+              <input type="text" id="conf-enurese-type" placeholder="ex: Taille M">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">A besoin d'une aide pour se changer ? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="conf-enurese-aide" value="oui"> Oui</label>
+              <label class="radio-opt"><input type="radio" name="conf-enurese-aide" value="non"> Non</label>
+            </div>
+          </div>
+          <div class="note-important">* Protections et alèses jetables à fournir en quantités adaptées pour le vacancier</div>
+        </div>
+      </div>
+
+      <!-- Encoprésie -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
+        <div class="yn-row">
+          <span class="yn-label">Encoprésie</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-encop" value="jour" onchange="showEncopDetails()"> Jour</label>
+            <label class="yn-opt"><input type="radio" name="conf-encop" value="nuit" onchange="showEncopDetails()"> Nuit</label>
+            <label class="yn-opt"><input type="radio" name="conf-encop" value="non" onchange="hideEncopDetails()"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-encop">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Fréquence des changes <span class="req">*</span></label>
+              <input type="text" id="conf-encop-freq" placeholder="ex: 1 fois par jour">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Type de change (à fournir) <span class="req">*</span></label>
+              <input type="text" id="conf-encop-type" placeholder="ex: Taille M">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">A besoin d'une aide pour se changer ? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="conf-encop-aide" value="oui"> Oui</label>
+              <label class="radio-opt"><input type="radio" name="conf-encop-aide" value="non"> Non</label>
+            </div>
+          </div>
+          <div class="note-important">* Protections et alèses jetables à fournir en quantités adaptées pour le vacancier</div>
+        </div>
+      </div>
+
+      <!-- Alimentation -->
+      <div class="section-header orange">Alimentation</div>
+      <table class="hygiene-table" style="margin-bottom:12px">
+        <thead>
+          <tr>
+            <th class="left" style="width:40%">Activité</th>
+            <th>Seul(e)</th>
+            <th>Stimulation verbale</th>
+            <th>Aide partielle</th>
+            <th>Aide totale</th>
+          </tr>
+        </thead>
+        <tbody id="alim-body">
+          <!-- généré par JS -->
+        </tbody>
+      </table>
+
+      <div class="field-row cols2" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Présentation des aliments <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="conf-alim-pres" value="normaux"> Normaux</label>
+            <label class="radio-opt"><input type="radio" name="conf-alim-pres" value="haches"> Hachés</label>
+            <label class="radio-opt"><input type="radio" name="conf-alim-pres" value="mixes"> Mixés</label>
+            <label class="radio-opt"><input type="radio" name="conf-alim-pres" value="lisses"> Lisses</label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Couverts adaptés ? <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="conf-couverts" value="oui" onchange="toggleConditional('cond-couverts',true)"> Oui</label>
+            <label class="radio-opt"><input type="radio" name="conf-couverts" value="non" onchange="toggleConditional('cond-couverts',false)"> Non</label>
+          </div>
+          <div class="conditional hidden" id="cond-couverts" style="margin-top:6px">
+            <input type="text" id="conf-couverts-detail" placeholder="Lesquels ?">
+            <div style="font-size:11px;color:var(--orange-section);margin-top:4px">* à fournir en quantités adaptées pour le vacancier</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="yn-row">
+        <span class="yn-label">Utilise du gélifiant</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-gelifiant" value="oui" onchange="toggleConditional('cond-gelifiant',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-gelifiant" value="non" onchange="toggleConditional('cond-gelifiant',false)"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Risque de fausses routes</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-fausses-routes" value="oui" onchange="toggleConditional('cond-alim-detail',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-fausses-routes" value="non" onchange="toggleConditional('cond-alim-detail',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-gelifiant">
+        <label class="field-label">Précisez avec quels aliments <span class="req">*</span></label>
+        <input type="text" id="conf-gelifiant-detail" placeholder="ex: pain de mie, chips...">
+      </div>
+      <div class="conditional hidden" id="cond-alim-detail">
+        <label class="field-label">Précisez <span class="req">*</span></label>
+        <input type="text" id="conf-fausses-routes-detail" placeholder="Précisez">
+      </div>
+
+      <div class="field-row" style="margin-top:12px">
+        <div class="field-group">
+          <label class="field-label">Régime alimentaire <span class="req">*</span></label>
+          <input type="text" id="conf-regime" placeholder="ex: sans gluten, végétarien, aucun...">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Addictions alimentaires <span class="req">*</span></label>
+          <input type="text" id="conf-addictions-alim" placeholder="ex: sucreries, aucune...">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Troubles alimentaires <span class="req">*</span></label>
+          <input type="text" id="conf-troubles-alim" placeholder="ex: anorexie, hyperphagie, aucun...">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Allergies <span class="req">*</span></label>
+          <input type="text" id="conf-allergies" placeholder="ex: arachides, lactose, aucune...">
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Informations complémentaires sur les habitudes alimentaires <span class="req">*</span></label>
+        <textarea id="conf-alim-info" placeholder="Précisez..." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 5 : FICHE CONFIDENTIELLE P.3 ════════ -->
+  <div class="step-page" id="step-5">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 3/6</div>
+
+      <!-- Rythme et repos -->
+      <div class="section-header orange">Rythme et Repos</div>
+      <div class="yn-row">
+        <span class="yn-label">Peurs / angoisses nocturnes</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-peurs-nuit" value="oui" onchange="toggleConditional('cond-peurs-nuit',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-peurs-nuit" value="non" onchange="toggleConditional('cond-peurs-nuit',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-peurs-nuit">
+        <label class="field-label">Si oui, précisez <span class="req">*</span></label>
+        <input type="text" id="conf-peurs-nuit-detail" placeholder="Précisez">
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Se lève la nuit</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-leve-nuit" value="oui" onchange="toggleConditional('cond-leve-nuit',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-leve-nuit" value="non" onchange="toggleConditional('cond-leve-nuit',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-leve-nuit">
+        <label class="field-label">Pour quelles raisons ? <span class="req">*</span></label>
+        <input type="text" id="conf-leve-nuit-detail" placeholder="Précisez">
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Besoin d'une surveillance nocturne</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-surveillance-nuit" value="oui" onchange="toggleConditional('cond-surveillance-nuit',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-surveillance-nuit" value="non" onchange="toggleConditional('cond-surveillance-nuit',false)"> Non</label>
+        </div>
+      </div>
+      <div class="note-important" style="font-size:11px">* Merci de noter que nos animateurs n'assurent pas de veille la nuit. Dormant sur place, ils interviennent pour de réelles nécessités.</div>
+      <div class="conditional hidden" id="cond-surveillance-nuit">
+        <label class="field-label">Si oui, pour quelles raisons ? <span class="req">*</span></label>
+        <input type="text" id="conf-surveillance-nuit-detail" placeholder="Précisez">
+      </div>
+      <div class="field-row cols2" style="margin-top:10px">
+        <div class="field-group">
+          <label class="field-label">Heure habituelle du coucher <span class="req">*</span></label>
+          <input type="text" id="conf-heure-coucher" placeholder="ex: 21h30">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Heure habituelle du lever <span class="req">*</span></label>
+          <input type="text" id="conf-heure-lever" placeholder="ex: 7h30">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:14px">
+        <label class="field-label">Informations complémentaires (rythme / repos) <span class="req">*</span></label>
+        <textarea id="conf-repos-info" placeholder="Précisez..." rows="3"></textarea>
+      </div>
+
+      <!-- Communication -->
+      <div class="section-header orange">Communication</div>
+      <div class="yn-row">
+        <span class="yn-label">Compréhension</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-comprehension" value="simple"> Simple</label>
+          <label class="yn-opt"><input type="radio" name="conf-comprehension" value="moyenne"> Moyenne</label>
+          <label class="yn-opt"><input type="radio" name="conf-comprehension" value="totale"> Totale</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Mode de communication</span>
+        <div class="yn-cols" style="flex-wrap:wrap;gap:10px">
+          <label class="yn-opt"><input type="radio" name="conf-mode-comm" value="langage_verbal"> Langage verbal</label>
+          <label class="yn-opt"><input type="radio" name="conf-mode-comm" value="geste_cris"> Geste/Cris</label>
+          <label class="yn-opt"><input type="radio" name="conf-mode-comm" value="ne_parle_pas"> Ne parle pas</label>
+          <label class="yn-opt"><input type="radio" name="conf-mode-comm" value="pictos"> Pictos/Photos</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Peut exprimer ses besoins</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-exprimer-besoins" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-exprimer-besoins" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Peut tenir une conversation fluide</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-conversation" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-conversation" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Écrit</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-ecrit" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-ecrit" value="non"> Non</label>
+          <label class="yn-opt"><input type="radio" name="conf-ecrit" value="avec_aide"> Avec aide</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Lit</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-lit" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-lit" value="non"> Non</label>
+          <label class="yn-opt"><input type="radio" name="conf-lit" value="avec_aide"> Avec aide</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Possède un téléphone portable</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-telephone" value="oui" onchange="toggleConditional('cond-telephone',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-telephone" value="non" onchange="toggleConditional('cond-telephone',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-telephone">
+        <label class="field-label">Si oui, protocole <span class="req">*</span></label>
+        <input type="text" id="conf-telephone-protocole" placeholder="ex: appels illimités, usage restreint...">
+      </div>
+      <div class="field-group" style="margin:12px 0 14px">
+        <label class="field-label">Informations complémentaires (communication) <span class="req">*</span></label>
+        <textarea id="conf-comm-info" placeholder="Précisez..." rows="3"></textarea>
+      </div>
+
+      <!-- Relations -->
+      <div class="section-header orange">Relation</div>
+      <div class="yn-row">
+        <span class="yn-label">Sociable</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-sociable" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-sociable" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">S'isole</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-isole" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-isole" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Agressivité verbale</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-agressivite-verbale" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-agressivite-verbale" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Agressivité physique</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-agressivite-physique" value="oui" onchange="toggleConditional('cond-agressivite',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-agressivite-physique" value="non" onchange="toggleConditional('cond-agressivite',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-agressivite">
+        <div class="field-group">
+          <label class="field-label">Si oui, envers qui ? <span class="req">*</span></label>
+          <input type="text" id="conf-agressivite-detail" placeholder="encadrants, vacanciers, autres...">
+        </div>
+        <div class="field-group" style="margin-top:8px">
+          <label class="field-label">Préconisations pour éviter/gérer ce type de difficultés <span class="req">*</span></label>
+          <textarea id="conf-agressivite-preconisation" placeholder="Précisez..." rows="2"></textarea>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">En couple sur le séjour avec</span>
+        <div style="flex:1"></div>
+      </div>
+      <div class="field-group" style="margin:6px 0 8px">
+        <input type="text" id="conf-couple-avec" placeholder="Nom et prénom si en couple sur le séjour">
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Partage la même chambre</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-meme-chambre-rel" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-meme-chambre-rel" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Partage le même lit (lits jumeaux)</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-meme-lit" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-meme-lit" value="non"> Non</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 6 : FICHE CONFIDENTIELLE P.4 ════════ -->
+  <div class="step-page" id="step-6">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 4/6</div>
+
+      <div class="section-header">Déplacements</div>
+      <div class="yn-row">
+        <span class="yn-label">Se repère dans l'espace</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-repere-espace" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-repere-espace" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Se repère dans le temps</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-repere-temps" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-repere-temps" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Fatigable</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-fatigable" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-fatigable" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Marche</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-marche" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-marche" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="field-row cols2" style="margin:10px 0">
+        <div class="field-group">
+          <label class="field-label">Marche <span class="req">*</span></label>
+          <div class="check-group" style="flex-wrap:wrap;gap:8px">
+            <label class="check-opt"><input type="checkbox" id="conf-marche-seul"> Seul(e)</label>
+            <label class="check-opt"><input type="checkbox" id="conf-marche-aide"> Avec l'aide de quelqu'un</label>
+            <label class="check-opt"><input type="checkbox" id="conf-marche-materiel"> Avec du matériel</label>
+            <label class="check-opt"><input type="checkbox" id="conf-marche-30min"> Moins de 30 min</label>
+            <label class="check-opt"><input type="checkbox" id="conf-marche-30a60"> De 30 min à 1h</label>
+            <label class="check-opt"><input type="checkbox" id="conf-marche-1h"> Plus de 1 heure</label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Vitesse / Rythme <span class="req">*</span></label>
+          <input type="text" id="conf-marche-vitesse" placeholder="ex: lent, normal...">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:14px">
+        <label class="field-label">Informations complémentaires (déplacements) <span class="req">*</span></label>
+        <textarea id="conf-deplacement-info" placeholder="Précisez..." rows="2"></textarea>
+      </div>
+
+      <div class="yn-row">
+        <span class="yn-label">Peut monter un escalier</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-escalier-monte" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-escalier-monte" value="non"> Non</label>
+          <label class="yn-opt"><input type="radio" name="conf-escalier-monte" value="avec_aide"> Avec aide</label>
+        </div>
+      </div>
+      <div class="field-row cols2" style="margin:10px 0">
+        <div class="field-group">
+          <label class="field-label">Se déplace en intérieur avec <span class="req">*</span></label>
+          <div class="radio-group" style="flex-wrap:wrap;gap:8px">
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="aucun"> Pas de matériel</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="fauteuil"> Fauteuil</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="canne"> Canne</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="deambulateur"> Déambulateur</label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Se déplace en extérieur avec <span class="req">*</span></label>
+          <div class="radio-group" style="flex-wrap:wrap;gap:8px">
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="aucun"> Pas de matériel</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="fauteuil"> Fauteuil</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="canne"> Canne</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="deambulateur"> Déambulateur</label>
+          </div>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">A besoin de tenir le bras de l'accompagnateur</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-tenir-bras" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-tenir-bras" value="non"> Non</label>
+        </div>
+      </div>
+
+      <!-- Fauteuil roulant -->
+      <div class="section-header orange">Pour les personnes en fauteuils</div>
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
+        <div class="yn-row">
+          <span class="yn-label">Occasionnellement pour les longues sorties</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-fr-occasionnel" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-fr-occasionnel" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">En permanence</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-fr-permanent" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-fr-permanent" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Peut se tenir debout</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-fr-debout" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-fr-debout" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label" style="color:var(--red-section);font-weight:600">Appui plantaire (pour les transferts) — obligatoire</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-appui-plantaire" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-appui-plantaire" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label" style="color:var(--red-section);font-weight:600">Transfert avec de l'aide dans un véhicule classique (trafic) — obligatoire</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-transfert-vehicule" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-transfert-vehicule" value="non"> Non</label>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label class="field-label">Je manœuvre seul(e) mon fauteuil manuel</label>
+          <div class="field-row cols2" style="margin-bottom:0">
+            <div>
+              <label style="font-size:12px">À l'intérieur</label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-fr-manoeuvre-int" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-fr-manoeuvre-int" value="non"> Non</label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px">À l'extérieur</label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-fr-manoeuvre-ext" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-fr-manoeuvre-ext" value="non"> Non</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sorties -->
+      <div class="section-header orange">Sorties</div>
+      <div class="yn-row">
+        <span class="yn-label" style="font-weight:600">Peut sortir seul(e) sans accompagnement</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-sortie-seul" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-sortie-seul" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label" style="font-weight:600">Peut sortir seul(e) en petit groupe sans accompagnement</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-sortie-groupe" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-sortie-groupe" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Sait demander son chemin</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-demander-chemin" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-demander-chemin" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Est capable de rentrer à une heure fixe</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-heure-fixe" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-heure-fixe" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label" style="font-weight:600">Gère son argent</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-argent" value="seul"> Seul(e)</label>
+          <label class="yn-opt"><input type="radio" name="conf-argent" value="avec_aide"> Avec aide</label>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--orange-section);padding:4px 0 8px">Merci de prévoir à minima 10€</div>
+      <div class="yn-row">
+        <span class="yn-label">Peut se mettre en danger ?</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-danger" value="oui" onchange="toggleConditional('cond-danger',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-danger" value="non" onchange="toggleConditional('cond-danger',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-danger">
+        <label class="field-label">Si oui, comment ? <span class="req">*</span></label>
+        <input type="text" id="conf-danger-detail" placeholder="Précisez">
+      </div>
+
+      <!-- Activités -->
+      <div class="section-header orange">Les Activités</div>
+      <div class="yn-row">
+        <span class="yn-label" style="font-weight:600">Sait nager</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-nage" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-nage" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label">Sait choisir parmi plusieurs activités</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-choix-activite" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-choix-activite" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div class="field-group">
+          <label class="field-label">Centres d'intérêt <span class="req">*</span></label>
+          <textarea id="conf-interets" placeholder="ex: musique, sport, nature, arts..." rows="2"></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Activités interdites <span class="req">*</span></label>
+          <textarea id="conf-activites-interdites" placeholder="ex: aucune, piscine, randonnée..." rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 7 : FICHE CONFIDENTIELLE P.5 ════════ -->
+  <div class="step-page" id="step-7">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 5/6</div>
+
+      <div class="section-header">Troubles</div>
+      <div id="troubles-list">
+        <!-- généré par JS -->
+      </div>
+      <div class="field-group" style="margin:12px 0 14px">
+        <label class="field-label">S'il y a des troubles du comportement, quelles solutions mettre en place afin d'éviter ou gérer les différentes situations <span class="req">*</span></label>
+        <textarea id="conf-troubles-solutions" placeholder="Précisez..." rows="4"></textarea>
+      </div>
+
+      <div class="section-header">Habitudes de Vie</div>
+
+      <!-- Tabac -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Fumeur</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-fumeur" value="oui" onchange="toggleConditional('cond-fumeur',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-fumeur" value="non" onchange="toggleConditional('cond-fumeur',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-fumeur">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">À quelle fréquence ? <span class="req">*</span></label>
+              <input type="text" id="conf-fumeur-freq" placeholder="ex: 10 cigarettes / jour">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Peut-il/elle gérer seul(e) ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-fumeur-seul" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-fumeur-seul" value="non"> Non</label>
+              </div>
+            </div>
+          </div>
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Peut-il/elle être frustré(e) par la limite de cigarette ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-fumeur-frustre" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-fumeur-frustre" value="non"> Non</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Si oui, comportement à adapter <span class="req">*</span></label>
+              <input type="text" id="conf-fumeur-comportement" placeholder="Précisez">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Protocole cigarette <span class="req">*</span></label>
+            <input type="text" id="conf-fumeur-protocole" placeholder="ex: 3 pauses par jour à heures fixes...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Alcool -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div class="yn-row">
+          <span class="yn-label">Peut consommer de l'alcool (ex: Bière au bar 1 fois dans le séjour)</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-alcool" value="oui" onchange="toggleConditional('cond-alcool',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-alcool" value="non" onchange="toggleConditional('cond-alcool',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-alcool">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">À quelle fréquence, peut-il/elle gérer seul(e) ? <span class="req">*</span></label>
+              <input type="text" id="conf-alcool-freq" placeholder="Précisez">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Type d'achat à éviter <span class="req">*</span></label>
+              <input type="text" id="conf-alcool-eviter" placeholder="ex: alcool fort...">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Les préférences d'achat du vacancier <span class="req">*</span></label>
+            <input type="text" id="conf-alcool-preferences" placeholder="Précisez">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 8 : FICHE CONFIDENTIELLE P.6 ════════ -->
+  <div class="step-page" id="step-8">
+    <div class="form-card">
+      <div class="form-card-title">Fiche Confidentielle — Page 6/6</div>
+      <div class="note-important">
+        <strong>PARTIE 3 : SANTÉ</strong> — Chaque médicament doit être accompagné de son ordonnance.
+      </div>
+
+      <!-- Traitement médical -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Traitement médical (sous pilulier obligatoirement)</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-traitement" value="oui" onchange="toggleConditional('cond-traitement',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-traitement" value="non" onchange="toggleConditional('cond-traitement',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-traitement">
+          <div class="field-row cols3">
+            <div class="field-group">
+              <label class="field-label">Prend son traitement seul(e) <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-traitement-seul" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-traitement-seul" value="non"> Non</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Soins corporels <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-soins-corp" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-soins-corp" value="non"> Non</label>
+              </div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Si oui, précisez pour quels soins et quelle fréquence <span class="req">*</span></label>
+            <textarea id="conf-soins-detail" placeholder="Précisez les soins et leur fréquence..." rows="2"></textarea>
+          </div>
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Porte des bas de contention ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="non"> Non</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Protocole <span class="req">*</span></label>
+              <input type="text" id="conf-contention-protocole" placeholder="Précisez">
+            </div>
+          </div>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Soins infirmiers</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-soins-infirm" value="oui" onchange="toggleConditional('cond-soins-infirm',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-soins-infirm" value="non" onchange="toggleConditional('cond-soins-infirm',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-soins-infirm">
+          <div class="field-group">
+            <label class="field-label">Si oui, précisez pour quels soins et quelle fréquence <span class="req">*</span></label>
+            <textarea id="conf-soins-infirm-detail" placeholder="Précisez..." rows="2"></textarea>
+          </div>
+          <div class="yn-row">
+            <span class="yn-label">Injections pendant le séjour</span>
+            <div class="yn-cols">
+              <label class="yn-opt"><input type="radio" name="conf-injections" value="non"> Non</label>
+              <label class="yn-opt"><input type="radio" name="conf-injections" value="matin"> Matin</label>
+              <label class="yn-opt"><input type="radio" name="conf-injections" value="soir"> Soir</label>
+            </div>
+          </div>
+          <div class="note-important" style="font-size:11px;margin-top:8px">⚠️ Toutes injections lors d'un séjour nécessite le passage d'une IDE. Une ordonnance sera à envoyer obligatoirement ainsi que la carte vitale (PAS DE PHOTOCOPIE) ou l'attestation de droit.</div>
+        </div>
+      </div>
+
+      <!-- Maladies -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Diabétique</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-diabete" value="oui" onchange="toggleConditional('cond-diabete',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-diabete" value="non" onchange="toggleConditional('cond-diabete',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-diabete">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Y a-t-il des injections ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="matin"> Matin</label>
+                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="soir"> Soir</label>
+                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="non"> Non</label>
+              </div>
+            </div>
+          </div>
+          <div class="note-important" style="font-size:11px">*Merci de fournir une ordonnance IDE, le protocole et le matériel nécessaire ainsi que la carte vitale</div>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Asthmatique</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-asthme" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-asthme" value="non"> Non</label>
+          </div>
+        </div>
+
+        <div class="yn-row">
+          <span class="yn-label" style="font-weight:600">Épilepsie</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-epilepsie" value="oui" onchange="toggleConditional('cond-epilepsie',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-epilepsie" value="non" onchange="toggleConditional('cond-epilepsie',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-epilepsie">
+          <div class="field-row cols2">
+            <div class="field-group">
+              <label class="field-label">Est-elle stabilisée ? <span class="req">*</span></label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="conf-epilepsie-stab" value="oui"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-epilepsie-stab" value="non"> Non</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Date de la dernière crise <span class="req">*</span></label>
+              <input type="text" id="conf-epilepsie-date" placeholder="ex: janvier 2025">
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Protocole en cas de crise <span class="req">*</span></label>
+            <textarea id="conf-epilepsie-protocole" placeholder="Décrivez le protocole à suivre en cas de crise..." rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Déficiences -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:12px;color:var(--text-mid);margin-bottom:10px">Déficience visuelle</div>
+        <div class="yn-row">
+          <span class="yn-label">Non voyant</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-non-voyant" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-non-voyant" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Mal voyant</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-mal-voyant" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-mal-voyant" value="non"> Non</label>
+          </div>
+        </div>
+        <div style="font-weight:700;font-size:12px;color:var(--text-mid);margin:12px 0 8px">Déficience auditive</div>
+        <div class="yn-row">
+          <span class="yn-label">Sourd</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-sourd" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-sourd" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Malentendant</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-malentendant" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-malentendant" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Port d'appareillage</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-appareillage" value="oui" onchange="toggleConditional('cond-appareillage',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-appareillage" value="non" onchange="toggleConditional('cond-appareillage',false)"> Non</label>
+          </div>
+        </div>
+        <div class="conditional hidden" id="cond-appareillage">
+          <label class="field-label">Type d'appareil <span class="req">*</span></label>
+          <input type="text" id="conf-appareillage-type" placeholder="ex: prothèse auditive bilatérale...">
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Porte un dentier</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-dentier" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-dentier" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Le gère t-il seul</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="non"> Non</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Poids / Taille -->
+      <div class="field-row cols2" style="margin-bottom:14px">
+        <div class="field-group">
+          <label class="field-label">Poids (kg) <span class="req">*</span></label>
+          <input type="number" id="conf-poids" placeholder="ex: 65" min="1" max="300">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Taille (cm) <span class="req">*</span></label>
+          <input type="number" id="conf-taille" placeholder="ex: 170" min="50" max="250">
+        </div>
+      </div>
+
+      <!-- Antécédents -->
+      <div class="field-group" style="margin-bottom:14px">
+        <label class="field-label">Antécédents médicaux (merci d'indiquer tous les antécédents médicaux à prendre en compte pour le séjour) <span class="req">*</span></label>
+        <textarea id="conf-antecedents" placeholder="Listez tous les antécédents médicaux pertinents..." rows="5"></textarea>
+      </div>
+
+      <!-- Autorisation image -->
+      <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+        <label class="field-label">J'autorise l'utilisation de l'image de <span class="req">*</span></label>
+        <div style="display:flex;gap:4px;margin-bottom:6px">
+          <input type="text" id="conf-image-nom" placeholder="Nom et prénom du vacancier" style="flex:1">
+        </div>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="conf-autorisation-image" value="oui"> Oui</label>
+          <label class="radio-opt"><input type="radio" name="conf-autorisation-image" value="non"> Non</label>
+        </div>
+      </div>
+
+      <!-- Signature -->
+      <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+        <div class="field-row cols2">
+          <div class="field-group">
+            <label class="field-label">Fait à <span class="req">*</span></label>
+            <input type="text" id="conf-fait-a" placeholder="Ville">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Le <span class="req">*</span></label>
+            <input type="date" id="conf-date-signature" value="">
+          </div>
+        </div>
+        <div class="field-group" style="margin-bottom:10px">
+          <label class="field-label">Je soussigné(e) Mme, Mr — agissant en qualité de <span class="req">*</span></label>
+          <input type="text" id="conf-qualite" placeholder="ex: directeur(trice), responsable légal...">
+        </div>
+        <label class="check-opt" style="font-size:13px;line-height:1.5;cursor:pointer;display:flex;gap:8px;align-items:flex-start">
+          <input type="checkbox" id="conf-acceptation" style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
+          <span>Je certifie avoir pris connaissance des conditions générales et particulières de LA LYSARDIERE mentionnées au catalogue 2026 et déclare les accepter sans réserve. <span class="req">*</span></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ÉTAPE 9 : CONFIRMATION ════════ -->
+  <div class="step-page" id="step-9">
+    <div class="form-card">
+      <div class="confirmation-box" id="recap-waiting" style="display:none">
+        <div style="font-size:48px;margin-bottom:16px">⏳</div>
+        <div class="confirmation-title">Envoi en cours...</div>
+        <div class="confirmation-sub">Vos données sont en cours d'envoi à La Lysardière. Merci de patienter.</div>
+      </div>
+      <div id="recap-done" style="display:none">
+        <div class="confirmation-box">
+          <div class="confirmation-icon">✅</div>
+          <div class="confirmation-title">Fiche envoyée avec succès !</div>
+          <div class="confirmation-sub">La fiche de <strong id="recap-nom-personne"></strong> a bien été transmise à La Lysardière et enregistrée dans notre système.</div>
+        </div>
+        <div style="padding:0 0 24px">
+          <h3 style="font-family:Fraunces,serif;color:var(--forest);margin-bottom:16px">Récapitulatif</h3>
+          <div id="recap-content" style="font-size:13px;line-height:1.8;color:var(--text-mid)"></div>
+          <div style="text-align:center;margin-top:24px">
+            <button class="btn btn-primary" onclick="downloadRecap()" style="margin-right:10px">⬇ Télécharger le récapitulatif PDF</button>
+            <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimer</button>
+          </div>
+        </div>
+      </div>
+      <div id="recap-error" style="display:none">
+        <div class="confirmation-box">
+          <div class="confirmation-icon">❌</div>
+          <div class="confirmation-title">Une erreur est survenue</div>
+          <div class="confirmation-sub" id="recap-error-msg">Merci de réessayer ou de contacter La Lysardière directement.</div>
+          <button class="btn btn-secondary" onclick="goToStep(8)" style="margin-top:16px">← Retour</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<!-- NAV BAR -->
+<div class="nav-bar" id="nav-bar">
+  <button class="btn btn-secondary" id="btn-prev" onclick="prevStep()" style="display:none">← Précédent</button>
+  <div style="font-size:12px;color:var(--text-light)" id="step-indicator">Étape 1 sur 9</div>
+  <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Suivant →</button>
+  <button class="btn btn-submit" id="btn-submit" onclick="submitForm()" style="display:none">✅ Envoyer la fiche</button>
+</div>
+
+<script>
+// ══ CONFIG SUPABASE ══
+const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+
+async function api(path, method='GET', body=null){
+  const opts={method,headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${SUPABASE_ANON_KEY}`,'Content-Type':'application/json',Prefer:'return=representation'}};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(SUPABASE_URL+path,opts);
+  if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t}`)}
+  const t=await res.text();return t?JSON.parse(t):null;
+}
+
+// ══ STATE ══
+let currentStep = 1;
+const TOTAL_STEPS = 9;
+let selectedTypeSejour = null;
+let formData = {};
+
+// ══ SÉJOURS CONFIG (modifiable dans documents.html) ══
+const SEJOURS_CONFIG = {
+  weekend_theme: {
+    label: 'Week-ends à thèmes',
+    intro: 'Tous ces week-ends commencent à partir de 10h et se terminent vers 17h30.',
+    prix: '390€ TTC',
+    sessions: [
+      'COUPLES du 27 au 29 Mars : 3 jours',
+      'PÂQUES du 4 au 6 Avril : 3 jours',
+      'PLAISIRS EN PERIGORD du 25 au 27 Avril : 3 jours',
+      'ENTRE COPINES du 25 au 27 avril : 3 jours',
+      'AUTOUR DES ANIMAUX du 1 au 3 Mai : 3 jours',
+      'Z\'ANIMAUX du 27 au 29 Novembre : 3 jours',
+      'MUSIC AND CO du 27 au 29 Novembre : 3 jours'
+    ]
+  },
+  mini_sejour: {
+    label: 'Les Mini Séjours',
+    intro: 'Tous ces mini séjours commencent à partir de 10h et se terminent vers 17h30.',
+    prix: '590€ TTC',
+    sessions: [
+      'TRESOR PERDU DU PERIGORD du 7 au 11 Mai',
+      'C\'EST LA FETE ! du 7 au 11 Mai',
+      'GRAND MIXTE du 14 au 18 Mai',
+      'MELI MELO du 14 au 18 Mai',
+      'PECHE ET PETANQUE PARTY',
+      'ENTRE COPINES du 4 au 8 Novembre',
+      'GOURMANDISES D\'AUTOMNE du 4 au 8 Novembre',
+      'DOUCEUR D\'AUTOMNE du 11 au 15 Novembre'
+    ]
+  },
+  weekend_ordinaire: {
+    label: 'Week-end et séjour ordinaire',
+    intro: 'Arrivée le matin et départ vers 17h30. Tarif 100 euros TTC / jour.',
+    prix: '100€ TTC / jour',
+    sessions: null // dates libres
+  },
+  sejour: {
+    label: 'Fiche d\'inscription séjour',
+    intro: 'Séjour Dordogne ou Mer.',
+    sessions: null // nom du séjour libre
+  }
+};
+
+// ══ STEPPER ══
+const STEP_LABELS = [
+  'Type de séjour','Inscription','Identité & mobilité','Hygiène & alimentation',
+  'Communication & relation','Déplacements & activités','Troubles & habitudes','Santé','Confirmation'
+];
+
+function initStepper(){
+  const s=document.getElementById('stepper');
+  s.innerHTML=STEP_LABELS.map((l,i)=>`<div class="step-item ${i+1===currentStep?'active':i+1<currentStep?'done':'todo'}" id="stepper-${i+1}" onclick="tryGoToStep(${i+1})">
+    <div class="step-num">${i+1<currentStep?'✓':i+1}</div>
+    <div class="step-label">${l}</div>
+  </div>`).join('');
+}
+
+function updateStepper(){
+  for(let i=1;i<=TOTAL_STEPS;i++){
+    const el=document.getElementById('stepper-'+i);
+    if(!el) continue;
+    el.className='step-item '+(i===currentStep?'active':i<currentStep?'done':'todo');
+    el.querySelector('.step-num').textContent=i<currentStep?'✓':String(i);
+  }
+  document.getElementById('step-indicator').textContent=`Étape ${currentStep} sur ${TOTAL_STEPS}`;
+  document.getElementById('progress-fill').style.width=(currentStep/TOTAL_STEPS*100)+'%';
+}
+
+function tryGoToStep(n){if(n<currentStep) goToStep(n);}
+
+// ══ NAVIGATION ══
+function goToStep(n){
+  document.getElementById('step-'+currentStep).classList.remove('active');
+  currentStep=n;
+  document.getElementById('step-'+currentStep).classList.add('active');
+  updateStepper();
+  updateNavButtons();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateNavButtons(){
+  const prev=document.getElementById('btn-prev');
+  const next=document.getElementById('btn-next');
+  const submit=document.getElementById('btn-submit');
+  const nav=document.getElementById('nav-bar');
+  prev.style.display=currentStep>1?'block':'none';
+  if(currentStep===9){next.style.display='none';submit.style.display='none';nav.style.display='none';}
+  else if(currentStep===8){next.style.display='none';submit.style.display='block';}
+  else{next.style.display='block';submit.style.display='none';}
+}
+
+function prevStep(){if(currentStep>1) goToStep(currentStep-1);}
+
+function nextStep(){
+  if(!validateStep(currentStep)) return;
+  if(currentStep===1) buildFicheInscription();
+  if(currentStep<TOTAL_STEPS) goToStep(currentStep+1);
+}
+
+// ══ TYPE SÉJOUR ══
+function selectTypeSejour(type){
+  selectedTypeSejour=type;
+  document.querySelectorAll('.sejour-type-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('card-'+type).classList.add('selected');
+  document.getElementById('error-type').style.display='none';
+}
+
+// ══ FICHE INSCRIPTION DYNAMIQUE ══
+function buildFicheInscription(){
+  const cfg=SEJOURS_CONFIG[selectedTypeSejour];
+  let html=`<div class="form-card">
+    <div class="form-card-title">${cfg.label}</div>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:16px">${cfg.intro}</p>`;
+
+  // Sessions à cocher
+  if(cfg.sessions){
+    html+=`<div class="section-header">Choisissez le séjour <span class="req">*</span></div>
+      <div style="margin-bottom:16px">`;
+    cfg.sessions.forEach((s,i)=>{
+      html+=`<div class="sejour-list-item" onclick="toggleSejour(${i})">
+        <label id="sejour-li-${i}"><input type="radio" name="sejour-choix" value="${s}" style="width:auto"> ${s}</label>
+        <span class="price">${cfg.prix}</span>
+      </div>`;
+    });
+    html+='</div>';
+  } else if(selectedTypeSejour==='weekend_ordinaire'){
+    html+=`<div class="section-header">Dates choisies</div>
+      <div class="field-row cols2">
+        <div class="field-group"><label class="field-label">Du <span class="req">*</span></label><input type="date" id="insc-date-debut"></div>
+        <div class="field-group"><label class="field-label">Au <span class="req">*</span></label><input type="date" id="insc-date-fin"></div>
+      </div>`;
+  } else {
+    html+=`<div class="field-row">
+      <div class="field-group"><label class="field-label">Nom du séjour et dates <span class="req">*</span></label><input type="text" id="insc-sejour-nom" placeholder="ex: Séjour mer du 1 au 15 juillet 2026"></div>
+    </div>`;
+  }
+
+  // Participant
+  html+=`<div class="section-header forest">Participant</div>
+    <div class="field-row cols3">
+      <div class="field-group"><label class="field-label">Nom <span class="req">*</span></label><input type="text" id="insc-nom" placeholder="NOM"></div>
+      <div class="field-group"><label class="field-label">Prénom <span class="req">*</span></label><input type="text" id="insc-prenom" placeholder="Prénom"></div>
+      <div class="field-group"><label class="field-label">Date de naissance <span class="req">*</span></label><input type="date" id="insc-naissance"></div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Sexe <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="insc-sexe" value="M"> M</label>
+          <label class="radio-opt"><input type="radio" name="insc-sexe" value="F"> F</label>
+        </div>
+      </div>
+      <div class="field-group"><label class="field-label">Autonomie <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="insc-autonomie" value="BA"> BA</label>
+          <label class="radio-opt"><input type="radio" name="insc-autonomie" value="MA"> MA</label>
+        </div>
+      </div>
+    </div>`;
+
+  if(selectedTypeSejour!=='weekend_ordinaire'){
+    html+=`<div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Inscription en couple ? <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="insc-couple" value="oui" onchange="document.getElementById('cond-insc-couple').classList.remove('hidden')"> Oui</label>
+          <label class="radio-opt"><input type="radio" name="insc-couple" value="non" onchange="document.getElementById('cond-insc-couple').classList.add('hidden')"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-insc-couple">
+        <label class="field-label">Si oui, de qui s'agit-il ? <span class="req">*</span></label>
+        <input type="text" id="insc-couple-detail" placeholder="Nom et prénom">
+      </div>
+    </div>`;
+  }
+
+  if(selectedTypeSejour==='sejour'){
+    html+=`<div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Tutelle / Curatelle <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="insc-tutelle" value="oui"> Oui</label>
+          <label class="radio-opt"><input type="radio" name="insc-tutelle" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="field-group"><label class="field-label">Mesure de protection <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="insc-protection" value="oui"> Oui</label>
+          <label class="radio-opt"><input type="radio" name="insc-protection" value="non"> Non</label>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  html+=`<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;color:#856404;margin-bottom:14px">
+    <strong>Numéro d'astreinte en cas d'urgence (obligatoire) : </strong>
+    <input type="tel" id="insc-astreinte" placeholder="Numéro de téléphone" style="width:auto;display:inline;padding:4px 10px;margin-left:8px">
+  </div>`;
+
+  // Personne s'occupant de l'inscription
+  html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px">Personne s'occupant de l'inscription</div>
+    <div style="font-size:11px;color:var(--text-mid);margin-bottom:10px"><em>Uniquement à cette adresse seront envoyés les informations et le dossier. Merci de renseigner ces éléments de façon claire et lisible.</em></div>
+    <div class="field-row cols3">
+      <div class="field-group"><label class="field-label">Nom <span class="req">*</span></label><input type="text" id="insc-resp-nom" placeholder="Nom"></div>
+      <div class="field-group"><label class="field-label">Prénom <span class="req">*</span></label><input type="text" id="insc-resp-prenom" placeholder="Prénom"></div>
+      <div class="field-group"><label class="field-label">Fonction <span class="req">*</span></label><input type="text" id="insc-resp-fonction" placeholder="Fonction"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-group"><label class="field-label">Nom du chef de service <span class="req">*</span></label><input type="text" id="insc-chef-service"></div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Nom du foyer <span class="req">*</span></label><input type="text" id="insc-foyer-nom"></div>
+      <div class="field-group"><label class="field-label">Adresse <span class="req">*</span></label><input type="text" id="insc-adresse"></div>
+    </div>
+    <div class="field-row cols3">
+      <div class="field-group"><label class="field-label">Code postal <span class="req">*</span></label><input type="text" id="insc-cp" placeholder="24000"></div>
+      <div class="field-group"><label class="field-label">Ville <span class="req">*</span></label><input type="text" id="insc-ville"></div>
+      <div class="field-group"><label class="field-label">Tél <span class="req">*</span></label><input type="tel" id="insc-tel"></div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Mail <span class="req">*</span></label><input type="email" id="insc-mail"></div>
+      <div class="field-group"><label class="field-label">Mail du secrétariat <span class="req">*</span></label><input type="email" id="insc-mail-secretariat"></div>
+    </div>
+  </div>`;
+
+  // Relevé de frais
+  html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px">Le relevé de frais sera adressé à</div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Organisme <span class="req">*</span></label><input type="text" id="insc-org-nom"></div>
+      <div class="field-group"><label class="field-label">Nom <span class="req">*</span></label><input type="text" id="insc-org-contact"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-group"><label class="field-label">Tél <span class="req">*</span></label><input type="tel" id="insc-org-tel" style="width:200px"></div>
+    </div>
+    <div class="field-group"><label class="field-label">Adresse <span class="req">*</span></label><input type="text" id="insc-org-adresse"></div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Code postal <span class="req">*</span></label><input type="text" id="insc-org-cp"></div>
+      <div class="field-group"><label class="field-label">Ville <span class="req">*</span></label><input type="text" id="insc-org-ville"></div>
+    </div>
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Mail <span class="req">*</span></label><input type="email" id="insc-org-mail"></div>
+      <div class="field-group"><label class="field-label">Mail comptabilité <span class="req">*</span></label><input type="email" id="insc-org-mail-compta"></div>
+    </div>
+  </div>`;
+
+  // Convoyage
+  html+=`<div style="background:var(--mint);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px">
+    <label class="field-label" style="margin-bottom:8px">Convoyage — Le vacancier sera pris en charge <span class="req">*</span></label>
+    <div class="radio-group">
+      <label class="radio-opt"><input type="radio" name="insc-convoyage" value="gare_souillac_sarlat"> À la gare de Souillac ou Sarlat</label>
+      <label class="radio-opt"><input type="radio" name="insc-convoyage" value="accompagne_structure"> Accompagné par sa structure</label>
+    </div>
+  </div>`;
+
+  // Signature
+  html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+    <div class="field-row cols2">
+      <div class="field-group"><label class="field-label">Fait à <span class="req">*</span></label><input type="text" id="insc-fait-a" placeholder="Ville"></div>
+      <div class="field-group"><label class="field-label">Le <span class="req">*</span></label><input type="date" id="insc-date-signature" value="${new Date().toISOString().split('T')[0]}"></div>
+    </div>
+    <div class="field-group" style="margin-bottom:10px">
+      <label class="field-label">Je soussigné(e) Mme, Mr — agissant en qualité de <span class="req">*</span></label>
+      <input type="text" id="insc-qualite" placeholder="ex: directeur(trice)">
+    </div>
+    <label class="check-opt" style="font-size:13px;line-height:1.5;cursor:pointer;display:flex;gap:8px;align-items:flex-start">
+      <input type="checkbox" id="insc-acceptation" style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
+      <span>Je certifie avoir pris connaissance des conditions générales et particulières de LA LYSARDIERE mentionnées au catalogue 2026 et déclare les accepter sans réserve. <span class="req">*</span></span>
+    </label>
+  </div>`;
+
+  html+='</div>';
+  document.getElementById('fiche-inscription-content').innerHTML=html;
+}
+
+function toggleSejour(i){
+  const radio=document.querySelector(`input[name="sejour-choix"][value]`);
+  document.querySelectorAll('[id^="sejour-li-"]').forEach(el=>el.closest('.sejour-list-item').classList.remove('selected'));
+  document.querySelector(`#sejour-li-${i}`).closest('.sejour-list-item').classList.add('selected');
+  document.querySelector(`#sejour-li-${i} input[type=radio]`).checked=true;
+}
+
+// ══ TABLEAU HYGIÈNE ══
+const HYGIENE_ITEMS = [
+  {label:'Fait sa toilette',sub:false},
+  {label:'Prend sa douche',sub:false},
+  {label:'Les cheveux',sub:true},
+  {label:'Le dos',sub:true},
+  {label:'Les parties intimes',sub:true},
+  {label:'Les pieds',sub:true},
+  {label:'Se rase',sub:false},
+  {label:'Se coiffe',sub:false},
+  {label:'Se brosse les dents',sub:false},
+  {label:'S\'habille',sub:false},
+  {label:'Reconnaît ses vêtements',sub:false},
+  {label:'Se chausse',sub:false},
+  {label:'Va aux toilettes',sub:false},
+];
+const ALIM_ITEMS=[{label:'Mange',sub:false},{label:'Boit',sub:false}];
+
+function buildHygieneTable(items,bodyId,prefix){
+  const tbody=document.getElementById(bodyId);
+  tbody.innerHTML=items.map((item,i)=>`<tr class="${item.sub?'sub':''}">
+    <td class="label">${item.sub?'  '+item.label:item.label}</td>
+    ${['seul','stim','aide_partielle','aide_totale'].map(col=>`<td><input type="radio" name="${prefix}-${i}" value="${col}" required></td>`).join('')}
+  </tr>`).join('');
+}
+
+// ══ LISTE TROUBLES ══
+const TROUBLES_ITEMS=[
+  {key:'objet_personnel',label:'Objet personnel'},
+  {key:'rituels',label:'Rituels'},
+  {key:'potomanie',label:'Potomanie'},
+  {key:'peur_foule',label:'Peur de la foule'},
+  {key:'crise_angoisse',label:'Crise d\'angoisse'},
+  {key:'isole',label:'S\'isole'},
+  {key:'fabulations',label:'Fabulations, délires'},
+  {key:'trouble_memoire',label:'Trouble de la mémoire'},
+  {key:'autres',label:'Autres (précisez)'},
+  {key:'mise_danger_soi',label:'Mise en danger de soi'},
+  {key:'automutilation',label:'Automutilation'},
+  {key:'tendance_fugue',label:'Tendance à fuguer'},
+  {key:'tentative_suicide',label:'Tentative de suicide'},
+  {key:'exhibitionnisme',label:'Trouble exhibitionniste'},
+  {key:'troubles_sexuels',label:'Troubles sexuels'},
+];
+
+function buildTroublesList(){
+  const el=document.getElementById('troubles-list');
+  el.innerHTML=TROUBLES_ITEMS.map(t=>`
+    <div>
+      <div class="yn-row">
+        <span class="yn-label">${t.label}</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="trouble-${t.key}" value="oui" onchange="toggleConditional('cond-trouble-${t.key}',true)"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="trouble-${t.key}" value="non" onchange="toggleConditional('cond-trouble-${t.key}',false)"> Non</label>
+        </div>
+      </div>
+      <div class="conditional hidden" id="cond-trouble-${t.key}">
+        <label class="field-label">Précisez <span class="req">*</span></label>
+        <input type="text" id="trouble-${t.key}-detail" placeholder="Précisez">
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══ CONDITIONAL TOGGLE ══
+function toggleConditional(id,show){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.classList.toggle('hidden',!show);
+  if(!show){
+    el.querySelectorAll('input,textarea,select').forEach(i=>{
+      if(i.type==='radio'||i.type==='checkbox') i.checked=false;
+      else i.value='';
+    });
+  }
+}
+function toggleAstreinte(id,show){toggleConditional(id,show);}
+function showEnureseDetails(){toggleConditional('cond-enurese',true);}
+function hideEnureseDetails(){toggleConditional('cond-enurese',false);}
+function showEncopDetails(){toggleConditional('cond-encop',true);}
+function hideEncopDetails(){toggleConditional('cond-encop',false);}
+
+// ══ PHOTO PREVIEW ══
+function previewPhoto(input){
+  if(!input.files||!input.files[0]) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=document.getElementById('conf-photo-preview');
+    img.src=e.target.result;
+    img.style.display='block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ══ VALIDATION ══
+function validateStep(step){
+  let ok=true;
+  const errors=[];
+
+  const req=(id)=>{
+    const el=document.getElementById(id);
+    if(!el) return true;
+    const v=el.value.trim();
+    if(!v){el.classList.add('error');ok=false;return false}
+    el.classList.remove('error');return true;
+  };
+  const reqRadio=(name)=>{
+    const checked=document.querySelector(`input[name="${name}"]:checked`);
+    if(!checked){ok=false;return false}
+    return true;
+  };
+
+  if(step===1){
+    if(!selectedTypeSejour){
+      document.getElementById('error-type').style.display='block';
+      ok=false;
+    }
+  }
+
+  if(step===2){
+    req('insc-nom');req('insc-prenom');req('insc-naissance');
+    reqRadio('insc-sexe');reqRadio('insc-autonomie');reqRadio('insc-convoyage');
+    req('insc-astreinte');
+    req('insc-resp-nom');req('insc-resp-prenom');req('insc-resp-fonction');
+    req('insc-chef-service');req('insc-foyer-nom');req('insc-adresse');
+    req('insc-cp');req('insc-ville');req('insc-tel');req('insc-mail');req('insc-mail-secretariat');
+    req('insc-org-nom');req('insc-org-contact');req('insc-org-tel');
+    req('insc-org-adresse');req('insc-org-cp');req('insc-org-ville');req('insc-org-mail');req('insc-org-mail-compta');
+    req('insc-fait-a');req('insc-date-signature');req('insc-qualite');
+    const accInsc=document.getElementById('insc-acceptation');
+    if(accInsc&&!accInsc.checked){accInsc.style.outline='2px solid red';ok=false;}
+    else if(accInsc) accInsc.style.outline='';
+    // Séjour choisi
+    if(SEJOURS_CONFIG[selectedTypeSejour]&&SEJOURS_CONFIG[selectedTypeSejour].sessions){
+      if(!document.querySelector('input[name="sejour-choix"]:checked')){ok=false;}
+    } else if(selectedTypeSejour==='weekend_ordinaire'){
+      req('insc-date-debut');req('insc-date-fin');
+    } else {
+      req('insc-sejour-nom');
+    }
+  }
+
+  if(step===3){
+    req('conf-nom');req('conf-prenom');req('conf-age');req('conf-sejour-nom');
+    reqRadio('conf-autonomie');reqRadio('conf-infirmiere');reqRadio('conf-couple');
+    reqRadio('conf-fauteuil');reqRadio('conf-deambulateur');reqRadio('conf-escaliers');
+    reqRadio('conf-astreinte-type');
+    const astrType=document.querySelector('input[name="conf-astreinte-type"]:checked');
+    if(astrType&&astrType.value==='autre'){req('astreinte-prenom');req('astreinte-nom');req('astreinte-tel');req('astreinte-mail');}
+    req('conf-personnalite');req('conf-vie-quotidienne');req('conf-comportement');
+  }
+
+  if(step===4){
+    // Hygiène tableau
+    HYGIENE_ITEMS.forEach((_,i)=>{if(!document.querySelector(`input[name="hyg-${i}"]:checked`)) ok=false;});
+    reqRadio('conf-presence-douche');reqRadio('conf-timer-douche');reqRadio('conf-linge');
+    req('conf-toilette-info');
+    reqRadio('conf-stomie');reqRadio('conf-pistolet');
+    if(!document.querySelector('input[name="conf-enurese"]:checked')) ok=false;
+    if(!document.querySelector('input[name="conf-encop"]:checked')) ok=false;
+    // Alim
+    ALIM_ITEMS.forEach((_,i)=>{if(!document.querySelector(`input[name="alim-${i}"]:checked`)) ok=false;});
+    reqRadio('conf-alim-pres');reqRadio('conf-couverts');reqRadio('conf-gelifiant');reqRadio('conf-fausses-routes');
+    req('conf-regime');req('conf-addictions-alim');req('conf-troubles-alim');req('conf-allergies');req('conf-alim-info');
+  }
+
+  if(step===5){
+    reqRadio('conf-peurs-nuit');reqRadio('conf-leve-nuit');reqRadio('conf-surveillance-nuit');
+    req('conf-heure-coucher');req('conf-heure-lever');req('conf-repos-info');
+    reqRadio('conf-comprehension');reqRadio('conf-mode-comm');reqRadio('conf-exprimer-besoins');
+    reqRadio('conf-conversation');reqRadio('conf-ecrit');reqRadio('conf-lit');reqRadio('conf-telephone');
+    req('conf-comm-info');
+    reqRadio('conf-sociable');reqRadio('conf-isole');reqRadio('conf-agressivite-verbale');reqRadio('conf-agressivite-physique');
+    reqRadio('conf-meme-chambre-rel');reqRadio('conf-meme-lit');
+  }
+
+  if(step===6){
+    reqRadio('conf-repere-espace');reqRadio('conf-repere-temps');reqRadio('conf-fatigable');reqRadio('conf-marche');
+    req('conf-marche-vitesse');req('conf-deplacement-info');
+    reqRadio('conf-escalier-monte');reqRadio('conf-deplacement-int');reqRadio('conf-deplacement-ext');reqRadio('conf-tenir-bras');
+    reqRadio('conf-fr-occasionnel');reqRadio('conf-fr-permanent');reqRadio('conf-fr-debout');
+    reqRadio('conf-appui-plantaire');reqRadio('conf-transfert-vehicule');
+    reqRadio('conf-fr-manoeuvre-int');reqRadio('conf-fr-manoeuvre-ext');
+    reqRadio('conf-sortie-seul');reqRadio('conf-sortie-groupe');reqRadio('conf-demander-chemin');
+    reqRadio('conf-heure-fixe');reqRadio('conf-argent');reqRadio('conf-danger');
+    reqRadio('conf-nage');reqRadio('conf-choix-activite');
+    req('conf-interets');req('conf-activites-interdites');
+  }
+
+  if(step===7){
+    TROUBLES_ITEMS.forEach(t=>{if(!document.querySelector(`input[name="trouble-${t.key}"]:checked`)) ok=false;});
+    req('conf-troubles-solutions');
+    reqRadio('conf-fumeur');reqRadio('conf-alcool');
+  }
+
+  if(step===8){
+    reqRadio('conf-traitement');reqRadio('conf-soins-infirm');
+    reqRadio('conf-diabete');reqRadio('conf-asthme');reqRadio('conf-epilepsie');
+    reqRadio('conf-non-voyant');reqRadio('conf-mal-voyant');
+    reqRadio('conf-sourd');reqRadio('conf-malentendant');reqRadio('conf-appareillage');
+    reqRadio('conf-dentier');reqRadio('conf-dentier-seul');
+    req('conf-poids');req('conf-taille');req('conf-antecedents');
+    req('conf-image-nom');reqRadio('conf-autorisation-image');
+    req('conf-fait-a');req('conf-date-signature');req('conf-qualite');
+    const acc=document.getElementById('conf-acceptation');
+    if(!acc.checked){acc.style.outline='2px solid red';ok=false;}else acc.style.outline='';
+  }
+
+  if(!ok) window.scrollTo({top:0,behavior:'smooth'});
+  return ok;
+}
+
+// ══ COLLECTE DES DONNÉES ══
+function getRadioVal(name){const el=document.querySelector(`input[name="${name}"]:checked`);return el?el.value:null;}
+function getVal(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+function getChecked(id){const el=document.getElementById(id);return el?el.checked:false;}
+function getHygieneRow(prefix,i){return{seul:!!document.querySelector(`input[name="${prefix}-${i}"][value="seul"]:checked`),stim:!!document.querySelector(`input[name="${prefix}-${i}"][value="stim"]:checked`),aide_partielle:!!document.querySelector(`input[name="${prefix}-${i}"][value="aide_partielle"]:checked`),aide_totale:!!document.querySelector(`input[name="${prefix}-${i}"][value="aide_totale"]:checked`)};}
+
+function collectAllData(){
+  const insc={
+    type_sejour:selectedTypeSejour,
+    sejour_choisi:getRadioVal('sejour-choix')||getVal('insc-date-debut')+' au '+getVal('insc-date-fin')||getVal('insc-sejour-nom'),
+    participant:{nom:getVal('insc-nom'),prenom:getVal('insc-prenom'),naissance:getVal('insc-naissance'),sexe:getRadioVal('insc-sexe'),autonomie:getRadioVal('insc-autonomie'),couple:getRadioVal('insc-couple'),couple_detail:getVal('insc-couple-detail'),tutelle:getRadioVal('insc-tutelle'),protection:getRadioVal('insc-protection'),astreinte:getVal('insc-astreinte')},
+    responsable:{nom:getVal('insc-resp-nom'),prenom:getVal('insc-resp-prenom'),fonction:getVal('insc-resp-fonction'),chef_service:getVal('insc-chef-service'),foyer:getVal('insc-foyer-nom'),adresse:getVal('insc-adresse'),cp:getVal('insc-cp'),ville:getVal('insc-ville'),tel:getVal('insc-tel'),mail:getVal('insc-mail'),mail_secretariat:getVal('insc-mail-secretariat')},
+    releve_frais:{organisme:getVal('insc-org-nom'),contact:getVal('insc-org-contact'),tel:getVal('insc-org-tel'),adresse:getVal('insc-org-adresse'),cp:getVal('insc-org-cp'),ville:getVal('insc-org-ville'),mail:getVal('insc-org-mail'),mail_compta:getVal('insc-org-mail-compta')},
+    convoyage:getRadioVal('insc-convoyage'),
+    signature:{fait_a:getVal('insc-fait-a'),date:getVal('insc-date-signature'),qualite:getVal('insc-qualite'),acceptation:getChecked('insc-acceptation')}
+  };
+
+  const hygieneData={};
+  HYGIENE_ITEMS.forEach((item,i)=>hygieneData[item.label]=getHygieneRow('hyg',i));
+  const alimentData={};
+  ALIM_ITEMS.forEach((item,i)=>alimentData[item.label]=getHygieneRow('alim',i));
+  const troublesData={};
+  TROUBLES_ITEMS.forEach(t=>{troublesData[t.key]={valeur:getRadioVal('trouble-'+t.key),detail:getVal('trouble-'+t.key+'-detail')};});
+
+  const conf={
+    identite:{nom:getVal('conf-nom'),prenom:getVal('conf-prenom'),age:getVal('conf-age'),sejour:getVal('conf-sejour-nom'),autonomie:getRadioVal('conf-autonomie')},
+    mobilite:{infirmiere:getRadioVal('conf-infirmiere'),infirmiere_moments:{matin:getChecked('conf-infirm-matin'),midi:getChecked('conf-infirm-midi'),soir:getChecked('conf-infirm-soir')},infirmiere_detail:getVal('conf-infirmiere-detail'),couple:getRadioVal('conf-couple'),meme_chambre:getRadioVal('conf-meme-chambre'),fauteuil:getRadioVal('conf-fauteuil'),fauteuil_sortie:getChecked('conf-fauteuil-sortie'),deambulateur:getRadioVal('conf-deambulateur'),escaliers:getRadioVal('conf-escaliers')},
+    astreinte:{type:getRadioVal('conf-astreinte-type'),prenom:getVal('astreinte-prenom'),nom:getVal('astreinte-nom'),tel:getVal('astreinte-tel'),mail:getVal('astreinte-mail')},
+    personnalite:getVal('conf-personnalite'),
+    vie_quotidienne:getVal('conf-vie-quotidienne'),
+    comportement:getVal('conf-comportement'),
+    hygiene:{tableau:hygieneData,presence_douche:getRadioVal('conf-presence-douche'),timer_douche:getRadioVal('conf-timer-douche'),linge:getRadioVal('conf-linge'),protocoles_toilette:getVal('conf-toilette-info'),stomie:getRadioVal('conf-stomie'),stomie_aide:getVal('conf-stomie-aide'),pistolet:getRadioVal('conf-pistolet'),pistolet_aide:getVal('conf-pistolet-aide'),enurese:getRadioVal('conf-enurese'),enurese_freq:getVal('conf-enurese-freq'),enurese_aide:getRadioVal('conf-enurese-aide'),enurese_type:getVal('conf-enurese-type'),encopresie:getRadioVal('conf-encop'),encop_freq:getVal('conf-encop-freq'),encop_aide:getRadioVal('conf-encop-aide'),encop_type:getVal('conf-encop-type')},
+    alimentation:{tableau:alimentData,presentation:getRadioVal('conf-alim-pres'),couverts:getRadioVal('conf-couverts'),couverts_detail:getVal('conf-couverts-detail'),gelifiant:getRadioVal('conf-gelifiant'),gelifiant_detail:getVal('conf-gelifiant-detail'),fausses_routes:getRadioVal('conf-fausses-routes'),fausses_routes_detail:getVal('conf-fausses-routes-detail'),regime:getVal('conf-regime'),addictions:getVal('conf-addictions-alim'),troubles:getVal('conf-troubles-alim'),allergies:getVal('conf-allergies'),info_comp:getVal('conf-alim-info')},
+    repos:{peurs_nuit:getRadioVal('conf-peurs-nuit'),peurs_nuit_detail:getVal('conf-peurs-nuit-detail'),leve_nuit:getRadioVal('conf-leve-nuit'),leve_nuit_detail:getVal('conf-leve-nuit-detail'),surveillance_nuit:getRadioVal('conf-surveillance-nuit'),surveillance_nuit_detail:getVal('conf-surveillance-nuit-detail'),heure_coucher:getVal('conf-heure-coucher'),heure_lever:getVal('conf-heure-lever'),info_comp:getVal('conf-repos-info')},
+    communication:{comprehension:getRadioVal('conf-comprehension'),mode:getRadioVal('conf-mode-comm'),exprime_besoins:getRadioVal('conf-exprimer-besoins'),conversation:getRadioVal('conf-conversation'),ecrit:getRadioVal('conf-ecrit'),lit:getRadioVal('conf-lit'),telephone:getRadioVal('conf-telephone'),telephone_protocole:getVal('conf-telephone-protocole'),info_comp:getVal('conf-comm-info')},
+    relation:{sociable:getRadioVal('conf-sociable'),isole:getRadioVal('conf-isole'),agressivite_verbale:getRadioVal('conf-agressivite-verbale'),agressivite_physique:getRadioVal('conf-agressivite-physique'),agressivite_detail:getVal('conf-agressivite-detail'),agressivite_preconisation:getVal('conf-agressivite-preconisation'),couple_avec:getVal('conf-couple-avec'),meme_chambre:getRadioVal('conf-meme-chambre-rel'),meme_lit:getRadioVal('conf-meme-lit')},
+    deplacements:{repere_espace:getRadioVal('conf-repere-espace'),repere_temps:getRadioVal('conf-repere-temps'),fatigable:getRadioVal('conf-fatigable'),marche:getRadioVal('conf-marche'),marche_modalites:{seul:getChecked('conf-marche-seul'),aide:getChecked('conf-marche-aide'),materiel:getChecked('conf-marche-materiel'),moins_30:getChecked('conf-marche-30min'),trente_a_soixante:getChecked('conf-marche-30a60'),plus_1h:getChecked('conf-marche-1h')},marche_vitesse:getVal('conf-marche-vitesse'),info_comp:getVal('conf-deplacement-info'),escalier:getRadioVal('conf-escalier-monte'),deplacement_int:getRadioVal('conf-deplacement-int'),deplacement_ext:getRadioVal('conf-deplacement-ext'),tenir_bras:getRadioVal('conf-tenir-bras'),fauteuil:{occasionnel:getRadioVal('conf-fr-occasionnel'),permanent:getRadioVal('conf-fr-permanent'),debout:getRadioVal('conf-fr-debout'),appui_plantaire:getRadioVal('conf-appui-plantaire'),transfert_vehicule:getRadioVal('conf-transfert-vehicule'),manoeuvre_int:getRadioVal('conf-fr-manoeuvre-int'),manoeuvre_ext:getRadioVal('conf-fr-manoeuvre-ext')}},
+    sorties:{seul:getRadioVal('conf-sortie-seul'),groupe:getRadioVal('conf-sortie-groupe'),chemin:getRadioVal('conf-demander-chemin'),heure_fixe:getRadioVal('conf-heure-fixe'),argent:getRadioVal('conf-argent'),danger:getRadioVal('conf-danger'),danger_detail:getVal('conf-danger-detail')},
+    activites:{nage:getRadioVal('conf-nage'),choix:getRadioVal('conf-choix-activite'),interets:getVal('conf-interets'),interdites:getVal('conf-activites-interdites')},
+    troubles:{liste:troublesData,solutions:getVal('conf-troubles-solutions')},
+    habitudes:{fumeur:getRadioVal('conf-fumeur'),fumeur_freq:getVal('conf-fumeur-freq'),fumeur_seul:getRadioVal('conf-fumeur-seul'),fumeur_frustre:getRadioVal('conf-fumeur-frustre'),fumeur_comportement:getVal('conf-fumeur-comportement'),fumeur_protocole:getVal('conf-fumeur-protocole'),alcool:getRadioVal('conf-alcool'),alcool_freq:getVal('conf-alcool-freq'),alcool_eviter:getVal('conf-alcool-eviter'),alcool_preferences:getVal('conf-alcool-preferences')},
+    sante:{traitement:getRadioVal('conf-traitement'),traitement_seul:getRadioVal('conf-traitement-seul'),soins_corporels:getRadioVal('conf-soins-corp'),soins_detail:getVal('conf-soins-detail'),bas_contention:getRadioVal('conf-bas-contention'),contention_protocole:getVal('conf-contention-protocole'),soins_infirmiers:getRadioVal('conf-soins-infirm'),soins_infirm_detail:getVal('conf-soins-infirm-detail'),injections:getRadioVal('conf-injections'),diabete:getRadioVal('conf-diabete'),diabete_injections:getRadioVal('conf-diabete-inject'),asthme:getRadioVal('conf-asthme'),epilepsie:getRadioVal('conf-epilepsie'),epilepsie_stabilisee:getRadioVal('conf-epilepsie-stab'),epilepsie_date:getVal('conf-epilepsie-date'),epilepsie_protocole:getVal('conf-epilepsie-protocole'),non_voyant:getRadioVal('conf-non-voyant'),mal_voyant:getRadioVal('conf-mal-voyant'),sourd:getRadioVal('conf-sourd'),malentendant:getRadioVal('conf-malentendant'),appareillage:getRadioVal('conf-appareillage'),appareillage_type:getVal('conf-appareillage-type'),dentier:getRadioVal('conf-dentier'),dentier_seul:getRadioVal('conf-dentier-seul'),poids:getVal('conf-poids'),taille:getVal('conf-taille'),antecedents:getVal('conf-antecedents')},
+    autorisation_image:{nom:getVal('conf-image-nom'),autorisation:getRadioVal('conf-autorisation-image')},
+    signature:{fait_a:getVal('conf-fait-a'),date:getVal('conf-date-signature'),qualite:getVal('conf-qualite'),acceptation:getChecked('conf-acceptation')}
+  };
+
+  return{inscription:insc,confidentielle:conf};
+}
+
+// ══ MATCHING PERSONNE ══
+function normalizeStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+
+async function matchPersonne(nom,prenom){
+  try{
+    const all=await api('/rest/v1/personnes?select=id,nom,prenom&limit=1000');
+    if(!all) return{id:null,status:'nouveau'};
+    const nNom=normalizeStr(nom),nPre=normalizeStr(prenom);
+    // Exact match
+    const exact=all.find(p=>normalizeStr(p.nom)===nNom&&normalizeStr(p.prenom)===nPre);
+    if(exact) return{id:exact.id,status:'exact'};
+    // Approx : même nom, prénom similaire (même 1ère lettre)
+    const approxCandidates=all.filter(p=>normalizeStr(p.nom)===nNom);
+    if(approxCandidates.length>0){
+      const approx=approxCandidates.find(p=>normalizeStr(p.prenom)[0]===nPre[0]);
+      if(approx) return{id:approx.id,status:'approx',match:approx};
+    }
+    return{id:null,status:'nouveau'};
+  }catch(e){return{id:null,status:'nouveau'};}
+}
+
+async function createPersonne(nom,prenom){
+  try{
+    const id='pers-'+Date.now()+'-'+Math.random().toString(36).substr(2,6);
+    const data={id,nom:nom.toUpperCase(),prenom,foyer:'',lieux:[],besoins:'',notes:''};
+    await api('/rest/v1/personnes','POST',data);
+    return id;
+  }catch(e){return null;}
+}
+
+// ══ UPLOAD PHOTO ══
+async function uploadPhoto(file,personneId){
+  if(!file) return null;
+  try{
+    const ext=file.name.split('.').pop();
+    const path=`fiches-sante/${personneId}/photo.${ext}`;
+    const res=await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`,{method:'POST',headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${SUPABASE_ANON_KEY}`,'Content-Type':file.type,'x-upsert':'true'},body:file});
+    if(!res.ok) return null;
+    return path;
+  }catch(e){return null;}
+}
+
+// ══ SOUMISSION ══
+async function submitForm(){
+  if(!validateStep(8)) return;
+
+  goToStep(9);
+  document.getElementById('nav-bar').style.display='none';
+  document.getElementById('recap-waiting').style.display='block';
+
+  const data=collectAllData();
+  const nom=data.inscription.participant.nom;
+  const prenom=data.inscription.participant.prenom;
+
+  // Matching personne
+  const match=await matchPersonne(nom,prenom);
+  let personneId=match.id;
+  let statut=match.status;
+
+  if(statut==='nouveau'){
+    personneId=await createPersonne(nom,prenom);
+  }
+
+  // Upload photo
+  const photoFile=document.getElementById('conf-photo-input').files[0];
+  let photoUrl=null;
+  if(photoFile&&personneId) photoUrl=await uploadPhoto(photoFile,personneId);
+
+  // Save to Supabase
+  try{
+    const ficheId='fiche-'+Date.now()+'-'+Math.random().toString(36).substr(2,8);
+    await api('/rest/v1/fiches_inscription','POST',{
+      id:ficheId,
+      personne_id:personneId,
+      prenom_saisi:prenom,
+      nom_saisi:nom,
+      type_sejour:selectedTypeSejour,
+      reponses_inscription:data.inscription,
+      reponses_confidentielle:data.confidentielle,
+      photo_url:photoUrl,
+      soumis_le:new Date().toISOString(),
+      statut_matching:statut
+    });
+
+    // Show success
+    document.getElementById('recap-waiting').style.display='none';
+    document.getElementById('recap-nom-personne').textContent=prenom+' '+nom.toUpperCase();
+    buildRecap(data);
+    document.getElementById('recap-done').style.display='block';
+
+    if(statut==='approx'){
+      const info=document.createElement('div');
+      info.className='alert alert-info';
+      info.style.margin='0 0 16px';
+      info.innerHTML='ℹ️ <strong>Correspondance approximative</strong> : la fiche a été liée à <strong>'+match.match.prenom+' '+match.match.nom+'</strong> (correspondance sur le nom). La Lysardière pourra confirmer le lien.';
+      document.getElementById('recap-done').prepend(info);
+    }
+  }catch(e){
+    document.getElementById('recap-waiting').style.display='none';
+    document.getElementById('recap-error-msg').textContent='Erreur : '+e.message;
+    document.getElementById('recap-error').style.display='block';
+  }
+}
+
+// ══ RÉCAPITULATIF ══
+function buildRecap(data){
+  const insc=data.inscription;
+  const conf=data.confidentielle;
+  const lines=[];
+  const yn=v=>v==='oui'?'Oui':v==='non'?'Non':v||'—';
+
+  lines.push('<strong>TYPE DE SÉJOUR</strong>');
+  lines.push('Type : '+SEJOURS_CONFIG[selectedTypeSejour].label);
+  lines.push('Séjour : '+(insc.sejour_choisi||'—'));
+  lines.push('');
+  lines.push('<strong>PARTICIPANT</strong>');
+  lines.push('Nom : '+insc.participant.nom+' '+insc.participant.prenom);
+  lines.push('Date de naissance : '+(insc.participant.naissance||'—'));
+  lines.push('Sexe : '+(insc.participant.sexe||'—')+' | Autonomie : '+(insc.participant.autonomie||'—'));
+  lines.push('Convoyage : '+(insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':'Accompagné par sa structure'));
+  lines.push('');
+  lines.push('<strong>RESPONSABLE INSCRIPTION</strong>');
+  lines.push(insc.responsable.prenom+' '+insc.responsable.nom+' — '+insc.responsable.fonction);
+  lines.push(insc.responsable.foyer+', '+insc.responsable.adresse+', '+insc.responsable.cp+' '+insc.responsable.ville);
+  lines.push('Mail : '+insc.responsable.mail);
+  lines.push('');
+  lines.push('<strong>FICHE CONFIDENTIELLE</strong>');
+  lines.push('Autonomie : '+(conf.identite.autonomie||'—'));
+  lines.push('Infirmière : '+yn(conf.mobilite.infirmiere));
+  lines.push('Fauteuil roulant : '+yn(conf.mobilite.fauteuil)+' | Déambulateur : '+yn(conf.mobilite.deambulateur));
+  lines.push('Poids : '+(conf.sante.poids||'—')+' kg | Taille : '+(conf.sante.taille||'—')+' cm');
+  lines.push('Traitement médical : '+yn(conf.sante.traitement));
+  lines.push('Diabète : '+yn(conf.sante.diabete)+' | Asthme : '+yn(conf.sante.asthme)+' | Épilepsie : '+yn(conf.sante.epilepsie));
+  lines.push('');
+  lines.push('Signé à '+conf.signature.fait_a+' le '+conf.signature.date+' par '+conf.signature.qualite);
+
+  document.getElementById('recap-content').innerHTML=lines.join('<br>');
+}
+
+async function downloadRecap(){
+  const data=collectAllData();
+  const nom=data.inscription.participant.nom;
+  const prenom=data.inscription.participant.prenom;
+  const el=document.getElementById('recap-content').cloneNode(true);
+  const wrap=document.createElement('div');
+  wrap.style.cssText='font-family:Arial,sans-serif;font-size:13px;padding:20px;color:#222;line-height:1.8';
+  const title=document.createElement('h2');
+  title.style.cssText='color:#18534F;font-size:18px;margin-bottom:16px';
+  title.textContent='Récapitulatif — '+prenom+' '+nom;
+  wrap.appendChild(title);
+  wrap.appendChild(el);
+  await html2pdf().set({margin:15,filename:`recapitulatif-${nom}-${prenom}.pdf`,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(wrap,'element').save();
+}
+
+// ══ INIT ══
+function init(){
+  initStepper();
+  updateNavButtons();
+  buildHygieneTable(HYGIENE_ITEMS,'hygiene-body','hyg');
+  buildHygieneTable(ALIM_ITEMS,'alim-body','alim');
+  buildTroublesList();
+  // Default date for conf signature
+  document.getElementById('conf-date-signature').value=new Date().toISOString().split('T')[0];
+}
+
+init();
+</script>
+</body>
+</html>
