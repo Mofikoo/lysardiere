@@ -1836,121 +1836,433 @@ function previewPhoto(input){
 }
 
 // ══ VALIDATION ══
+function showErrorBanner(messages){
+  let banner=document.getElementById('validation-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='validation-banner';
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#C0392B;color:white;padding:12px 20px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.2);max-height:50vh;overflow-y:auto';
+    document.body.prepend(banner);
+  }
+  banner.innerHTML='<div style="font-weight:700;margin-bottom:6px">⚠️ Champs manquants ou incorrects :</div>'
+    +messages.map(m=>'<div style="padding:2px 0 2px 12px">• '+m+'</div>').join('')
+    +'<div style="margin-top:8px;font-size:11px;opacity:0.85">Faites défiler la page pour trouver les champs surlignés en rouge.</div>';
+  banner.style.display='block';
+  setTimeout(()=>{if(banner) banner.style.display='none';},8000);
+}
+
+function clearErrorBanner(){
+  const b=document.getElementById('validation-banner');
+  if(b) b.style.display='none';
+}
+
+function markRadioError(name, label){
+  // Wrap all radio inputs with that name in a red outline group
+  const inputs=document.querySelectorAll(`input[name="${name}"]`);
+  inputs.forEach(inp=>{
+    const parent=inp.closest('.radio-group,.check-group,.yn-cols,.radio-opt,.yn-opt');
+    if(parent){parent.style.outline='2px solid #C0392B';parent.style.borderRadius='4px';}
+  });
+  // Also mark the closest yn-row or field-group with a left border
+  if(inputs.length){
+    const row=inputs[0].closest('.yn-row');
+    if(row) row.style.background='#fff5f5';
+    const group=inputs[0].closest('.field-group');
+    if(group&&!row){group.style.outline='2px solid #C0392B';group.style.borderRadius='6px';}
+  }
+}
+
+function clearRadioError(name){
+  const inputs=document.querySelectorAll(`input[name="${name}"]`);
+  inputs.forEach(inp=>{
+    const parent=inp.closest('.radio-group,.check-group,.yn-cols,.radio-opt,.yn-opt');
+    if(parent){parent.style.outline='';parent.style.borderRadius='';}
+  });
+  if(inputs.length){
+    const row=inputs[0].closest('.yn-row');
+    if(row) row.style.background='';
+  }
+}
+
+function markHygieneRowError(name){
+  const inputs=document.querySelectorAll(`input[name="${name}"]`);
+  if(inputs.length){
+    const row=inputs[0].closest('tr');
+    if(row) row.style.background='#fff0f0';
+  }
+}
+
+function clearHygieneRowError(name){
+  const inputs=document.querySelectorAll(`input[name="${name}"]`);
+  if(inputs.length){
+    const row=inputs[0].closest('tr');
+    if(row) row.style.background='';
+  }
+}
+
 function validateStep(step){
   let ok=true;
-  const errors=[];
+  const missing=[];
 
-  const req=(id)=>{
+  // Clear all previous errors on this step
+  document.querySelectorAll('.error').forEach(el=>el.classList.remove('error'));
+  document.querySelectorAll('[style*="fff5f5"],[style*="fff0f0"]').forEach(el=>{el.style.background='';});
+
+  const req=(id, label)=>{
     const el=document.getElementById(id);
     if(!el) return true;
     const v=el.value.trim();
-    if(!v){el.classList.add('error');ok=false;return false}
-    el.classList.remove('error');return true;
+    if(!v){
+      el.classList.add('error');
+      el.scrollIntoView&&false; // don't auto-scroll each one
+      if(label) missing.push(label);
+      ok=false;
+      return false;
+    }
+    el.classList.remove('error');
+    return true;
   };
-  const reqRadio=(name)=>{
+
+  const reqRadio=(name, label)=>{
     const checked=document.querySelector(`input[name="${name}"]:checked`);
-    if(!checked){ok=false;return false}
+    if(!checked){
+      markRadioError(name, label);
+      if(label) missing.push(label);
+      ok=false;
+      return false;
+    }
+    clearRadioError(name);
+    return true;
+  };
+
+  const reqHygieneRow=(prefix, i, label)=>{
+    const checked=document.querySelector(`input[name="${prefix}-${i}"]:checked`);
+    if(!checked){
+      markHygieneRowError(prefix+'-'+i);
+      if(label) missing.push(label);
+      ok=false;
+      return false;
+    }
+    clearHygieneRowError(prefix+'-'+i);
     return true;
   };
 
   if(step===1){
     if(!selectedTypeSejour){
       document.getElementById('error-type').style.display='block';
+      missing.push('Type de séjour');
       ok=false;
     }
   }
 
   if(step===2){
-    req('insc-nom');req('insc-prenom');req('insc-naissance');
-    reqRadio('insc-sexe');reqRadio('insc-autonomie');
-    if(selectedTypeSejour!=='sejour') reqRadio('insc-convoyage');
-    req('insc-astreinte');
-    req('insc-resp-nom');req('insc-resp-prenom');req('insc-resp-fonction');
-    req('insc-chef-service');req('insc-foyer-nom');req('insc-adresse');
-    req('insc-cp');req('insc-ville');req('insc-tel');req('insc-mail');req('insc-mail-secretariat');
-    req('insc-org-nom');req('insc-org-contact');req('insc-org-tel');
-    req('insc-org-adresse');req('insc-org-cp');req('insc-org-ville');req('insc-org-mail');req('insc-org-mail-compta');
-    req('insc-fait-a');req('insc-date-signature');req('insc-qualite');
-    const accInsc=document.getElementById('insc-acceptation');
-    if(accInsc&&!accInsc.checked){accInsc.style.outline='2px solid red';ok=false;}
-    else if(accInsc) accInsc.style.outline='';
     // Séjour choisi
     if(SEJOURS_CONFIG[selectedTypeSejour]&&SEJOURS_CONFIG[selectedTypeSejour].sessions){
-      if(!document.querySelector('input[name="sejour-choix"]:checked')){ok=false;}
+      if(!document.querySelector('input[name="sejour-choix"]:checked')){
+        missing.push('Séjour à choisir dans la liste');
+        ok=false;
+      }
     } else if(selectedTypeSejour==='weekend_ordinaire'){
-      req('insc-date-debut');req('insc-date-fin');
+      req('insc-date-debut','Date de début');
+      req('insc-date-fin','Date de fin');
     } else {
-      req('insc-sejour-nom');
+      req('insc-sejour-nom','Nom du séjour et dates');
     }
+    // Participant
+    req('insc-nom','Nom du participant');
+    req('insc-prenom','Prénom du participant');
+    req('insc-naissance','Date de naissance');
+    reqRadio('insc-sexe','Sexe');
+    reqRadio('insc-autonomie','Autonomie');
+    if(selectedTypeSejour!=='sejour') reqRadio('insc-convoyage','Convoyage');
+    req('insc-astreinte','Numéro d\'astreinte');
+    // Couple
+    const coupleVal=document.querySelector('input[name="insc-couple"]:checked');
+    if(!coupleVal&&selectedTypeSejour!=='weekend_ordinaire'){reqRadio('insc-couple','Inscription en couple');}
+    // Responsable
+    req('insc-resp-nom','Nom du responsable');
+    req('insc-resp-prenom','Prénom du responsable');
+    req('insc-resp-fonction','Fonction du responsable');
+    req('insc-chef-service','Nom du chef de service');
+    req('insc-foyer-nom','Nom du foyer');
+    req('insc-adresse','Adresse du foyer');
+    req('insc-cp','Code postal');
+    req('insc-ville','Ville');
+    req('insc-tel','Téléphone');
+    req('insc-mail','Mail');
+    req('insc-mail-secretariat','Mail du secrétariat');
+    // Relevé frais
+    req('insc-org-nom','Organisme (relevé de frais)');
+    req('insc-org-contact','Nom contact (relevé de frais)');
+    req('insc-org-tel','Téléphone (relevé de frais)');
+    req('insc-org-adresse','Adresse (relevé de frais)');
+    req('insc-org-cp','Code postal (relevé de frais)');
+    req('insc-org-ville','Ville (relevé de frais)');
+    req('insc-org-mail','Mail (relevé de frais)');
+    req('insc-org-mail-compta','Mail comptabilité');
+    // Signature
+    req('insc-fait-a','Fait à (signature)');
+    req('insc-date-signature','Date de signature');
+    req('insc-qualite','Qualité du signataire');
+    const accInsc=document.getElementById('insc-acceptation');
+    if(accInsc&&!accInsc.checked){
+      accInsc.style.outline='2px solid #C0392B';
+      missing.push('Acceptation des conditions générales');
+      ok=false;
+    } else if(accInsc) accInsc.style.outline='';
   }
 
   if(step===3){
-    req('conf-nom');req('conf-prenom');req('conf-age');req('conf-sejour-nom');
-    reqRadio('conf-autonomie');reqRadio('conf-infirmiere');reqRadio('conf-couple');
-    reqRadio('conf-fauteuil');reqRadio('conf-deambulateur');reqRadio('conf-escaliers');
-    reqRadio('conf-astreinte-type');
+    req('conf-nom','Nom du vacancier (fiche confidentielle)');
+    req('conf-prenom','Prénom du vacancier (fiche confidentielle)');
+    req('conf-age','Âge');
+    req('conf-sejour-nom','Nom et date du séjour');
+    reqRadio('conf-autonomie','Autonomie');
+    reqRadio('conf-infirmiere','Besoin d\'une infirmière');
+    const infirm=document.querySelector('input[name="conf-infirmiere"]:checked');
+    if(infirm&&infirm.value==='oui'){
+      req('conf-infirmiere-detail','Précision infirmière (qui s\'agit-il)');
+    }
+    reqRadio('conf-couple','Inscription en couple (fiche conf.)');
+    const coupleConf=document.querySelector('input[name="conf-couple"]:checked');
+    if(coupleConf&&coupleConf.value==='oui'){
+      reqRadio('conf-meme-chambre','Partage la même chambre');
+    }
+    reqRadio('conf-fauteuil','Fauteuil roulant');
+    reqRadio('conf-deambulateur','Déambulateur');
+    reqRadio('conf-escaliers','Monte les escaliers');
+    reqRadio('conf-astreinte-type','Personne d\'astreinte à contacter');
     const astrType=document.querySelector('input[name="conf-astreinte-type"]:checked');
-    if(astrType&&astrType.value==='autre'){req('astreinte-prenom');req('astreinte-nom');req('astreinte-tel');req('astreinte-mail');}
-    req('conf-personnalite');req('conf-vie-quotidienne');req('conf-comportement');
+    if(astrType&&astrType.value==='autre'){
+      req('astreinte-prenom','Prénom de l\'astreinte');
+      req('astreinte-nom','Nom de l\'astreinte');
+      req('astreinte-tel','Téléphone de l\'astreinte');
+      req('astreinte-mail','Mail de l\'astreinte');
+    }
+    req('conf-personnalite','Description de la personnalité');
+    req('conf-vie-quotidienne','Vie quotidienne (habitudes)');
+    req('conf-comportement','Comportement');
   }
 
   if(step===4){
-    // Hygiène tableau
-    HYGIENE_ITEMS.forEach((_,i)=>{if(!document.querySelector(`input[name="hyg-${i}"]:checked`)) ok=false;});
-    reqRadio('conf-presence-douche');reqRadio('conf-timer-douche');reqRadio('conf-linge');
-    req('conf-toilette-info');
-    reqRadio('conf-stomie');reqRadio('conf-pistolet');
-    if(!document.querySelector('input[name="conf-enurese"]:checked')) ok=false;
-    if(!document.querySelector('input[name="conf-encop"]:checked')) ok=false;
-    // Alim
-    ALIM_ITEMS.forEach((_,i)=>{if(!document.querySelector(`input[name="alim-${i}"]:checked`)) ok=false;});
-    reqRadio('conf-alim-pres');reqRadio('conf-couverts');reqRadio('conf-gelifiant');reqRadio('conf-fausses-routes');
-    req('conf-regime');req('conf-addictions-alim');req('conf-troubles-alim');req('conf-allergies');req('conf-alim-info');
+    // Hygiène tableau — chaque ligne
+    HYGIENE_ITEMS.forEach((item,i)=>{
+      reqHygieneRow('hyg',i,'Hygiène : '+item.label);
+    });
+    reqRadio('conf-presence-douche','Présence physique lors de la douche');
+    reqRadio('conf-timer-douche','Timer lors de la douche');
+    reqRadio('conf-linge','Gestion du linge');
+    req('conf-toilette-info','Informations complémentaires (toilette)');
+    reqRadio('conf-stomie','Poche de stomie');
+    const stomie=document.querySelector('input[name="conf-stomie"]:checked');
+    if(stomie&&stomie.value==='oui') req('conf-stomie-aide','Aide pour la stomie');
+    reqRadio('conf-pistolet','Pistolet');
+    const pistolet=document.querySelector('input[name="conf-pistolet"]:checked');
+    if(pistolet&&pistolet.value==='oui') req('conf-pistolet-aide','Aide pour le pistolet');
+    // Enurésie/encoprésie
+    if(!document.querySelector('input[name="conf-enurese"]:checked')){
+      markRadioError('conf-enurese','Énurésies');
+      missing.push('Énurésies');ok=false;
+    }
+    const enurese=document.querySelector('input[name="conf-enurese"]:checked');
+    if(enurese&&enurese.value!=='non'){
+      req('conf-enurese-freq','Fréquence des changes (énurésies)');
+      req('conf-enurese-type','Type de change (énurésies)');
+      reqRadio('conf-enurese-aide','Aide pour se changer (énurésies)');
+    }
+    if(!document.querySelector('input[name="conf-encop"]:checked')){
+      markRadioError('conf-encop','Encoprésie');
+      missing.push('Encoprésie');ok=false;
+    }
+    const encop=document.querySelector('input[name="conf-encop"]:checked');
+    if(encop&&encop.value!=='non'){
+      req('conf-encop-freq','Fréquence des changes (encoprésie)');
+      req('conf-encop-type','Type de change (encoprésie)');
+      reqRadio('conf-encop-aide','Aide pour se changer (encoprésie)');
+    }
+    // Alimentation tableau
+    ALIM_ITEMS.forEach((item,i)=>{
+      reqHygieneRow('alim',i,'Alimentation : '+item.label);
+    });
+    reqRadio('conf-alim-pres','Présentation des aliments');
+    reqRadio('conf-couverts','Couverts adaptés');
+    const couverts=document.querySelector('input[name="conf-couverts"]:checked');
+    if(couverts&&couverts.value==='oui') req('conf-couverts-detail','Précision couverts adaptés');
+    reqRadio('conf-gelifiant','Gélifiant');
+    const gel=document.querySelector('input[name="conf-gelifiant"]:checked');
+    if(gel&&gel.value==='oui') req('conf-gelifiant-detail','Précision gélifiant (aliments)');
+    reqRadio('conf-fausses-routes','Risque de fausses routes');
+    const fr=document.querySelector('input[name="conf-fausses-routes"]:checked');
+    if(fr&&fr.value==='oui') req('conf-fausses-routes-detail','Précision fausses routes');
+    req('conf-regime','Régime alimentaire');
+    req('conf-addictions-alim','Addictions alimentaires');
+    req('conf-troubles-alim','Troubles alimentaires');
+    req('conf-allergies','Allergies');
+    req('conf-alim-info','Informations complémentaires (alimentation)');
   }
 
   if(step===5){
-    reqRadio('conf-peurs-nuit');reqRadio('conf-leve-nuit');reqRadio('conf-surveillance-nuit');
-    req('conf-heure-coucher');req('conf-heure-lever');req('conf-repos-info');
-    reqRadio('conf-comprehension');reqRadio('conf-mode-comm');reqRadio('conf-exprimer-besoins');
-    reqRadio('conf-conversation');reqRadio('conf-ecrit');reqRadio('conf-lit');reqRadio('conf-telephone');
-    req('conf-comm-info');
-    reqRadio('conf-sociable');reqRadio('conf-isole');reqRadio('conf-agressivite-verbale');reqRadio('conf-agressivite-physique');
-    reqRadio('conf-meme-chambre-rel');reqRadio('conf-meme-lit');
+    reqRadio('conf-peurs-nuit','Peurs / angoisses nocturnes');
+    const peurs=document.querySelector('input[name="conf-peurs-nuit"]:checked');
+    if(peurs&&peurs.value==='oui') req('conf-peurs-nuit-detail','Précision peurs nocturnes');
+    reqRadio('conf-leve-nuit','Se lève la nuit');
+    const leve=document.querySelector('input[name="conf-leve-nuit"]:checked');
+    if(leve&&leve.value==='oui') req('conf-leve-nuit-detail','Raisons lever la nuit');
+    reqRadio('conf-surveillance-nuit','Surveillance nocturne');
+    const surv=document.querySelector('input[name="conf-surveillance-nuit"]:checked');
+    if(surv&&surv.value==='oui') req('conf-surveillance-nuit-detail','Raisons surveillance nocturne');
+    req('conf-heure-coucher','Heure habituelle du coucher');
+    req('conf-heure-lever','Heure habituelle du lever');
+    req('conf-repos-info','Informations complémentaires (repos)');
+    reqRadio('conf-comprehension','Compréhension');
+    reqRadio('conf-mode-comm','Mode de communication');
+    reqRadio('conf-exprimer-besoins','Peut exprimer ses besoins');
+    reqRadio('conf-conversation','Peut tenir une conversation fluide');
+    reqRadio('conf-ecrit','Écrit');
+    reqRadio('conf-lit','Lit');
+    reqRadio('conf-telephone','Possède un téléphone portable');
+    const tel=document.querySelector('input[name="conf-telephone"]:checked');
+    if(tel&&tel.value==='oui') req('conf-telephone-protocole','Protocole téléphone');
+    req('conf-comm-info','Informations complémentaires (communication)');
+    reqRadio('conf-sociable','Sociable');
+    reqRadio('conf-isole','S\'isole');
+    reqRadio('conf-agressivite-verbale','Agressivité verbale');
+    reqRadio('conf-agressivite-physique','Agressivité physique');
+    const agr=document.querySelector('input[name="conf-agressivite-physique"]:checked');
+    if(agr&&agr.value==='oui'){
+      req('conf-agressivite-detail','Envers qui (agressivité physique)');
+      req('conf-agressivite-preconisation','Préconisations agressivité');
+    }
+    reqRadio('conf-meme-chambre-rel','Partage la même chambre (relation)');
+    reqRadio('conf-meme-lit','Partage le même lit');
   }
 
   if(step===6){
-    reqRadio('conf-repere-espace');reqRadio('conf-repere-temps');reqRadio('conf-fatigable');reqRadio('conf-marche');
-    req('conf-marche-vitesse');req('conf-deplacement-info');
-    reqRadio('conf-escalier-monte');reqRadio('conf-deplacement-int');reqRadio('conf-deplacement-ext');reqRadio('conf-tenir-bras');
-    reqRadio('conf-fr-occasionnel');reqRadio('conf-fr-permanent');reqRadio('conf-fr-debout');
-    reqRadio('conf-appui-plantaire');reqRadio('conf-transfert-vehicule');
-    reqRadio('conf-fr-manoeuvre-int');reqRadio('conf-fr-manoeuvre-ext');
-    reqRadio('conf-sortie-seul');reqRadio('conf-sortie-groupe');reqRadio('conf-demander-chemin');
-    reqRadio('conf-heure-fixe');reqRadio('conf-argent');reqRadio('conf-danger');
-    reqRadio('conf-nage');reqRadio('conf-choix-activite');
-    req('conf-interets');req('conf-activites-interdites');
+    reqRadio('conf-repere-espace','Se repère dans l\'espace');
+    reqRadio('conf-repere-temps','Se repère dans le temps');
+    reqRadio('conf-fatigable','Fatigable');
+    reqRadio('conf-marche','Marche');
+    req('conf-marche-vitesse','Vitesse / Rythme de marche');
+    req('conf-deplacement-info','Informations complémentaires (déplacements)');
+    reqRadio('conf-escalier-monte','Peut monter un escalier');
+    reqRadio('conf-deplacement-int','Déplacement en intérieur');
+    reqRadio('conf-deplacement-ext','Déplacement en extérieur');
+    reqRadio('conf-tenir-bras','Tenir le bras de l\'accompagnateur');
+    reqRadio('conf-fr-occasionnel','Fauteuil : occasionnellement');
+    reqRadio('conf-fr-permanent','Fauteuil : en permanence');
+    reqRadio('conf-fr-debout','Peut se tenir debout');
+    reqRadio('conf-appui-plantaire','Appui plantaire (obligatoire)');
+    reqRadio('conf-transfert-vehicule','Transfert véhicule (obligatoire)');
+    reqRadio('conf-fr-manoeuvre-int','Manœuvre fauteuil en intérieur');
+    reqRadio('conf-fr-manoeuvre-ext','Manœuvre fauteuil en extérieur');
+    reqRadio('conf-sortie-seul','Peut sortir seul sans accompagnement');
+    reqRadio('conf-sortie-groupe','Peut sortir seul en groupe');
+    reqRadio('conf-demander-chemin','Sait demander son chemin');
+    reqRadio('conf-heure-fixe','Capable de rentrer à une heure fixe');
+    reqRadio('conf-argent','Gère son argent');
+    reqRadio('conf-danger','Peut se mettre en danger');
+    const danger=document.querySelector('input[name="conf-danger"]:checked');
+    if(danger&&danger.value==='oui') req('conf-danger-detail','Précision danger');
+    reqRadio('conf-nage','Sait nager');
+    reqRadio('conf-choix-activite','Sait choisir parmi des activités');
+    req('conf-interets','Centres d\'intérêt');
+    req('conf-activites-interdites','Activités interdites');
   }
 
   if(step===7){
-    TROUBLES_ITEMS.forEach(t=>{if(!document.querySelector(`input[name="trouble-${t.key}"]:checked`)) ok=false;});
-    req('conf-troubles-solutions');
-    reqRadio('conf-fumeur');reqRadio('conf-alcool');
+    TROUBLES_ITEMS.forEach(t=>{
+      if(!document.querySelector(`input[name="trouble-${t.key}"]:checked`)){
+        markHygieneRowError('trouble-'+t.key);
+        const row=document.querySelector(`input[name="trouble-${t.key}"]`)?.closest('.yn-row');
+        if(row) row.style.background='#fff5f5';
+        missing.push('Trouble : '+t.label);
+        ok=false;
+      }
+      const val=document.querySelector(`input[name="trouble-${t.key}"]:checked`);
+      if(val&&val.value==='oui'){
+        req('trouble-'+t.key+'-detail','Précision : '+t.label);
+      }
+    });
+    req('conf-troubles-solutions','Solutions pour gérer les troubles');
+    reqRadio('conf-fumeur','Fumeur');
+    const fumeur=document.querySelector('input[name="conf-fumeur"]:checked');
+    if(fumeur&&fumeur.value==='oui'){
+      req('conf-fumeur-freq','Fréquence tabac');
+      reqRadio('conf-fumeur-seul','Gère seul la cigarette');
+      reqRadio('conf-fumeur-frustre','Frustration par la limite de cigarette');
+      req('conf-fumeur-protocole','Protocole cigarette');
+    }
+    reqRadio('conf-alcool','Alcool');
+    const alcool=document.querySelector('input[name="conf-alcool"]:checked');
+    if(alcool&&alcool.value==='oui'){
+      req('conf-alcool-freq','Fréquence alcool');
+      req('conf-alcool-eviter','Type d\'achat à éviter');
+      req('conf-alcool-preferences','Préférences d\'achat');
+    }
   }
 
   if(step===8){
-    reqRadio('conf-traitement');reqRadio('conf-soins-infirm');
-    reqRadio('conf-diabete');reqRadio('conf-asthme');reqRadio('conf-epilepsie');
-    reqRadio('conf-non-voyant');reqRadio('conf-mal-voyant');
-    reqRadio('conf-sourd');reqRadio('conf-malentendant');reqRadio('conf-appareillage');
-    reqRadio('conf-dentier');reqRadio('conf-dentier-seul');
-    req('conf-poids');req('conf-taille');req('conf-antecedents');
-    req('conf-image-nom');reqRadio('conf-autorisation-image');
-    req('conf-fait-a');req('conf-date-signature');req('conf-qualite');
+    reqRadio('conf-traitement','Traitement médical');
+    const trait=document.querySelector('input[name="conf-traitement"]:checked');
+    if(trait&&trait.value==='oui'){
+      reqRadio('conf-traitement-seul','Prend son traitement seul');
+      reqRadio('conf-soins-corp','Soins corporels');
+      req('conf-soins-detail','Précision soins et fréquence');
+      reqRadio('conf-bas-contention','Bas de contention');
+      req('conf-contention-protocole','Protocole contention');
+    }
+    reqRadio('conf-soins-infirm','Soins infirmiers');
+    const infirm=document.querySelector('input[name="conf-soins-infirm"]:checked');
+    if(infirm&&infirm.value==='oui'){
+      req('conf-soins-infirm-detail','Précision soins infirmiers');
+      reqRadio('conf-injections','Injections pendant le séjour');
+    }
+    reqRadio('conf-diabete','Diabétique');
+    const diab=document.querySelector('input[name="conf-diabete"]:checked');
+    if(diab&&diab.value==='oui') reqRadio('conf-diabete-inject','Injections diabète');
+    reqRadio('conf-asthme','Asthmatique');
+    reqRadio('conf-epilepsie','Épilepsie');
+    const epil=document.querySelector('input[name="conf-epilepsie"]:checked');
+    if(epil&&epil.value==='oui'){
+      reqRadio('conf-epilepsie-stab','Épilepsie stabilisée');
+      req('conf-epilepsie-date','Date dernière crise');
+      req('conf-epilepsie-protocole','Protocole crise d\'épilepsie');
+    }
+    reqRadio('conf-non-voyant','Non voyant');
+    reqRadio('conf-mal-voyant','Mal voyant');
+    reqRadio('conf-sourd','Sourd');
+    reqRadio('conf-malentendant','Malentendant');
+    reqRadio('conf-appareillage','Port d\'appareillage');
+    const appar=document.querySelector('input[name="conf-appareillage"]:checked');
+    if(appar&&appar.value==='oui') req('conf-appareillage-type','Type d\'appareillage');
+    reqRadio('conf-dentier','Porte un dentier');
+    reqRadio('conf-dentier-seul','Gère le dentier seul');
+    req('conf-poids','Poids');
+    req('conf-taille','Taille');
+    req('conf-antecedents','Antécédents médicaux');
+    req('conf-image-nom','Nom pour autorisation image');
+    reqRadio('conf-autorisation-image','Autorisation utilisation image');
+    req('conf-fait-a','Fait à (signature confidentielle)');
+    req('conf-date-signature','Date de signature (confidentielle)');
+    req('conf-qualite','Qualité du signataire (confidentielle)');
     const acc=document.getElementById('conf-acceptation');
-    if(!acc.checked){acc.style.outline='2px solid red';ok=false;}else acc.style.outline='';
+    if(!acc.checked){
+      acc.style.outline='2px solid #C0392B';
+      missing.push('Acceptation des conditions générales (fiche confidentielle)');
+      ok=false;
+    } else acc.style.outline='';
   }
 
-  if(!ok) window.scrollTo({top:0,behavior:'smooth'});
+  if(!ok){
+    showErrorBanner(missing);
+    // Scroll to first red field
+    setTimeout(()=>{
+      const firstErr=document.querySelector('.error,[style*="fff5f5"],[style*="fff0f0"]');
+      if(firstErr) firstErr.scrollIntoView({behavior:'smooth',block:'center'});
+    },100);
+  } else {
+    clearErrorBanner();
+  }
   return ok;
 }
 
