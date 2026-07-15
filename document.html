@@ -268,6 +268,7 @@ body {
     </a>
     <div class="header-actions">
       <a href="index.html" class="back-link">← Accueil</a>
+      <button class="btn btn-sm" onclick="openSejoursConfig()" title="Configurer les séjours du formulaire public">⚙️ Séjours formulaire</button>
       <button class="btn btn-accent btn-sm" onclick="openModal()">+ Séjour</button>
       <button class="btn btn-accent btn-sm" onclick="openAddDocModal()">+ Document</button>
       <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Vacancier</button>
@@ -333,49 +334,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const REQUIRED_TYPES = ['inscription', 'confidentiel'];
 const TYPE_LABELS = { inscription:'📝 Inscription', confidentiel:'🔒 Confidentiel', ordonnance:'💊 Ordonnance', divers:'📎 Divers', dossier_complet:'📁 Dossier complet' };
 
-let allPersonnes=[], allDocuments=[], allSejours=[], allSejoursPersonnes=[];
+let allPersonnes=[], allDocuments=[], allSejours=[], allSejoursPersonnes=[], allArchivedSejours=[], allFiches=[];
 
-function esc(str) { return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function escAttr(str) { return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r?\n/g,' '); }
+function esc(str) { return (str||'').replace(/'/g, "\\'"); }
 
 async function api(path, method='GET', body=null) {
   const opts = { method, headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type':'application/json', Prefer:'return=representation' } };
   if (body) opts.body = JSON.stringify(body);
-  let res;
-  try {
-    res = await fetch(SUPABASE_URL + path, opts);
-  } catch(networkErr) {
-    console.error('API network error:', path, networkErr);
-    alert(`❌ Erreur réseau : impossible de joindre Supabase.\n${networkErr.message||networkErr}\n\nVérifiez votre connexion internet.`);
-    return null;
-  }
-  if (!res.ok) {
-    let errBody='';
-    try { errBody = await res.text(); } catch(e){}
-    console.error('API HTTP error:', res.status, path, errBody);
-    // Don't alert on GET errors during init to avoid spam; alert on mutations
-    if (method !== 'GET') {
-      alert(`❌ Erreur Supabase (${res.status}) sur ${method} ${path.split('?')[0]}\n${errBody.slice(0,200)}`);
-    }
-    return null;
-  }
+  const res = await fetch(SUPABASE_URL + path, opts);
+  if (!res.ok) return null;
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
 
 async function fetchData() {
-  const [pRaw, docs, sejours, sp, archivedSejours] = await Promise.all([
+  const [pRaw, docs, sejours, sp, archivedSejours, fiches] = await Promise.all([
     api('/rest/v1/personnes?select=id,data&order=id.asc'),
     api('/rest/v1/documents?select=*&order=email_date.desc'),
     api('/rest/v1/sejours?archived=eq.false&select=*&order=date_debut.asc'),
     api('/rest/v1/sejours_personnes?select=*'),
-    api('/rest/v1/sejours?archived=eq.true&select=*&order=date_debut.desc')
+    api('/rest/v1/sejours?archived=eq.true&select=*&order=date_debut.desc'),
+    api('/rest/v1/fiches_inscription?select=*&order=soumis_le.desc')
   ]);
   allPersonnes = (pRaw||[]).map(p => ({ id:p.id, prenom:p.data?.prenom||'', nom:p.data?.nom||'', foyer:p.data?.foyer||'' }));
   allDocuments = docs||[];
   allSejours = sejours||[];
   allSejoursPersonnes = sp||[];
   allArchivedSejours = archivedSejours||[];
+  allFiches = fiches||[];
 }
 
 function buildArchivesSection() {
@@ -400,40 +386,40 @@ function buildArchivesSection() {
         const docs = allDocuments.filter(d => d.personne_id === p.id);
         const docsHtml = docs.map(doc => `
           <div class="doc-row">
-            <span class="doc-type-pill ${doc.type==='confidentiel'?'confidentiel':doc.type==='inscription'?'inscription':doc.type==='ordonnance'?'ordonnance':'divers'}">${TYPE_LABELS[doc.type]||esc(doc.type)}</span>
-            <span class="doc-filename">${esc(doc.filename)}</span>
+            <span class="doc-type-pill ${doc.type==='confidentiel'?'confidentiel':doc.type==='inscription'?'inscription':doc.type==='ordonnance'?'ordonnance':'divers'}">${TYPE_LABELS[doc.type]||doc.type}</span>
+            <span class="doc-filename">${doc.filename}</span>
             <span class="doc-date">${fmtDate(doc.email_date)}</span>
             <div class="doc-actions">
-              <button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button>
+              <button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button>
             </div>
           </div>`).join('') || '<p class="empty-sejour">Aucun document.</p>';
 
         const uid = `arch-${p.id}-${s.id}`;
         return `
           <div class="person-card">
-            <div class="person-header" onclick="toggleCard('${escAttr(uid)}')">
-              <div class="person-avatar">${esc(initials(p.prenom,p.nom))}</div>
+            <div class="person-header" onclick="toggleCard('${uid}')">
+              <div class="person-avatar">${initials(p.prenom,p.nom)}</div>
               <div class="person-info">
-                <div class="person-name">${esc(p.prenom)} ${esc(p.nom)}</div>
-                <div class="person-foyer">${esc(p.foyer)}</div>
+                <div class="person-name">${p.prenom} ${p.nom}</div>
+                <div class="person-foyer">${p.foyer}</div>
               </div>
               <span style="font-size:11px;color:var(--text-light)">${docs.length} doc${docs.length>1?'s':''}</span>
-              <span class="chevron" id="chev-${escAttr(uid)}">▶</span>
+              <span class="chevron" id="chev-${uid}">▶</span>
             </div>
-            <div class="person-docs" id="docs-${escAttr(uid)}">${docsHtml}</div>
+            <div class="person-docs" id="docs-${uid}">${docsHtml}</div>
           </div>`;
       }).join('') || '<p class="empty-sejour">Aucun vacancier.</p>';
 
       const uid = `arch-sejour-${s.id}`;
       return `
         <div class="sejour-block" style="opacity:0.85">
-          <div class="sejour-header" onclick="toggleSejour('${escAttr(uid)}')" style="background:linear-gradient(135deg,#4a5e5c,#6a7e7c)">
-            <h3>${esc(s.nom)}</h3>
+          <div class="sejour-header" onclick="toggleSejour('${uid}')" style="background:linear-gradient(135deg,#4a5e5c,#6a7e7c)">
+            <h3>${s.nom}</h3>
             <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
             <span class="sejour-count">${personnes.length} vacancier(s)</span>
-            <span class="sejour-chevron" id="schev-${escAttr(uid)}">▶</span>
+            <span class="sejour-chevron" id="schev-${uid}">▶</span>
           </div>
-          <div class="sejour-body" id="${escAttr(uid)}">${cardsHtml}</div>
+          <div class="sejour-body" id="${uid}">${cardsHtml}</div>
         </div>`;
     }).join('');
 
@@ -561,12 +547,9 @@ async function linkDocument(docId, personneId, typeForce=null) {
 }
 
 async function confirmLink(docId) {
-  const selEl = document.getElementById(`sel-${docId}`);
-  const typeEl = document.getElementById(`type-${docId}`);
-  if (!selEl || !typeEl) { alert('Erreur interne : éléments manquants. Rechargez la page.'); return; }
-  const val = selEl.value;
+  const val = document.getElementById(`sel-${docId}`).value;
   if (!val) return alert('Choisis un vacancier.');
-  const typeChoisi = typeEl.value || null;
+  const typeChoisi = document.getElementById(`type-${docId}`).value || null;
   await linkDocument(docId, val, typeChoisi);
 }
 
@@ -582,26 +565,16 @@ function closeModal() { document.getElementById('modalOverlay').classList.remove
 async function saveSejour() {
   const nom=document.getElementById('sejourNom').value.trim(), debut=document.getElementById('sejourDebut').value, fin=document.getElementById('sejourFin').value, categorie=document.getElementById('sejourCategorie').value;
   if (!nom||!debut||!fin) return alert('Remplis tous les champs.');
-  if (debut > fin) return alert('La date de fin doit être après la date de début.');
   await api('/rest/v1/sejours','POST',{nom,date_debut:debut,date_fin:fin,categorie});
   closeModal(); await init();
 }
 
 async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await init(); }
-async function removeFromSejour(sid,pid) {
-  const sejour = allSejours.find(s=>s.id===sid);
-  const personne = allPersonnes.find(p=>p.id===pid);
-  const nom = personne ? `${personne.prenom} ${personne.nom}` : 'cette personne';
-  const sejourNom = sejour ? sejour.nom : 'ce séjour';
-  if (!confirm(`Retirer ${nom} de "${sejourNom}" ?`)) return;
-  await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE');
-  await init();
-}
+async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await init(); }
 async function addPersonToSejour(sid) { const sel=document.getElementById(`add-sel-${sid}`); if(!sel.value) return; await addToSejour(sid,sel.value); }
 
 async function archiverSejour(sejourId) {
   const sejour = allSejours.find(s=>s.id===sejourId);
-  if (!sejour) { alert('Séjour introuvable. La page va se recharger.'); await init(); return; }
   if (!confirm(`Archiver le séjour "${sejour.nom}" et tous ses documents ?`)) return;
   await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
   const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
@@ -614,23 +587,16 @@ async function rejectSejour(spId)  { await api(`/rest/v1/sejours_personnes?id=eq
 
 function filterSearchSelect(docId, query) {
   const list = document.getElementById(`ss-list-${docId}`);
-  if (!list) return;
   const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   list.style.display = 'block';
   Array.from(list.children).forEach(item => { const name=(item.dataset.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); item.style.display=name.includes(q)?'block':'none'; });
 }
 function selectPerson(docId,personneId,label) {
-  const sel=document.getElementById(`sel-${docId}`);
-  const inp=document.querySelector(`#ss-${docId} .search-select-input`);
-  const list=document.getElementById(`ss-list-${docId}`);
-  const type=document.getElementById(`type-${docId}`);
-  const lier=document.getElementById(`lier-${docId}`);
-  if (!sel||!inp||!list||!type||!lier) { console.warn('selectPerson: éléments DOM manquants pour doc',docId); return; }
-  sel.value=personneId;
-  inp.value=label;
-  list.style.display='none';
-  type.style.display = 'inline-block';
-  lier.style.display='inline-flex';
+  document.getElementById(`sel-${docId}`).value=personneId;
+  document.querySelector(`#ss-${docId} .search-select-input`).value=label;
+  document.getElementById(`ss-list-${docId}`).style.display='none';
+  document.getElementById(`type-${docId}`).style.display = 'inline-block';
+  document.getElementById(`lier-${docId}`).style.display='inline-flex';
 }
 document.addEventListener('click', e => { if (!e.target.closest('.search-select')) document.querySelectorAll('.search-select-list').forEach(l=>l.style.display='none'); });
 
@@ -642,31 +608,55 @@ function toggleCat(id,chevId) { const el=document.getElementById(id),ch=document
 
 function buildPersonCard(p, sejourId=null) {
   const docs=getPersonDocs(p.id), status=getStatus(p.id);
+  const personFiches=allFiches.filter(f=>f.personne_id===p.id);
+  const hasFiche=personFiches.length>0;
+  const lastFiche=personFiches[0];
+
   let badgesHtml='';
   if (status==='complete') badgesHtml=`<span class="badge badge-inscription">✅ Complet</span>`;
   else if (status==='pending') badgesHtml=`<span class="badge badge-pending">⏳ À vérifier</span>`;
   else badgesHtml=REQUIRED_TYPES.map(t=>{ const has=docs.find(d=>d.type===t); return `<span class="badge ${has?`badge-${t}`:'missing'}">${has?TYPE_LABELS[t]:TYPE_LABELS[t]+' ✗'}</span>`; }).join('');
 
+  // Fiche formulaire badge
+  if(hasFiche){
+    badgesHtml+=`<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">📋 Fiche reçue</span>`;
+  }
+
   const docRows=REQUIRED_TYPES.map(t=>{
     const typeDocs=docs.filter(d=>d.type===t);
     if (!typeDocs.length) return `<div class="doc-row"><span class="doc-type-pill missing">${TYPE_LABELS[t]}</span><span class="doc-missing">Document manquant</span></div>`;
-    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
   }).join('');
 
   const extraTypes=['ordonnance','divers','dossier_complet'];
-  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
+  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
 
   const unclassified=docs.filter(d=>!REQUIRED_TYPES.includes(d.type)&&!extraTypes.includes(d.type));
-  const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${esc(doc.filename)}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${escAttr(doc.id)}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+  const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
 
-  const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${escAttr(p.id)}')">✅ Valider comme complet</button></div>`:'';
-  const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${escAttr(p.id)}','${escAttr(p.prenom+' '+p.nom)}')">📄 Compiler tous les PDFs</button></div>` : '';
-  const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${escAttr(sejourId)}','${escAttr(p.id)}')">Retirer</button>`:'';
+  // Fiches formulaire rows
+  const ficheRows = personFiches.map(f => {
+    const typLabel = {weekend_theme:'Week-end thème',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
+    const sejNom = f.reponses_inscription?.sejour_choisi||'—';
+    return `<div class="doc-row" style="background:#f0f9ff;border-left:3px solid #0ea5e9">
+      <span class="doc-type-pill" style="background:#e0f2fe;color:#0369a1">📋 Fiche</span>
+      <span class="doc-filename">${typLabel} — ${sejNom}</span>
+      <span class="doc-date">${fmtDate(f.soumis_le)}</span>
+      <div class="doc-actions">
+        <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="deleteFiche('${f.id}')" title="Supprimer">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">✅ Valider comme complet</button></div>`:'';
+  const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${p.id}','${p.prenom} ${p.nom}')">📄 Compiler tous les PDFs</button></div>` : '';
+  const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
   const uid=`${p.id}-${sejourId||'all'}`;
 
   const totalDocs = docs.length;
   const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
-  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${escAttr(uid)}')"><div class="person-avatar">${esc(initials(p.prenom,p.nom))}</div><div class="person-info"><div class="person-name">${esc(p.prenom)} ${esc(p.nom)}</div><div class="person-foyer">${esc(p.foyer)}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${escAttr(uid)}">▶</span></div><div class="person-docs" id="docs-${escAttr(uid)}">${docRows}${extraRows}${unclassifiedRows}${btnValider}${btnCompile}</div></div>`;
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${ficheRows}${btnValider}${btnCompile}</div></div>`;
 }
 
 async function compilePDF(personneId, nom) {
@@ -697,11 +687,6 @@ async function compilePDF(personneId, nom) {
       console.warn(`Erreur sur ${doc.filename}:`, e);
       erreurs++;
     }
-  }
-
-  // Vérifier qu'au moins une page a été ajoutée avant d'uploader
-  if (merged.getPageCount() === 0) {
-    return alert(`❌ Compilation échouée : aucun document n'a pu être lu (${erreurs} erreur(s)).\nVérifiez que les PDFs ne sont pas corrompus.`);
   }
 
 const mergedBytes = await merged.save();
@@ -753,12 +738,12 @@ function buildSejoursSection(personnesFiltered) {
     const sejoursHtml=sejours.map(s=>{
       const personnes=getSejourPersonnes(s.id).filter(p=>personnesFiltered.some(pf=>pf.id===p.id));
       const others=personnesFiltered.filter(p=>!allSejoursPersonnes.some(sp=>sp.sejour_id===s.id&&sp.personne_id===p.id));
-      const options=others.map(p=>`<option value="${escAttr(p.id)}">${esc(p.prenom)} ${esc(p.nom)} — ${esc(p.foyer)}</option>`).join('');
+      const options=others.map(p=>`<option value="${p.id}">${p.prenom} ${p.nom} — ${p.foyer}</option>`).join('');
       const cards=personnes.length?personnes.map(p=>buildPersonCard(p,s.id)).join(''):`<p class="empty-sejour">Aucun vacancier dans ce séjour.</p>`;
       const uid=`sejour-${s.id}`;
       const estPasse=new Date(s.date_fin)<new Date();
-      const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${escAttr(s.id)}')">📦 Archiver</button>`:'';
-      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${escAttr(uid)}')"><h3>${esc(s.nom)}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${escAttr(s.id)}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${escAttr(uid)}">▶</span></div><div class="sejour-body" id="${escAttr(uid)}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${escAttr(s.id)}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${escAttr(s.id)}')">Ajouter</button></div>`:''}</div></div>`;
+      const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
     }).join('');
     return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
   }).join('');
@@ -799,11 +784,6 @@ async function imprimerSejour(sejourId) {
     }
   }
 
-  // Vérifier qu'au moins une page existe avant d'afficher la preview
-  if (merged.getPageCount() === 0) {
-    return alert(`❌ Impression impossible : aucun document n'a pu être lu (${erreurs} erreur(s)).\nVérifiez que des documents sont liés à ce séjour.`);
-  }
-
   const mergedBytes = await merged.save();
   const blob = new Blob([mergedBytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
@@ -817,13 +797,13 @@ async function imprimerSejour(sejourId) {
   overlay.classList.add('show');
   overlay.style.display = 'flex';
 
-  if (erreurs > 0) alert(`⚠️ ${erreurs} document(s) n'ont pas pu être lus et ont été ignorés.`);
+  if (erreurs > 0) console.warn(`${erreurs} document(s) ignoré(s)`);
 }
 
 function buildUnlinked() {
   const unlinked=getUnlinked();
   if (!unlinked.length) return '';
-  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${escAttr(doc.id)}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${esc(doc.filename)}</strong><span class="unlinked-meta">De : ${esc(doc.email_from)} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${escAttr(doc.storage_path)}','${escAttr(doc.filename)}')">Voir PDF</button><div class="search-select" id="ss-${escAttr(doc.id)}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${escAttr(doc.id)}',this.value)" onfocus="document.getElementById('ss-list-${escAttr(doc.id)}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${escAttr(doc.id)}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${escAttr(p.id)}" data-name="${escAttr(p.nom+' '+p.prenom)}" onclick="selectPerson('${escAttr(doc.id)}','${escAttr(p.id)}','${escAttr(p.nom+' '+p.prenom+' — '+(p.foyer||''))}')"><strong>${esc(p.nom)}</strong> ${esc(p.prenom)} <span style="color:var(--text-light);font-size:11px">— ${esc(p.foyer)}</span></div>`).join('')}</div><input type="hidden" id="sel-${escAttr(doc.id)}"></div><select class="link-select" id="type-${escAttr(doc.id)}" style="display:none;height:30px;font-size:11px">
+  const rows=unlinked.map(doc=>`<div class="unlinked-card" data-doc-id="${doc.id}"><span class="unlinked-icon">📄</span><div class="unlinked-info"><strong>${doc.filename}</strong><span class="unlinked-meta">De : ${doc.email_from} — ${fmtDate(doc.email_date)}</span></div><div class="unlinked-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir PDF</button><div class="search-select" id="ss-${doc.id}"><input type="text" class="search-select-input" placeholder="🔍 Rechercher un vacancier…" oninput="filterSearchSelect('${doc.id}',this.value)" onfocus="document.getElementById('ss-list-${doc.id}').style.display='block'" autocomplete="off"><div class="search-select-list" id="ss-list-${doc.id}">${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<div class="search-select-item" data-id="${p.id}" data-name="${p.nom} ${p.prenom}" onclick="selectPerson('${doc.id}','${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')"><strong>${p.nom}</strong> ${p.prenom} <span style="color:var(--text-light);font-size:11px">— ${p.foyer}</span></div>`).join('')}</div><input type="hidden" id="sel-${doc.id}"></div><select class="link-select" id="type-${doc.id}" style="display:none;height:30px;font-size:11px">
   <option value="">Type auto</option>
   <option value="inscription">📝 Inscription</option>
   <option value="confidentiel">🔒 Confidentiel</option>
@@ -831,27 +811,17 @@ function buildUnlinked() {
   <option value="ordonnance">💊 Ordonnance</option>
   <option value="divers">📎 Divers</option>
 </select>
-<button class="btn btn-success btn-sm" id="lier-${escAttr(doc.id)}" style="display:none" onclick="confirmLink('${escAttr(doc.id)}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${escAttr(doc.id)}','${escAttr(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+<button class="btn btn-success btn-sm" id="lier-${doc.id}" style="display:none" onclick="confirmLink('${doc.id}')">Lier</button><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
   return `<div class="section-title" onclick="toggleAClasser()" style="cursor:pointer;user-select:none">⚠️ À classer <span class="count">${unlinked.length}</span><span class="chevron" id="aclasser-chevron" style="margin-left:auto">▶</span></div><div id="aclasser-container" style="display:none">${rows}</div>`;
 }
 
 function checkAlerts() {
   const newDocs=allDocuments.filter(d=>d.status==='new');
-  const alertBanner=document.getElementById('alertBanner');
-  if (newDocs.length) {
-    document.getElementById('alertText').textContent=`${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`;
-    alertBanner.classList.add('show');
-  } else {
-    alertBanner.classList.remove('show');
-  }
+  if (newDocs.length) { document.getElementById('alertText').textContent=`${newDocs.length} nouveau(x) document(s) reçu(s) et non classé(s).`; document.getElementById('alertBanner').classList.add('show'); }
   const toConfirm=allSejoursPersonnes.filter(sp=>sp.confirmed===false);
-  const banner=document.getElementById('confirmBanner');
   if (toConfirm.length) {
-    banner.classList.add('show');
-    banner.innerHTML=`<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>`+toConfirm.map(sp=>{ const p=allPersonnes.find(x=>x.id===sp.personne_id),s=allSejours.find(x=>x.id===sp.sejour_id); if(!p||!s) return ''; return `<span><strong>${esc(p.prenom)} ${esc(p.nom)}</strong> → ${esc(s.nom)}</span><button class="btn btn-info btn-sm" onclick="confirmSejour('${escAttr(sp.id)}')">Confirmer</button><button class="btn btn-danger btn-sm" onclick="rejectSejour('${escAttr(sp.id)}')">Rejeter</button>`; }).join('');
-  } else {
-    banner.classList.remove('show');
-    banner.innerHTML='';
+    const banner=document.getElementById('confirmBanner'); banner.classList.add('show');
+    banner.innerHTML=`<span>🔵 ${toConfirm.length} liaison(s) séjour à confirmer :</span>`+toConfirm.map(sp=>{ const p=allPersonnes.find(x=>x.id===sp.personne_id),s=allSejours.find(x=>x.id===sp.sejour_id); if(!p||!s) return ''; return `<span><strong>${p.prenom} ${p.nom}</strong> → ${s.nom}</span><button class="btn btn-info btn-sm" onclick="confirmSejour('${sp.id}')">Confirmer</button><button class="btn btn-danger btn-sm" onclick="rejectSejour('${sp.id}')">Rejeter</button>`; }).join('');
   }
 }
 
@@ -864,7 +834,7 @@ function checkNewDocsSinceLastVisit() {
   const byP={};
   newDocs.forEach(doc=>{ const k=doc.personne_nom||'— Non classé'; if(!byP[k]) byP[k]=[]; byP[k].push(doc.filename); });
   document.getElementById('newdocs-count').textContent=newDocs.length;
-  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${esc(nom)}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.map(esc).join(', ')}</td></tr>`).join('');
+  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${nom}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.join(', ')}</td></tr>`).join('');
   document.getElementById('newdocsOverlay').classList.add('show');
 }
 
@@ -914,18 +884,13 @@ function checkNouvelAn() {
 async function archiverAnnee(annee) {
   if (!confirm(`Archiver automatiquement tous les séjours et inscriptions de ${annee} ?`)) return;
   
-  try {
-    // 1) Archiver les séjours de l'année (PATCH sur /sejours, pas /documents !)
-    await api(`/rest/v1/sejours?date_debut=gte.${annee}-01-01&date_debut=lte.${annee}-12-31`, 'PATCH', { archived: true });
-    
-    // 2) Archiver les documents de l'année SAUF les confidentiels
-    await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
-    
-    await init();
-    alert(`✅ Année ${annee} archivée.`);
-  } catch(e) {
-    alert(`❌ Erreur lors de l'archivage : ${e.message||e}`);
-  }
+  // Archiver les séjours de l'année passée
+  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel&type=neq.dossier_complet`, 'PATCH', { archived: true });
+
+  // Archiver les documents de l'année passée SAUF les confidentielles
+  await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
+  
+  await init();
 }
 
 function getFilteredPersonnes() {
@@ -945,11 +910,11 @@ async function openAddDocModal() {
   const list = document.getElementById('ss-list-doc');
   list.innerHTML = allPersonnes.sort((a,b) => a.nom.localeCompare(b.nom)).map(p => `
   <div class="search-select-item"
-    data-id="${escAttr(p.id)}"
-    data-name="${escAttr(p.nom+' '+p.prenom)}"
-    onclick="selectDocPerson('${escAttr(p.id)}','${escAttr(p.nom+' '+p.prenom+' — '+(p.foyer||''))}')">
-    <strong>${esc(p.nom)}</strong> ${esc(p.prenom)}
-    <span style="color:var(--text-light);font-size:11px"> — ${esc(p.foyer)}</span>
+    data-id="${p.id}"
+    data-name="${p.nom} ${p.prenom}"
+    onclick="selectDocPerson('${p.id}','${p.nom} ${p.prenom} — ${p.foyer}')">
+    <strong>${p.nom}</strong> ${p.prenom}
+    <span style="color:var(--text-light);font-size:11px"> — ${p.foyer}</span>
   </div>`).join('');
   document.getElementById('addDocOverlay').classList.add('show');
 }
@@ -1013,9 +978,254 @@ async function saveDoc() {
   alert('✅ Document ajouté avec succès !');
 }
 
+function buildFichesSection() {
+  const total = allFiches.length;
+  if (!total) return '';
+
+  const approx = allFiches.filter(f => f.statut_matching === 'approx');
+  const nouveau = allFiches.filter(f => f.statut_matching === 'nouveau');
+  const alertHtml = approx.length ? `<div style="background:#fff9e6;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px">⚠️ <strong>${approx.length} fiche(s)</strong> avec correspondance approximative à vérifier.</div>` : '';
+  const nouveauHtml = nouveau.length ? `<div style="background:#f0f9ff;border:1px solid #7dd3fc;border-radius:6px;padding:8px 12px;font-size:12px;color:#0369a1;margin-bottom:10px">🆕 <strong>${nouveau.length} nouveau(x) vacancier(s)</strong> créés depuis le formulaire.</div>` : '';
+
+  const rows = allFiches.map(f => {
+    const p = allPersonnes.find(x => x.id === f.personne_id);
+    const typLabel = {weekend_theme:'🎭 Week-end thème',mini_sejour:'🌿 Mini séjour',weekend_ordinaire:'🏡 Week-end ordinaire',sejour:'📋 Séjour long'}[f.type_sejour]||f.type_sejour;
+    const matchBadge = f.statut_matching==='exact'
+      ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Exact</span>`
+      : f.statut_matching==='approx'
+      ? `<span style="background:#fff9e6;color:#856404;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">⚠️ Approx.</span>`
+      : `<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">🆕 Nouveau</span>`;
+    const persNom = p ? `${p.prenom} ${p.nom}` : `${f.prenom_saisi} ${f.nom_saisi}`;
+    const linkSelect = f.statut_matching!=='exact' ? `<select class="link-select" onchange="relier_fiche('${f.id}',this.value)" style="font-size:11px">
+      <option value="">🔗 Relier à…</option>
+      ${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<option value="${p.id}">${p.prenom} ${p.nom}${p.foyer?' — '+p.foyer:''}</option>`).join('')}
+    </select>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div style="font-weight:600;font-size:13px">${persNom}</div>
+        <div style="font-size:11px;color:var(--text-light)">${typLabel} — ${fmtDate(f.soumis_le)}</div>
+      </div>
+      ${matchBadge}
+      ${linkSelect}
+      <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteFiche('${f.id}')">🗑</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="section-title" onclick="toggleFiches()" style="cursor:pointer;user-select:none">
+    📋 Fiches formulaire reçues <span class="count">${total}</span>
+    <span class="chevron" id="fiches-chevron" style="margin-left:auto">▶</span>
+  </div>
+  <div id="fiches-container" style="display:none">
+    <div style="background:var(--card);border-radius:var(--radius-xs);border:1px solid var(--border);margin-bottom:16px;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border-light)">${alertHtml}${nouveauHtml}</div>
+      ${rows}
+    </div>
+  </div>`;
+}
+
+function toggleFiches(){
+  const c=document.getElementById('fiches-container');
+  const v=document.getElementById('fiches-chevron');
+  c.style.display=c.style.display==='none'?'block':'none';
+  v?.classList.toggle('open');
+}
+
+async function relier_fiche(ficheId, personneId){
+  if(!personneId) return;
+  await api(`/rest/v1/fiches_inscription?id=eq.${ficheId}`, 'PATCH', {personne_id: personneId, statut_matching: 'exact'});
+  await init();
+}
+
+async function deleteFiche(ficheId){
+  if(!confirm('Supprimer cette fiche ? Cette action est irréversible.')) return;
+  await api(`/rest/v1/fiches_inscription?id=eq.${ficheId}`, 'DELETE');
+  await init();
+}
+
+function openFicheDetail(ficheId){
+  const f = allFiches.find(x => x.id === ficheId);
+  if(!f) return;
+  const insc = f.reponses_inscription || {};
+  const conf = f.reponses_confidentielle || {};
+  const p = insc.participant || {};
+  const typLabel = {weekend_theme:'Week-end à thèmes',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
+  const yn = v => v==='oui'?'Oui':v==='non'?'Non':v||'—';
+
+  const section = (title, color='#18534F') => `<div style="font-weight:700;font-size:12px;color:${color};text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${color}">${title}</div>`;
+  const field = (label, val) => val&&val!=='—' ? `<div style="display:flex;gap:8px;padding:4px 0;font-size:13px"><span style="color:#5C6B6A;min-width:160px;flex-shrink:0">${label}</span><span style="color:#1A2E2C;font-weight:500">${val}</span></div>` : '';
+  const textarea_field = (label, val) => val ? `<div style="padding:4px 0;font-size:13px"><div style="color:#5C6B6A;margin-bottom:4px">${label}</div><div style="background:#f7f3ec;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.6">${val}</div></div>` : '';
+
+  let html = `<div style="font-family:'DM Sans',sans-serif;max-width:720px;margin:0 auto;padding:20px">`;
+  html += `<div style="font-family:'Fraunces',serif;font-size:20px;color:#18534F;margin-bottom:4px">Fiche de ${f.prenom_saisi} ${f.nom_saisi.toUpperCase()}</div>`;
+  html += `<div style="font-size:12px;color:#8A9695;margin-bottom:16px">${typLabel} — Reçue le ${fmtDate(f.soumis_le)}</div>`;
+
+  html += section('Fiche d\'inscription');
+  html += field('Type de séjour', typLabel);
+  html += field('Séjour choisi', insc.sejour_choisi);
+  html += field('Nom', p.nom); html += field('Prénom', p.prenom);
+  html += field('Date de naissance', p.naissance); html += field('Sexe', p.sexe);
+  html += field('Autonomie', p.autonomie); html += field('Astreinte', p.astreinte);
+  html += field('Convoyage', insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':insc.convoyage||'Pris en charge par La Lysardière');
+  const resp = insc.responsable||{};
+  html += section('Responsable inscription');
+  html += field('Nom', resp.prenom+' '+resp.nom); html += field('Fonction', resp.fonction);
+  html += field('Foyer', resp.foyer); html += field('Adresse', resp.adresse+' '+resp.cp+' '+resp.ville);
+  html += field('Tél', resp.tel); html += field('Mail', resp.mail);
+  const rf = insc.releve_frais||{};
+  html += section('Relevé de frais');
+  html += field('Organisme', rf.organisme); html += field('Contact', rf.contact);
+  html += field('Adresse', (rf.adresse||'')+' '+(rf.cp||'')+' '+(rf.ville||''));
+  html += field('Mail', rf.mail); html += field('Mail compta', rf.mail_compta);
+
+  const id = conf.identite||{}, mob = conf.mobilite||{};
+  html += section('Fiche confidentielle — Identité & mobilité','#C0392B');
+  html += field('Autonomie', id.autonomie); html += field('Infirmière', yn(mob.infirmiere));
+  html += field('Fauteuil roulant', yn(mob.fauteuil)); html += field('Déambulateur', yn(mob.deambulateur));
+  html += field('Monte escaliers', yn(mob.escaliers));
+  html += textarea_field('Personnalité', conf.personnalite);
+  html += textarea_field('Vie quotidienne', conf.vie_quotidienne);
+  html += textarea_field('Comportement', conf.comportement);
+
+  const hyg = conf.hygiene||{};
+  html += section('Hygiène','#E67E22');
+  html += field('Présence douche', yn(hyg.presence_douche)); html += field('Timer douche', yn(hyg.timer_douche));
+  html += field('Gestion linge', yn(hyg.linge)); html += field('Stomie', yn(hyg.stomie));
+  html += field('Énurésies', hyg.enurese||'—'); html += field('Encoprésie', hyg.encopresie||'—');
+  html += textarea_field('Protocoles toilette', hyg.protocoles_toilette);
+
+  const alim = conf.alimentation||{};
+  html += section('Alimentation','#E67E22');
+  html += field('Présentation', alim.presentation); html += field('Régime', alim.regime);
+  html += field('Allergies', alim.allergies); html += field('Troubles alim.', alim.troubles);
+  html += field('Gélifiant', yn(alim.gelifiant)); html += field('Fausses routes', yn(alim.fausses_routes));
+  html += textarea_field('Info complémentaires', alim.info_comp);
+
+  const rep = conf.repos||{}, comm = conf.communication||{};
+  html += section('Rythme & communication','#E67E22');
+  html += field('Coucher', rep.heure_coucher); html += field('Lever', rep.heure_lever);
+  html += field('Surveillance nocturne', yn(rep.surveillance_nuit));
+  html += field('Compréhension', comm.comprehension); html += field('Mode comm.', comm.mode);
+  html += field('Téléphone', yn(comm.telephone));
+
+  const dep = conf.deplacements||{}, sort = conf.sorties||{};
+  html += section('Déplacements & sorties','#E67E22');
+  html += field('Marche', yn(dep.marche)); html += field('Escalier', dep.escalier);
+  html += field('Intérieur', dep.deplacement_int); html += field('Extérieur', dep.deplacement_ext);
+  html += field('Sortie seul', yn(sort.seul)); html += field('En groupe', yn(sort.groupe));
+  html += field('Gère argent', sort.argent); html += field('Nage', yn((conf.activites||{}).nage));
+
+  const trou = conf.troubles||{}, hab = conf.habitudes||{}, sante = conf.sante||{};
+  html += section('Santé','#C0392B');
+  html += field('Traitement médical', yn(sante.traitement)); html += field('Diabétique', yn(sante.diabete));
+  html += field('Asthmatique', yn(sante.asthme)); html += field('Épilepsie', yn(sante.epilepsie));
+  html += field('Non voyant', yn(sante.non_voyant)); html += field('Mal voyant', yn(sante.mal_voyant));
+  html += field('Sourd', yn(sante.sourd)); html += field('Malentendant', yn(sante.malentendant));
+  html += field('Poids', sante.poids ? sante.poids+' kg' : '—'); html += field('Taille', sante.taille ? sante.taille+' cm' : '—');
+  html += textarea_field('Antécédents médicaux', sante.antecedents);
+  html += field('Fumeur', yn(hab.fumeur)); html += field('Alcool', yn(hab.alcool));
+  html += textarea_field('Solutions troubles comportement', trou.solutions);
+
+  html += `</div>`;
+
+  // Show in modal overlay
+  let overlay = document.getElementById('fiche-detail-overlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'fiche-detail-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto">
+    <div style="background:#18534F;padding:16px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">📋 Fiche reçue — ${f.prenom_saisi} ${f.nom_saisi.toUpperCase()}</span>
+      <button onclick="document.getElementById('fiche-detail-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    ${html}
+  </div>`;
+  overlay.style.display = 'flex';
+}
+
+// ── SÉJOURS CONFIG FORMULAIRE ──
+const SEJOURS_STORAGE_KEY = 'lys_sejours_config';
+
+function loadSejoursConfig(){
+  try{ return JSON.parse(localStorage.getItem(SEJOURS_STORAGE_KEY))||null; } catch(e){ return null; }
+}
+
+function openSejoursConfig(){
+  const saved = loadSejoursConfig();
+  const cfg = saved || {
+    weekend_theme: { sessions:['COUPLES du 27 au 29 Mars : 3 jours','PÂQUES du 4 au 6 Avril : 3 jours','PLAISIRS EN PERIGORD du 25 au 27 Avril : 3 jours','ENTRE COPINES du 25 au 27 avril : 3 jours','AUTOUR DES ANIMAUX du 1 au 3 Mai : 3 jours','Z\'ANIMAUX du 27 au 29 Novembre : 3 jours','MUSIC AND CO du 27 au 29 Novembre : 3 jours'], prix:'390€ TTC' },
+    mini_sejour: { sessions:['TRESOR PERDU DU PERIGORD du 7 au 11 Mai','C\'EST LA FETE ! du 7 au 11 Mai','GRAND MIXTE du 14 au 18 Mai','MELI MELO du 14 au 18 Mai','PECHE ET PETANQUE PARTY','ENTRE COPINES du 4 au 8 Novembre','GOURMANDISES D\'AUTOMNE du 4 au 8 Novembre','DOUCEUR D\'AUTOMNE du 11 au 15 Novembre'], prix:'590€ TTC' }
+  };
+
+  const makeRows = (type) => cfg[type].sessions.map((s,i) =>
+    `<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+      <input type="text" value="${s.replace(/"/g,'&quot;')}" id="cfg-${type}-${i}" style="flex:1;padding:6px 10px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px">
+      <button onclick="removeCfgRow('${type}',${i})" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;color:#991b1b;font-size:12px">✕</button>
+    </div>`
+  ).join('');
+
+  let overlay = document.getElementById('sejours-config-overlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='sejours-config-overlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(overlay); }
+
+  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:#18534F;padding:16px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">⚙️ Séjours du formulaire en ligne</span>
+      <button onclick="document.getElementById('sejours-config-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:12px;color:#5C6B6A;margin-bottom:16px">Ces séjours apparaissent dans le formulaire public que vous envoyez aux structures. Modifier ici les met à jour automatiquement.</p>
+      <div style="font-weight:700;font-size:13px;color:#18534F;margin-bottom:8px">🎭 Week-ends à thèmes — <input type="text" id="cfg-wt-prix" value="${cfg.weekend_theme.prix}" style="padding:4px 8px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px;width:100px"></div>
+      <div id="cfg-wt-rows">${makeRows('weekend_theme')}</div>
+      <button onclick="addCfgRow('weekend_theme')" style="background:#ECF8F6;border:1px solid #b8e4df;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;color:#18534F;margin-bottom:16px">+ Ajouter un week-end</button>
+
+      <div style="font-weight:700;font-size:13px;color:#18534F;margin-bottom:8px">🌿 Mini Séjours — <input type="text" id="cfg-ms-prix" value="${cfg.mini_sejour.prix}" style="padding:4px 8px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px;width:100px"></div>
+      <div id="cfg-ms-rows">${makeRows('mini_sejour')}</div>
+      <button onclick="addCfgRow('mini_sejour')" style="background:#ECF8F6;border:1px solid #b8e4df;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;color:#18534F;margin-bottom:16px">+ Ajouter un mini séjour</button>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid #E5E0D6">
+        <button onclick="document.getElementById('sejours-config-overlay').remove()" style="padding:8px 18px;border:1px solid #E5E0D6;border-radius:8px;cursor:pointer;font-size:13px;background:white">Annuler</button>
+        <button onclick="saveSejoursConfig()" style="padding:8px 18px;background:#18534F;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
+  overlay.style.display='flex';
+}
+
+function addCfgRow(type){
+  const container=document.getElementById('cfg-'+(type==='weekend_theme'?'wt':'ms')+'-rows');
+  const idx=container.querySelectorAll('input').length;
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`<input type="text" id="cfg-${type}-${idx}" placeholder="Nom du séjour et dates" style="flex:1;padding:6px 10px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px">
+    <button onclick="this.parentElement.remove()" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;color:#991b1b;font-size:12px">✕</button>`;
+  container.appendChild(div);
+}
+
+function removeCfgRow(type, idx){
+  const el=document.getElementById('cfg-'+type+'-'+idx);
+  if(el) el.closest('div[style]').remove();
+}
+
+function saveSejoursConfig(){
+  const wtRows=document.querySelectorAll('#cfg-wt-rows input[type=text]');
+  const msRows=document.querySelectorAll('#cfg-ms-rows input[type=text]');
+  const cfg={
+    weekend_theme:{ sessions:[...wtRows].map(i=>i.value.trim()).filter(Boolean), prix:document.getElementById('cfg-wt-prix').value.trim()||'390€ TTC' },
+    mini_sejour:{ sessions:[...msRows].map(i=>i.value.trim()).filter(Boolean), prix:document.getElementById('cfg-ms-prix').value.trim()||'590€ TTC' }
+  };
+  localStorage.setItem(SEJOURS_STORAGE_KEY, JSON.stringify(cfg));
+  document.getElementById('sejours-config-overlay').remove();
+  alert('✅ Configuration enregistrée. Le formulaire utilisera ces séjours à la prochaine ouverture.');
+}
+
 function renderAll() {
   const personnes=getFilteredPersonnes(), fSejour=document.getElementById('filterSejour').value;
   let html=buildUnlinked();
+  html+=buildFichesSection();
   if (!fSejour||fSejour==='none') html+=buildSejoursSection(personnes);
   html+=`<div class="section-title" onclick="toggleVacanciers()" style="cursor:pointer;user-select:none">👥 Tous les vacanciers <span class="count">${personnes.length}</span><span class="chevron" id="vacanciers-chevron" style="margin-left:auto">▶</span></div>`;
   html+=`<div id="vacanciers-container" style="display:none">${personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>'}</div>`;
@@ -1042,13 +1252,7 @@ async function init() {
     listenersAdded=true;
   }
 }
-// AUTH GUARD: vérifier l'authentification avant tout
-if(sessionStorage.getItem('lys_auth')!=='1'&&localStorage.getItem('lys_auth')!=='1'){
-  window.location.href='index.html';
-} else {
-  if(localStorage.getItem('lys_auth')==='1') sessionStorage.setItem('lys_auth','1');
-  init();
-}
+init();
 </script>
 
 <!-- MODAL VACANCIER -->
