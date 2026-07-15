@@ -1445,6 +1445,7 @@ async function api(path, method='GET', body=null){
 let currentStep = 1;
 const TOTAL_STEPS = 9;
 let selectedTypeSejour = null;
+let ficheInscriptionBuiltFor = null;
 let formData = {};
 
 // ══ SÉJOURS CONFIG (modifiable dans documents.html) ══
@@ -1543,12 +1544,16 @@ function prevStep(){if(currentStep>1) goToStep(currentStep-1);}
 
 function nextStep(){
   if(!validateStep(currentStep)) return;
-  if(currentStep===1) buildFicheInscription();
+  if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
   if(currentStep<TOTAL_STEPS) goToStep(currentStep+1);
 }
 
 // ══ TYPE SÉJOUR ══
 function selectTypeSejour(type){
+  if(ficheInscriptionBuiltFor&&ficheInscriptionBuiltFor!==type){
+    if(!confirm('Changer de type de séjour va effacer la fiche d\'inscription déjà remplie. Continuer ?')) return;
+    ficheInscriptionBuiltFor=null;
+  }
   selectedTypeSejour=type;
   document.querySelectorAll('.sejour-type-card').forEach(c=>c.classList.remove('selected'));
   document.getElementById('card-'+type).classList.add('selected');
@@ -1693,13 +1698,20 @@ function buildFicheInscription(){
   </div>`;
 
   // Convoyage
-  html+=`<div style="background:var(--mint);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px">
-    <label class="field-label" style="margin-bottom:8px">Convoyage — Le vacancier sera pris en charge <span class="req">*</span></label>
-    <div class="radio-group">
-      <label class="radio-opt"><input type="radio" name="insc-convoyage" value="gare_souillac_sarlat"> À la gare de Souillac ou Sarlat</label>
-      <label class="radio-opt"><input type="radio" name="insc-convoyage" value="accompagne_structure"> Accompagné par sa structure</label>
-    </div>
-  </div>`;
+  if(selectedTypeSejour==='sejour'){
+    html+=`<div style="background:var(--mint);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px">
+      <label class="field-label" style="margin-bottom:4px">Convoyage</label>
+      <p style="font-size:13px;color:var(--forest)">Nous contacter précedemment pour déterminer ensemble le lieu de prise en charge le plus proche.</p>
+    </div>`;
+  } else {
+    html+=`<div style="background:var(--mint);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px">
+      <label class="field-label" style="margin-bottom:8px">Convoyage — Le vacancier sera pris en charge <span class="req">*</span></label>
+      <div class="radio-group">
+        <label class="radio-opt"><input type="radio" name="insc-convoyage" value="gare_souillac_sarlat"> À la gare de Souillac ou Sarlat</label>
+        <label class="radio-opt"><input type="radio" name="insc-convoyage" value="accompagne_structure"> Accompagné par sa structure</label>
+      </div>
+    </div>`;
+  }
 
   // Signature
   html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
@@ -1719,6 +1731,7 @@ function buildFicheInscription(){
 
   html+='</div>';
   document.getElementById('fiche-inscription-content').innerHTML=html;
+  ficheInscriptionBuiltFor=selectedTypeSejour;
 }
 
 function toggleSejour(i){
@@ -1849,7 +1862,8 @@ function validateStep(step){
 
   if(step===2){
     req('insc-nom');req('insc-prenom');req('insc-naissance');
-    reqRadio('insc-sexe');reqRadio('insc-autonomie');reqRadio('insc-convoyage');
+    reqRadio('insc-sexe');reqRadio('insc-autonomie');
+    if(selectedTypeSejour!=='sejour') reqRadio('insc-convoyage');
     req('insc-astreinte');
     req('insc-resp-nom');req('insc-resp-prenom');req('insc-resp-fonction');
     req('insc-chef-service');req('insc-foyer-nom');req('insc-adresse');
