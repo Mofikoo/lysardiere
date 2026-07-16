@@ -4749,8 +4749,7 @@ async function supprimerStop(convoiIdx,stopIdx){
   // Remove the stop
   c.stops.splice(stopIdx,1);
   
-  // Restore custom hours with updated indices
-  restoreCustomHeuresAfterReorder(c,savedH);
+  // (customHeures already shifted by shiftCustomHeuresAfterRemove above)
   
   // Recalculate depart/arrivee from remaining stops
   var newDep=[],newArr=[];
