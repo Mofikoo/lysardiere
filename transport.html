@@ -4902,7 +4902,11 @@ function execInsertStop(convoiIdx,insertAtIdx){
   
   // Smart: if the same lieu already exists as a stop in this convoi, 
   // add persons to it directly without creating a new stop or invalidating Maps
-  var existingStop=c.stops.find(function(s){
+  // If any depPers is a transfer person, always create a NEW stop (don't merge with existing)
+  // because a transfer person boarding at stop A and departing at stop B must stay separate
+  var hasTransfert=depPers.some(function(p){return p.isTransfert});
+
+  var existingStop=!hasTransfert&&c.stops.find(function(s){
     if(s.action==='depart'||s.action==='retour') return false;
     return s.fid===lieuId;
   });
@@ -4923,9 +4927,21 @@ function execInsertStop(convoiIdx,insertAtIdx){
     else if((existingStop.depPers||[]).length) existingStop.action='depot';
     else if((existingStop.arrPers||[]).length) existingStop.action='pickup';
     existingStop.sameFoyer=false;
-    // Add to flat lists
-    depPers.forEach(function(p){if(!(c.depart||[]).some(function(x){return x.id===p.id})) c.depart=(c.depart||[]).concat([p])});
-    arrPers.forEach(function(p){if(!(c.arrivee||[]).some(function(x){return x.id===p.id})) c.arrivee=(c.arrivee||[]).concat([p])});
+    // Add to flat lists — skip isTransfert persons (they're already in c.depart from their pickup stop)
+    depPers.forEach(function(p){
+      if(!p.isTransfert&&!(c.depart||[]).some(function(x){return x.id===p.id||(x.prenom===p.prenom&&x.nom===p.nom)}))
+        c.depart=(c.depart||[]).concat([p]);
+    });
+    arrPers.forEach(function(p){if(!(c.arrivee||[]).some(function(x){return x.id===p.id||(x.prenom===p.prenom&&x.nom===p.nom)})) c.arrivee=(c.arrivee||[]).concat([p])});
+    // Recalculate seats
+    var seatCount2=(c.depart||[]).length;
+    c.stops[0].seats=seatCount2;
+    for(var si2=1;si2<c.stops.length;si2++){
+      var dep2=(c.stops[si2].depPers||[]).filter(function(pp){return !pp.isTransfert}).length;
+      var tDep2=(c.stops[si2].depPers||[]).filter(function(pp){return pp.isTransfert}).length;
+      seatCount2=seatCount2-dep2-tDep2+(c.stops[si2].arrPers||[]).length;
+      c.stops[si2].seats=seatCount2;
+    }
     c.peakSeats=peakSeatsStops(c.stops);
     c.remplissage=Math.round(c.peakSeats/c.vehicule.cap*100);
     // NO Maps invalidation — circuit hasn't changed
