@@ -4965,6 +4965,22 @@ function execInsertStop(convoiIdx,insertAtIdx){
   // Insert at position (BEFORE shifting customHeures - we need to track all changes)
   c.stops.splice(insertAtIdx,0,newStop);
   
+  // Auto-detect transfers: if a person in depPers is already in arrPers of another stop
+  // in this convoi, they are automatically a transfer passenger — mark them isTransfert=true
+  depPers.forEach(function(mp){
+    var mpKey=mp.prenom.toLowerCase()+'|'+(mp.nom||'').toLowerCase();
+    var alreadyBoarding=c.stops.some(function(s){
+      if(s.action==='depart'||s.action==='retour') return false;
+      return (s.arrPers||[]).some(function(pp){
+        return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()===mpKey;
+      });
+    });
+    if(alreadyBoarding){
+      mp.isTransfert=true;
+      console.log('[TRANSFERT] Auto-détecté transfert pour',mp.prenom);
+    }
+  });
+
   // Remove moved persons from their original stops
   // TRANSFERT LOGIC: if a person in depPers is marked isTransfert, they are intentionally
   // at TWO stops: arrPers at stop A (pickup), depPers at stop B (vehicle change).
