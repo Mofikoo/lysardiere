@@ -5923,8 +5923,13 @@ async function genCourrierPdf(singleKey){
   var label=singleKey?window._courrierData[singleKey].foyer.replace(/[\s\/\\:*?"<>|]+/g,'_'):'tous';
   var filename='courriers-'+label+'-'+ts+'.pdf';
   setPersist('⏳ Génération PDF...','neutral');
-  // Use a full HTML document string — html2pdf renders it internally without needing DOM visibility
-  var fullHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box}body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;background:white;width:186mm;overflow-x:hidden}</style></head><body>'+pages+'</body></html>';
+
+  // Use a hidden DOM element to avoid the blank first page bug in html2pdf string mode
+  var container=document.createElement('div');
+  container.style.cssText='position:fixed;left:-9999px;top:0;width:186mm;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;background:white';
+  container.innerHTML=pages;
+  document.body.appendChild(container);
+
   try{
     await html2pdf().set({
       margin:[10,12,12,12],
@@ -5932,13 +5937,15 @@ async function genCourrierPdf(singleKey){
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,letterRendering:true,backgroundColor:'#ffffff'},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css','legacy']}
-    }).from(fullHtml,'string').save();
+      pagebreak:{mode:'css',before:'.page-break'}
+    }).from(container).save();
     setPersist('✅ PDF généré','ok');
   } catch(e){
     console.error('html2pdf error:',e);
     setPersist('Erreur PDF','err');
     lyAlert('Erreur lors de la génération du PDF : '+(e.message||e)+'\n\nEssayez le bouton Imprimer à la place.','error');
+  } finally{
+    document.body.removeChild(container);
   }
 }
 

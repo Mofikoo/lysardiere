@@ -2881,17 +2881,29 @@ async function downloadRecap(){
   const nom=data.inscription.participant.nom||data.confidentielle.identite.nom||'';
   const prenom=data.inscription.participant.prenom||data.confidentielle.identite.prenom||'';
   const fullHtml=buildFullPdfHtml(data);
+
+  // Use a hidden iframe to render the full HTML document (avoids blank page bug of html2pdf string mode)
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;height:297mm;border:none;visibility:hidden';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(fullHtml);
+  iframe.contentDocument.close();
+
   try{
+    await new Promise(function(resolve){setTimeout(resolve,300)}); // let iframe render
     await html2pdf().set({
       margin:[8,8,10,8],
-      filename:`dossier-${nom}-${prenom}.pdf`,
+      filename:'dossier-'+nom+'-'+prenom+'.pdf',
       image:{type:'jpeg',quality:0.95},
       html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
       pagebreak:{mode:'css',before:'.page-break'}
-    }).from(fullHtml,'string').save();
+    }).from(iframe.contentDocument.body).save();
   } catch(e){
     alert('Erreur PDF : '+(e.message||e));
+  } finally{
+    document.body.removeChild(iframe);
   }
 }
 
