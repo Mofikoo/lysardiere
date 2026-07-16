@@ -996,9 +996,9 @@ function buildFichesSection() {
       ? `<span style="background:#fff9e6;color:#856404;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">⚠️ Approx.</span>`
       : `<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">🆕 Nouveau</span>`;
     const persNom = p ? `${p.prenom} ${p.nom}` : `${f.prenom_saisi} ${f.nom_saisi}`;
-    const linkSelect = f.statut_matching!=='exact' ? `<select class="link-select" onchange="relier_fiche('${f.id}',this.value)" style="font-size:11px">
+    const linkSelect = f.statut_matching!=='exact' ? `<select class="link-select" onchange="relier_fiche('${f.id}',event.target.value)" style="font-size:11px">
       <option value="">🔗 Relier à…</option>
-      ${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(p=>`<option value="${p.id}">${p.prenom} ${p.nom}${p.foyer?' — '+p.foyer:''}</option>`).join('')}
+      ${allPersonnes.sort((a,b)=>a.nom.localeCompare(b.nom)).map(pp=>`<option value="${pp.id}">${pp.prenom} ${pp.nom}${pp.foyer?' — '+pp.foyer:''}</option>`).join('')}
     </select>` : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light);flex-wrap:wrap">
       <div style="flex:1;min-width:180px">
@@ -1049,86 +1049,196 @@ function openFicheDetail(ficheId){
   const insc = f.reponses_inscription || {};
   const conf = f.reponses_confidentielle || {};
   const p = insc.participant || {};
-  const typLabel = {weekend_theme:'Week-end à thèmes',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
-  const yn = v => v==='oui'?'Oui':v==='non'?'Non':v||'—';
+  const resp = insc.responsable || {};
+  const rf = insc.releve_frais || {};
+  const id = conf.identite||{}, mob = conf.mobilite||{}, hyg = conf.hygiene||{};
+  const alim = conf.alimentation||{}, rep = conf.repos||{}, comm = conf.communication||{};
+  const rel = conf.relation||{}, dep = conf.deplacements||{}, sort = conf.sorties||{};
+  const act = conf.activites||{}, trou = conf.troubles||{}, hab = conf.habitudes||{};
+  const sante = conf.sante||{}, astr = conf.astreinte||{};
+  const typLabel = {weekend_theme:'Week-ends à thèmes',mini_sejour:'Les Mini Séjours',weekend_ordinaire:'Week-end et séjour ordinaire',sejour:'Fiche d\'inscription séjour'}[f.type_sejour]||f.type_sejour;
 
-  const section = (title, color='#18534F') => `<div style="font-weight:700;font-size:12px;color:${color};text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid ${color}">${title}</div>`;
-  const field = (label, val) => val&&val!=='—' ? `<div style="display:flex;gap:8px;padding:4px 0;font-size:13px"><span style="color:#5C6B6A;min-width:160px;flex-shrink:0">${label}</span><span style="color:#1A2E2C;font-weight:500">${val}</span></div>` : '';
-  const textarea_field = (label, val) => val ? `<div style="padding:4px 0;font-size:13px"><div style="color:#5C6B6A;margin-bottom:4px">${label}</div><div style="background:#f7f3ec;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.6">${val}</div></div>` : '';
+  const yn = v => v==='oui'?'<b style="color:#18534F">Oui</b>':v==='non'?'Non':v||'—';
+  const chkFmt = obj => {
+    const labels={matin:'Matin',midi:'Midi',soir:'Soir',non:'Aucune',jour:'Jour',nuit:'Nuit'};
+    if(!obj) return '—';
+    if(typeof obj==='string') return obj;
+    return Object.entries(obj).filter(([,v])=>v).map(([k])=>labels[k]||k).join(', ')||'Non';
+  };
 
-  let html = `<div style="font-family:'DM Sans',sans-serif;max-width:720px;margin:0 auto;padding:20px">`;
-  html += `<div style="font-family:'Fraunces',serif;font-size:20px;color:#18534F;margin-bottom:4px">Fiche de ${f.prenom_saisi} ${f.nom_saisi.toUpperCase()}</div>`;
-  html += `<div style="font-size:12px;color:#8A9695;margin-bottom:16px">${typLabel} — Reçue le ${fmtDate(f.soumis_le)}</div>`;
+  const TROUBLES_LABELS = {objet_personnel:'Objet personnel',rituels:'Rituels',potomanie:'Potomanie',peur_foule:'Peur de la foule',crise_angoisse:'Crise d\'angoisse',isole:'S\'isole',fabulations:'Fabulations, délires',trouble_memoire:'Trouble de la mémoire',autres:'Autres',mise_danger_soi:'Mise en danger de soi',automutilation:'Automutilation',tendance_fugue:'Tendance à fuguer',tentative_suicide:'Tentative de suicide',exhibitionnisme:'Trouble exhibitionniste',troubles_sexuels:'Troubles sexuels'};
 
-  html += section('Fiche d\'inscription');
-  html += field('Type de séjour', typLabel);
-  html += field('Séjour choisi', insc.sejour_choisi);
-  html += field('Nom', p.nom); html += field('Prénom', p.prenom);
-  html += field('Date de naissance', p.naissance); html += field('Sexe', p.sexe);
-  html += field('Autonomie', p.autonomie); html += field('Astreinte', p.astreinte);
-  html += field('Convoyage', insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':insc.convoyage||'Pris en charge par La Lysardière');
-  const resp = insc.responsable||{};
-  html += section('Responsable inscription');
-  html += field('Nom', resp.prenom+' '+resp.nom); html += field('Fonction', resp.fonction);
-  html += field('Foyer', resp.foyer); html += field('Adresse', resp.adresse+' '+resp.cp+' '+resp.ville);
-  html += field('Tél', resp.tel); html += field('Mail', resp.mail);
-  const rf = insc.releve_frais||{};
-  html += section('Relevé de frais');
-  html += field('Organisme', rf.organisme); html += field('Contact', rf.contact);
-  html += field('Adresse', (rf.adresse||'')+' '+(rf.cp||'')+' '+(rf.ville||''));
-  html += field('Mail', rf.mail); html += field('Mail compta', rf.mail_compta);
+  const S = (title,color='#18534F') => `<div style="background:${color};color:white;font-size:11px;font-weight:700;padding:5px 10px;margin:14px 0 5px;text-transform:uppercase;letter-spacing:0.5px">${title}</div>`;
+  const F = (label,val) => (val&&val!=='—') ? `<div style="display:flex;gap:8px;padding:3px 8px;font-size:12px;border-bottom:1px solid #f5f5f5"><span style="color:#666;min-width:180px;flex-shrink:0">${label}</span><span style="color:#111;font-weight:500">${val}</span></div>` : '';
+  const TA = (label,val) => val ? `<div style="padding:6px 8px"><div style="font-size:11px;color:#666;margin-bottom:2px">${label}</div><div style="background:#f7f3ec;border-left:3px solid #18534F;padding:6px 10px;font-size:11px;line-height:1.5">${(val||'').replace(/\n/g,'<br>')}</div></div>` : '';
 
-  const id = conf.identite||{}, mob = conf.mobilite||{};
-  html += section('Fiche confidentielle — Identité & mobilité','#C0392B');
-  html += field('Autonomie', id.autonomie); html += field('Infirmière', yn(mob.infirmiere));
-  html += field('Fauteuil roulant', yn(mob.fauteuil)); html += field('Déambulateur', yn(mob.deambulateur));
-  html += field('Monte escaliers', yn(mob.escaliers));
-  html += textarea_field('Personnalité', conf.personnalite);
-  html += textarea_field('Vie quotidienne', conf.vie_quotidienne);
-  html += textarea_field('Comportement', conf.comportement);
+  // Hygiène/alim tableau helpers
+  const HYGIENE_ITEMS_LABELS = ['Fait sa toilette','Prend sa douche','Les cheveux','Le dos','Les parties intimes','Les pieds','Se rase','Se coiffe','Se brosse les dents','S\'habille','Reconnaît ses vêtements','Se chausse','Va aux toilettes'];
+  const ALIM_ITEMS_LABELS = ['Mange','Boit'];
+  const COLS = ['Seul(e)','Stimulation verbale','Aide partielle','Aide totale'];
+  const COLS_KEYS = ['seul','stim','aide_partielle','aide_totale'];
 
-  const hyg = conf.hygiene||{};
-  html += section('Hygiène','#E67E22');
-  html += field('Présence douche', yn(hyg.presence_douche)); html += field('Timer douche', yn(hyg.timer_douche));
-  html += field('Gestion linge', yn(hyg.linge)); html += field('Stomie', yn(hyg.stomie));
-  html += field('Énurésies', hyg.enurese||'—'); html += field('Encoprésie', hyg.encopresie||'—');
-  html += textarea_field('Protocoles toilette', hyg.protocoles_toilette);
+  const buildHygTable = (items, tableObj) => {
+    let t = `<table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0"><tr style="background:#e8f5e9"><th style="padding:3px 6px;text-align:left;border:1px solid #ccc">Activité</th>${COLS.map(c=>`<th style="padding:3px 6px;text-align:center;border:1px solid #ccc">${c}</th>`).join('')}</tr>`;
+    items.forEach(label=>{const row=(tableObj||{})[label]||{};t+=`<tr><td style="padding:2px 6px;border:1px solid #eee">${label}</td>${COLS_KEYS.map(k=>`<td style="text-align:center;border:1px solid #eee">${row[k]?'☑':'☐'}</td>`).join('')}</tr>`;});
+    return t+'</table>';
+  };
 
-  const alim = conf.alimentation||{};
-  html += section('Alimentation','#E67E22');
-  html += field('Présentation', alim.presentation); html += field('Régime', alim.regime);
-  html += field('Allergies', alim.allergies); html += field('Troubles alim.', alim.troubles);
-  html += field('Gélifiant', yn(alim.gelifiant)); html += field('Fausses routes', yn(alim.fausses_routes));
-  html += textarea_field('Info complémentaires', alim.info_comp);
+  const troublesRows = Object.entries(trou.liste||{}).map(([k,v])=>{
+    const label=TROUBLES_LABELS[k]||k;
+    const val=v?.valeur==='oui'?`<b>Oui</b>${v.detail?' — '+v.detail:''}`:'Non';
+    return `<div style="display:flex;gap:8px;padding:3px 8px;font-size:12px;border-bottom:1px solid #f5f5f5"><span style="color:#666;min-width:180px">${label}</span><span>${val}</span></div>`;
+  }).join('');
 
-  const rep = conf.repos||{}, comm = conf.communication||{};
-  html += section('Rythme & communication','#E67E22');
-  html += field('Coucher', rep.heure_coucher); html += field('Lever', rep.heure_lever);
-  html += field('Surveillance nocturne', yn(rep.surveillance_nuit));
-  html += field('Compréhension', comm.comprehension); html += field('Mode comm.', comm.mode);
-  html += field('Téléphone', yn(comm.telephone));
+  let html = `<div style="font-family:Arial,sans-serif;font-size:12px;color:#222;padding:0">`;
 
-  const dep = conf.deplacements||{}, sort = conf.sorties||{};
-  html += section('Déplacements & sorties','#E67E22');
-  html += field('Marche', yn(dep.marche)); html += field('Escalier', dep.escalier);
-  html += field('Intérieur', dep.deplacement_int); html += field('Extérieur', dep.deplacement_ext);
-  html += field('Sortie seul', yn(sort.seul)); html += field('En groupe', yn(sort.groupe));
-  html += field('Gère argent', sort.argent); html += field('Nage', yn((conf.activites||{}).nage));
+  html += S('Fiche d\'inscription — '+typLabel);
+  html += F('Séjour choisi', insc.sejour_choisi);
+  html += F('Nom / Prénom', (p.nom||'')+' '+(p.prenom||''));
+  html += F('Date de naissance', p.naissance); html += F('Sexe', p.sexe); html += F('Autonomie', p.autonomie);
+  html += F('En couple', yn(p.couple)+(p.couple==='oui'?' avec '+p.couple_detail:''));
+  html += F('Numéro d\'astreinte', p.astreinte);
+  html += F('Convoyage', insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière');
 
-  const trou = conf.troubles||{}, hab = conf.habitudes||{}, sante = conf.sante||{};
-  html += section('Santé','#C0392B');
-  html += field('Traitement médical', yn(sante.traitement)); html += field('Diabétique', yn(sante.diabete));
-  html += field('Asthmatique', yn(sante.asthme)); html += field('Épilepsie', yn(sante.epilepsie));
-  html += field('Non voyant', yn(sante.non_voyant)); html += field('Mal voyant', yn(sante.mal_voyant));
-  html += field('Sourd', yn(sante.sourd)); html += field('Malentendant', yn(sante.malentendant));
-  html += field('Poids', sante.poids ? sante.poids+' kg' : '—'); html += field('Taille', sante.taille ? sante.taille+' cm' : '—');
-  html += textarea_field('Antécédents médicaux', sante.antecedents);
-  html += field('Fumeur', yn(hab.fumeur)); html += field('Alcool', yn(hab.alcool));
-  html += textarea_field('Solutions troubles comportement', trou.solutions);
+  html += S('Responsable de l\'inscription','#2a6b66');
+  html += F('Nom', (resp.prenom||'')+' '+(resp.nom||'')); html += F('Fonction', resp.fonction);
+  html += F('Chef de service', resp.chef_service); html += F('Foyer', resp.foyer);
+  html += F('Adresse', (resp.adresse||'')+', '+(resp.cp||'')+' '+(resp.ville||''));
+  html += F('Tél', resp.tel); html += F('Mail', resp.mail);
+  html += F('Mail secrétariat', resp.mail_secretariat); html += F('Mail éducatif', resp.mail_educatif);
+
+  html += S('Relevé de frais','#2a6b66');
+  html += F('Organisme', rf.organisme); html += F('Contact', rf.contact); html += F('Tél', rf.tel);
+  html += F('Adresse', (rf.adresse||'')+', '+(rf.cp||'')+' '+(rf.ville||''));
+  html += F('Mail', rf.mail); html += F('Mail comptabilité', rf.mail_compta);
+  html += F('Signé à', insc.signature?.fait_a+' le '+insc.signature?.date+' par '+insc.signature?.qualite);
+
+  html += S('Fiche confidentielle p.1 — Identité & mobilité','#C0392B');
+  html += F('Âge', id.age); html += F('Séjour', id.sejour); html += F('Autonomie', id.autonomie);
+  html += F('Infirmière', yn(mob.infirmiere));
+  if(mob.infirmiere==='oui') html += F('Moments / qui', chkFmt(mob.infirmiere_moments)+' — '+(mob.infirmiere_detail||''));
+  html += F('Fauteuil roulant', yn(mob.fauteuil)+(mob.fauteuil_sortie?' (sorties uniquement)':''));
+  html += F('Déambulateur', yn(mob.deambulateur)); html += F('Monte escaliers', yn(mob.escaliers));
+  html += F('Astreinte', astr.type==='autre'?((astr.prenom||'')+' '+(astr.nom||'')+' — '+(astr.tel||'')):astr.type);
+  html += TA('Personnalité', conf.personnalite);
+  html += TA('Vie quotidienne', conf.vie_quotidienne);
+  html += TA('Comportement', conf.comportement);
+
+  html += S('Fiche confidentielle p.2 — Hygiène','#E67E22');
+  html += buildHygTable(HYGIENE_ITEMS_LABELS, hyg.tableau);
+  html += F('Présence physique douche', yn(hyg.presence_douche)); html += F('Timer douche', yn(hyg.timer_douche));
+  html += F('Gestion linge', yn(hyg.linge)); html += F('Stomie', yn(hyg.stomie));
+  if(hyg.stomie==='oui') html += F('Aide stomie', hyg.stomie_aide);
+  html += F('Pistolet', yn(hyg.pistolet));
+  if(hyg.pistolet==='oui') html += F('Aide pistolet', hyg.pistolet_aide);
+  html += TA('Protocoles toilette', hyg.protocoles_toilette);
+  html += F('Énurésies', chkFmt(hyg.enurese));
+  if(hyg.enurese?.jour||hyg.enurese?.nuit){ html += F('Fréquence changes',hyg.enurese?.freq); html += F('Aide changes',yn(hyg.enurese?.aide)); html += F('Type change',hyg.enurese?.type); }
+  html += F('Encoprésie', chkFmt(hyg.encopresie));
+  if(hyg.encopresie?.jour||hyg.encopresie?.nuit){ html += F('Fréquence changes encop.',hyg.encopresie?.freq); html += F('Aide changes',yn(hyg.encopresie?.aide)); html += F('Type change',hyg.encopresie?.type); }
+
+  html += S('Alimentation','#E67E22');
+  html += buildHygTable(ALIM_ITEMS_LABELS, alim.tableau);
+  html += F('Présentation aliments', alim.presentation); html += F('Couverts adaptés', yn(alim.couverts));
+  if(alim.couverts==='oui') html += F('Lesquels', alim.couverts_detail);
+  html += F('Gélifiant', yn(alim.gelifiant));
+  if(alim.gelifiant==='oui') html += F('Avec quels aliments', alim.gelifiant_detail);
+  html += F('Fausses routes', yn(alim.fausses_routes));
+  if(alim.fausses_routes==='oui') html += F('Précision', alim.fausses_routes_detail);
+  html += F('Régime', alim.regime); html += F('Addictions', alim.addictions);
+  html += F('Troubles alim.', alim.troubles); html += F('Allergies', alim.allergies);
+  html += TA('Informations complémentaires alimentation', alim.info_comp);
+
+  html += S('Fiche confidentielle p.3 — Rythme & repos','#E67E22');
+  html += F('Peurs nocturnes', yn(rep.peurs_nuit)); if(rep.peurs_nuit==='oui') html += F('Précision',rep.peurs_nuit_detail);
+  html += F('Se lève la nuit', yn(rep.leve_nuit)); if(rep.leve_nuit==='oui') html += F('Raisons',rep.leve_nuit_detail);
+  html += F('Surveillance nocturne', yn(rep.surveillance_nuit)); if(rep.surveillance_nuit==='oui') html += F('Raisons',rep.surveillance_nuit_detail);
+  html += F('Heure coucher', rep.heure_coucher); html += F('Heure lever', rep.heure_lever);
+  html += TA('Informations complémentaires repos', rep.info_comp);
+
+  html += S('Communication','#E67E22');
+  html += F('Compréhension', comm.comprehension); html += F('Mode comm.', comm.mode);
+  html += F('Exprime ses besoins', yn(comm.exprime_besoins)); html += F('Conversation fluide', yn(comm.conversation));
+  html += F('Écrit', comm.ecrit); html += F('Lit', comm.lit);
+  html += F('Téléphone', yn(comm.telephone)); if(comm.telephone==='oui') html += F('Protocole téléphone', comm.telephone_protocole);
+  html += TA('Informations complémentaires communication', comm.info_comp);
+
+  html += S('Relation','#E67E22');
+  html += F('Sociable', yn(rel.sociable)); html += F('S\'isole', yn(rel.isole));
+  html += F('Agressivité verbale', yn(rel.agressivite_verbale)); html += F('Agressivité physique', yn(rel.agressivite_physique));
+  if(rel.agressivite_physique==='oui'){ html += F('Envers qui',rel.agressivite_detail); html += F('Préconisations',rel.agressivite_preconisation); }
+  if(rel.couple_avec) html += F('En couple avec', rel.couple_avec);
+  html += F('Même chambre', yn(rel.meme_chambre)); html += F('Même lit', yn(rel.meme_lit));
+
+  html += S('Fiche confidentielle p.4 — Déplacements & sorties','#E67E22');
+  html += F('Se repère espace', yn(dep.repere_espace)); html += F('Se repère temps', yn(dep.repere_temps));
+  html += F('Fatigable', yn(dep.fatigable)); html += F('Marche', yn(dep.marche));
+  const marcheModal=[dep.marche_modalites?.seul&&'Seul',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Matériel',dep.marche_modalites?.moins_30&&'<30min',dep.marche_modalites?.trente_a_soixante&&'30-60min',dep.marche_modalites?.plus_1h&&'>1h'].filter(Boolean).join(', ');
+  if(marcheModal) html += F('Modalités marche', marcheModal);
+  html += F('Vitesse', dep.marche_vitesse);
+  html += TA('Infos déplacements', dep.info_comp);
+  html += F('Escalier', dep.escalier); html += F('Intérieur', dep.deplacement_int); html += F('Extérieur', dep.deplacement_ext);
+  html += F('Tient le bras', yn(dep.tenir_bras));
+  html += F('Fauteuil occas.', yn(dep.fauteuil?.occasionnel)); html += F('Fauteuil permanent', yn(dep.fauteuil?.permanent));
+  html += F('Se tient debout', yn(dep.fauteuil?.debout));
+  html += F('Appui plantaire', yn(dep.fauteuil?.appui_plantaire));
+  html += F('Transfert trafic', yn(dep.fauteuil?.transfert_vehicule));
+  html += F('Manœuvre int.', yn(dep.fauteuil?.manoeuvre_int)); html += F('Manœuvre ext.', yn(dep.fauteuil?.manoeuvre_ext));
+  html += F('Sort seul', yn(sort.seul)); html += F('Sort en groupe', yn(sort.groupe));
+  html += F('Demande chemin', yn(sort.chemin)); html += F('Heure fixe', yn(sort.heure_fixe));
+  html += F('Garde argent sur lui', yn(sort.argent_garde));
+  html += F('Gère argent', sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':'Non');
+  html += F('Peut se mettre en danger', yn(sort.danger)); if(sort.danger==='oui') html += F('Comment', sort.danger_detail);
+  html += F('Sait nager', yn(act.nage)); html += F('Choisit activités', yn(act.choix));
+  html += TA('Centres d\'intérêt', act.interets); html += TA('Activités interdites', act.interdites);
+
+  html += S('Fiche confidentielle p.5 — Troubles & habitudes');
+  html += troublesRows;
+  html += TA('Solutions troubles comportement', trou.solutions);
+  html += F('Fumeur', yn(hab.fumeur));
+  if(hab.fumeur==='oui'){
+    html += F('Fréquence tabac', hab.fumeur_freq); html += F('Gère seul', yn(hab.fumeur_seul));
+    html += F('Frustré par limite', yn(hab.fumeur_frustre)); html += F('Comportement si frustré', hab.fumeur_comportement);
+    html += F('Protocole cigarette', hab.fumeur_protocole);
+  }
+  html += F('Alcool autorisé', yn(hab.alcool));
+  if(hab.alcool==='oui') html += F('Fréquence alcool', hab.alcool_freq);
+  html += F('Type achat à éviter', hab.alcool_eviter||'—'); html += F('Préférences achat', hab.alcool_preferences||'—');
+
+  html += S('Fiche confidentielle p.6 — Santé','#C0392B');
+  html += F('Traitement médical', yn(sante.traitement));
+  if(sante.traitement==='oui'){
+    html += F('Prend seul', yn(sante.traitement_seul)); html += F('Soins corporels', yn(sante.soins_corporels));
+    html += TA('Précision soins', sante.soins_detail);
+    html += F('Bas de contention', yn(sante.bas_contention)); html += F('Protocole contention', sante.contention_protocole);
+  }
+  html += F('Soins infirmiers', yn(sante.soins_infirmiers));
+  if(sante.soins_infirmiers==='oui'){
+    html += TA('Détail soins infirmiers', sante.soins_infirm_detail);
+    html += F('Injections', chkFmt(sante.injections));
+  }
+  html += F('Diabétique', yn(sante.diabete));
+  if(sante.diabete==='oui') html += F('Injections diabète', chkFmt(sante.diabete_injections));
+  html += F('Asthmatique', yn(sante.asthme));
+  html += F('Épilepsie', yn(sante.epilepsie));
+  if(sante.epilepsie==='oui'){
+    html += F('Stabilisée', yn(sante.epilepsie_stabilisee));
+    html += F('Dernière crise', sante.epilepsie_date);
+    html += TA('Protocole crise', sante.epilepsie_protocole);
+  }
+  html += F('Non voyant', yn(sante.non_voyant)); html += F('Mal voyant', yn(sante.mal_voyant));
+  html += F('Sourd', yn(sante.sourd)); html += F('Malentendant', yn(sante.malentendant));
+  html += F('Appareillage', yn(sante.appareillage));
+  if(sante.appareillage==='oui') html += F('Type appareil', sante.appareillage_type);
+  html += F('Dentier', yn(sante.dentier)); if(sante.dentier) html += F('Gère seul', yn(sante.dentier_seul));
+  html += F('Lunettes', yn(sante.lunettes));
+  html += F('Poids', sante.poids?sante.poids+' kg':'—'); html += F('Taille', sante.taille?sante.taille+' cm':'—');
+  html += TA('Antécédents médicaux', sante.antecedents);
+  html += F('Autorisation image', yn(conf.autorisation_image?.autorisation)+' — '+(conf.autorisation_image?.nom||''));
+  html += F('Signature', 'Signé à '+(conf.signature?.fait_a||'')+' le '+(conf.signature?.date||'')+' par '+(conf.signature?.qualite||''));
 
   html += `</div>`;
 
-  // Show in modal overlay
   let overlay = document.getElementById('fiche-detail-overlay');
   if(!overlay){
     overlay = document.createElement('div');
@@ -1137,12 +1247,12 @@ function openFicheDetail(ficheId){
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto">
-    <div style="background:#18534F;padding:16px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
-      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">📋 Fiche reçue — ${f.prenom_saisi} ${f.nom_saisi.toUpperCase()}</span>
-      <button onclick="document.getElementById('fiche-detail-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>
+  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:800px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:auto;overflow:hidden">
+    <div style="background:#18534F;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1">
+      <span style="color:white;font-family:Georgia,serif;font-size:16px;font-weight:700">📋 ${f.prenom_saisi} ${(f.nom_saisi||'').toUpperCase()} — Fiche complète</span>
+      <button onclick="document.getElementById('fiche-detail-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:16px">✕</button>
     </div>
-    ${html}
+    <div style="padding:0 0 20px">${html}</div>
   </div>`;
   overlay.style.display = 'flex';
 }

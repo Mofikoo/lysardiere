@@ -484,10 +484,10 @@ textarea{resize:vertical;min-height:80px}
       <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
         <div class="yn-row">
           <span class="yn-label">Énurésies</span>
-          <div class="yn-cols">
-            <label class="yn-opt"><input type="radio" name="conf-enurese" value="jour" onchange="showEnureseDetails()"> Jour</label>
-            <label class="yn-opt"><input type="radio" name="conf-enurese" value="nuit" onchange="showEnureseDetails()"> Nuit</label>
-            <label class="yn-opt"><input type="radio" name="conf-enurese" value="non" onchange="hideEnureseDetails()"> Non</label>
+          <div class="yn-cols" style="flex-wrap:wrap;gap:10px">
+            <label class="check-opt"><input type="checkbox" id="conf-enurese-jour" onchange="toggleEnureseDetails()"> Jour</label>
+            <label class="check-opt"><input type="checkbox" id="conf-enurese-nuit" onchange="toggleEnureseDetails()"> Nuit</label>
+            <label class="check-opt"><input type="checkbox" id="conf-enurese-non" onchange="toggleEnureseNon()"> Non</label>
           </div>
         </div>
         <div class="conditional hidden" id="cond-enurese">
@@ -516,10 +516,10 @@ textarea{resize:vertical;min-height:80px}
       <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
         <div class="yn-row">
           <span class="yn-label">Encoprésie</span>
-          <div class="yn-cols">
-            <label class="yn-opt"><input type="radio" name="conf-encop" value="jour" onchange="showEncopDetails()"> Jour</label>
-            <label class="yn-opt"><input type="radio" name="conf-encop" value="nuit" onchange="showEncopDetails()"> Nuit</label>
-            <label class="yn-opt"><input type="radio" name="conf-encop" value="non" onchange="hideEncopDetails()"> Non</label>
+          <div class="yn-cols" style="flex-wrap:wrap;gap:10px">
+            <label class="check-opt"><input type="checkbox" id="conf-encop-jour" onchange="toggleEncopDetails()"> Jour</label>
+            <label class="check-opt"><input type="checkbox" id="conf-encop-nuit" onchange="toggleEncopDetails()"> Nuit</label>
+            <label class="check-opt"><input type="checkbox" id="conf-encop-non" onchange="toggleEncopNon()"> Non</label>
           </div>
         </div>
         <div class="conditional hidden" id="cond-encop">
@@ -940,6 +940,7 @@ textarea{resize:vertical;min-height:80px}
             <label class="yn-opt"><input type="radio" name="conf-appui-plantaire" value="non"> Non</label>
           </div>
         </div>
+        <div class="note-important" style="font-size:11px;margin:4px 0 8px">ℹ️ <strong>Important :</strong> La Lysardière ne dispose pas de lève-personne ni de véhicules PMR. L'appui plantaire est donc indispensable pour assurer les transferts dans de bonnes conditions de sécurité.</div>
         <div class="yn-row">
           <span class="yn-label" style="color:var(--red-section);font-weight:600">Transfert avec de l'aide dans un véhicule classique (trafic) — obligatoire</span>
           <div class="yn-cols">
@@ -999,10 +1000,18 @@ textarea{resize:vertical;min-height:80px}
         </div>
       </div>
       <div class="yn-row">
-        <span class="yn-label" style="font-weight:600">Gère son argent</span>
+        <span class="yn-label" style="font-weight:600">Garde son argent sur lui/elle</span>
         <div class="yn-cols">
-          <label class="yn-opt"><input type="radio" name="conf-argent" value="seul"> Seul(e)</label>
+          <label class="yn-opt"><input type="radio" name="conf-argent-garde" value="oui"> Oui</label>
+          <label class="yn-opt"><input type="radio" name="conf-argent-garde" value="non"> Non</label>
+        </div>
+      </div>
+      <div class="yn-row">
+        <span class="yn-label" style="font-weight:600">Le gère t-il/elle</span>
+        <div class="yn-cols">
+          <label class="yn-opt"><input type="radio" name="conf-argent" value="seul"> Oui (seul)</label>
           <label class="yn-opt"><input type="radio" name="conf-argent" value="avec_aide"> Avec aide</label>
+          <label class="yn-opt"><input type="radio" name="conf-argent" value="non"> Non</label>
         </div>
       </div>
       <div style="font-size:11px;color:var(--orange-section);padding:4px 0 8px">Merci de prévoir à minima 10€</div>
@@ -1072,6 +1081,9 @@ textarea{resize:vertical;min-height:80px}
             <label class="yn-opt"><input type="radio" name="conf-fumeur" value="non" onchange="toggleConditional('cond-fumeur',false)"> Non</label>
           </div>
         </div>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#991b1b;margin:6px 0">
+          🚨 <strong>Information importante :</strong> Les éducateurs doivent informer les vacanciers que <strong>les briquets sont récupérés la nuit</strong>, quelque soit leur niveau d'autonomie, pour des raisons de sécurité.
+        </div>
         <div class="conditional hidden" id="cond-fumeur">
           <div class="field-row cols2">
             <div class="field-group">
@@ -1116,18 +1128,24 @@ textarea{resize:vertical;min-height:80px}
           </div>
         </div>
         <div class="conditional hidden" id="cond-alcool">
-          <div class="field-row cols2">
+          <div class="field-row">
             <div class="field-group">
               <label class="field-label">À quelle fréquence, peut-il/elle gérer seul(e) ? <span class="req">*</span></label>
               <input type="text" id="conf-alcool-freq" placeholder="Précisez">
             </div>
-            <div class="field-group">
-              <label class="field-label">Type d'achat à éviter <span class="req">*</span></label>
-              <input type="text" id="conf-alcool-eviter" placeholder="ex: alcool fort...">
-            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Achats alcool - toujours visible -->
+      <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px">
+        <div class="field-row cols2" style="margin-bottom:0">
+          <div class="field-group">
+            <label class="field-label">Type d'achat à éviter</label>
+            <input type="text" id="conf-alcool-eviter" placeholder="ex: alcool fort...">
           </div>
           <div class="field-group">
-            <label class="field-label">Les préférences d'achat du vacancier <span class="req">*</span></label>
+            <label class="field-label">Les préférences d'achat du vacancier</label>
             <input type="text" id="conf-alcool-preferences" placeholder="Précisez">
           </div>
         </div>
@@ -1140,7 +1158,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="form-card">
       <div class="form-card-title">Fiche Confidentielle — Page 6/6</div>
       <div class="note-important">
-        <strong>PARTIE 3 : SANTÉ</strong> — Chaque médicament doit être accompagné de son ordonnance.
+        <strong>PARTIE 3 : SANTÉ</strong> — Chaque médicament doit être accompagné de son ordonnance <strong>DANS LA VALISE</strong> au moment du séjour.
       </div>
 
       <!-- Traitement médical -->
@@ -1200,12 +1218,13 @@ textarea{resize:vertical;min-height:80px}
             <label class="field-label">Si oui, précisez pour quels soins et quelle fréquence <span class="req">*</span></label>
             <textarea id="conf-soins-infirm-detail" placeholder="Précisez..." rows="2"></textarea>
           </div>
-          <div class="yn-row">
-            <span class="yn-label">Injections pendant le séjour</span>
-            <div class="yn-cols">
-              <label class="yn-opt"><input type="radio" name="conf-injections" value="non"> Non</label>
-              <label class="yn-opt"><input type="radio" name="conf-injections" value="matin"> Matin</label>
-              <label class="yn-opt"><input type="radio" name="conf-injections" value="soir"> Soir</label>
+          <div style="margin-top:8px">
+            <label class="field-label">Injections pendant le séjour</label>
+            <div class="check-group">
+              <label class="check-opt"><input type="checkbox" id="conf-inject-matin"> Matin</label>
+              <label class="check-opt"><input type="checkbox" id="conf-inject-midi"> Midi</label>
+              <label class="check-opt"><input type="checkbox" id="conf-inject-soir"> Soir</label>
+              <label class="check-opt"><input type="checkbox" id="conf-inject-non"> Aucune</label>
             </div>
           </div>
           <div class="note-important" style="font-size:11px;margin-top:8px">⚠️ Toutes injections lors d'un séjour nécessite le passage d'une IDE. Une ordonnance sera à envoyer obligatoirement ainsi que la carte vitale (PAS DE PHOTOCOPIE) ou l'attestation de droit.</div>
@@ -1222,14 +1241,13 @@ textarea{resize:vertical;min-height:80px}
           </div>
         </div>
         <div class="conditional hidden" id="cond-diabete">
-          <div class="field-row cols2">
-            <div class="field-group">
-              <label class="field-label">Y a-t-il des injections ? <span class="req">*</span></label>
-              <div class="radio-group">
-                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="matin"> Matin</label>
-                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="soir"> Soir</label>
-                <label class="radio-opt"><input type="radio" name="conf-diabete-inject" value="non"> Non</label>
-              </div>
+          <div style="margin:8px 0">
+            <label class="field-label">Y a-t-il des injections ? <span class="req">*</span></label>
+            <div class="check-group">
+              <label class="check-opt"><input type="checkbox" id="conf-diabete-matin"> Matin</label>
+              <label class="check-opt"><input type="checkbox" id="conf-diabete-midi"> Midi</label>
+              <label class="check-opt"><input type="checkbox" id="conf-diabete-soir"> Soir</label>
+              <label class="check-opt"><input type="checkbox" id="conf-diabete-non"> Aucune</label>
             </div>
           </div>
           <div class="note-important" style="font-size:11px">*Merci de fournir une ordonnance IDE, le protocole et le matériel nécessaire ainsi que la carte vitale</div>
@@ -1326,6 +1344,13 @@ textarea{resize:vertical;min-height:80px}
           <div class="yn-cols">
             <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="oui"> Oui</label>
             <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="non"> Non</label>
+          </div>
+        </div>
+        <div class="yn-row">
+          <span class="yn-label">Porte des lunettes</span>
+          <div class="yn-cols">
+            <label class="yn-opt"><input type="radio" name="conf-lunettes" value="oui"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-lunettes" value="non"> Non</label>
           </div>
         </div>
       </div>
@@ -1543,7 +1568,9 @@ function updateNavButtons(){
 function prevStep(){if(currentStep>1) goToStep(currentStep-1);}
 
 function nextStep(){
-  if(!validateStep(currentStep)) return;
+  // Validation désactivée pendant le développement
+  // if(!validateStep(currentStep)) return;
+  if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
   if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
   if(currentStep<TOTAL_STEPS) goToStep(currentStep+1);
 }
@@ -1608,6 +1635,7 @@ function buildFicheInscription(){
         <div class="radio-group">
           <label class="radio-opt"><input type="radio" name="insc-autonomie" value="BA"> BA</label>
           <label class="radio-opt"><input type="radio" name="insc-autonomie" value="MA"> MA</label>
+          ${selectedTypeSejour==='sejour'?'<label class="radio-opt"><input type="radio" name="insc-autonomie" value="PA"> PA</label>':''}
         </div>
       </div>
     </div>`;
@@ -1673,6 +1701,9 @@ function buildFicheInscription(){
     <div class="field-row cols2">
       <div class="field-group"><label class="field-label">Mail <span class="req">*</span></label><input type="email" id="insc-mail"></div>
       <div class="field-group"><label class="field-label">Mail du secrétariat <span class="req">*</span></label><input type="email" id="insc-mail-secretariat"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-group"><label class="field-label">Mail à l'éducatif <span class="req">*</span></label><input type="email" id="insc-mail-educatif" placeholder="mail@educatif.fr"></div>
     </div>
   </div>`;
 
@@ -1818,6 +1849,36 @@ function toggleConditional(id,show){
   }
 }
 function toggleAstreinte(id,show){toggleConditional(id,show);}
+function toggleEnureseDetails(){
+  const jour=document.getElementById('conf-enurese-jour')?.checked;
+  const nuit=document.getElementById('conf-enurese-nuit')?.checked;
+  if(jour||nuit){
+    document.getElementById('conf-enurese-non').checked=false;
+    toggleConditional('cond-enurese',true);
+  } else { toggleConditional('cond-enurese',false); }
+}
+function toggleEnureseNon(){
+  if(document.getElementById('conf-enurese-non')?.checked){
+    document.getElementById('conf-enurese-jour').checked=false;
+    document.getElementById('conf-enurese-nuit').checked=false;
+    toggleConditional('cond-enurese',false);
+  }
+}
+function toggleEncopDetails(){
+  const jour=document.getElementById('conf-encop-jour')?.checked;
+  const nuit=document.getElementById('conf-encop-nuit')?.checked;
+  if(jour||nuit){
+    document.getElementById('conf-encop-non').checked=false;
+    toggleConditional('cond-encop',true);
+  } else { toggleConditional('cond-encop',false); }
+}
+function toggleEncopNon(){
+  if(document.getElementById('conf-encop-non')?.checked){
+    document.getElementById('conf-encop-jour').checked=false;
+    document.getElementById('conf-encop-nuit').checked=false;
+    toggleConditional('cond-encop',false);
+  }
+}
 function showEnureseDetails(){toggleConditional('cond-enurese',true);}
 function hideEnureseDetails(){toggleConditional('cond-enurese',false);}
 function showEncopDetails(){toggleConditional('cond-encop',true);}
@@ -2273,11 +2334,14 @@ function getChecked(id){const el=document.getElementById(id);return el?el.checke
 function getHygieneRow(prefix,i){return{seul:!!document.querySelector(`input[name="${prefix}-${i}"][value="seul"]:checked`),stim:!!document.querySelector(`input[name="${prefix}-${i}"][value="stim"]:checked`),aide_partielle:!!document.querySelector(`input[name="${prefix}-${i}"][value="aide_partielle"]:checked`),aide_totale:!!document.querySelector(`input[name="${prefix}-${i}"][value="aide_totale"]:checked`)};}
 
 function collectAllData(){
+  const sejourChoisi = getRadioVal('sejour-choix') ||
+    (getVal('insc-date-debut')&&getVal('insc-date-fin') ? getVal('insc-date-debut')+' au '+getVal('insc-date-fin') : '') ||
+    getVal('insc-sejour-nom');
   const insc={
     type_sejour:selectedTypeSejour,
-    sejour_choisi:getRadioVal('sejour-choix')||getVal('insc-date-debut')+' au '+getVal('insc-date-fin')||getVal('insc-sejour-nom'),
+    sejour_choisi:sejourChoisi,
     participant:{nom:getVal('insc-nom'),prenom:getVal('insc-prenom'),naissance:getVal('insc-naissance'),sexe:getRadioVal('insc-sexe'),autonomie:getRadioVal('insc-autonomie'),couple:getRadioVal('insc-couple'),couple_detail:getVal('insc-couple-detail'),tutelle:getRadioVal('insc-tutelle'),protection:getRadioVal('insc-protection'),astreinte:getVal('insc-astreinte')},
-    responsable:{nom:getVal('insc-resp-nom'),prenom:getVal('insc-resp-prenom'),fonction:getVal('insc-resp-fonction'),chef_service:getVal('insc-chef-service'),foyer:getVal('insc-foyer-nom'),adresse:getVal('insc-adresse'),cp:getVal('insc-cp'),ville:getVal('insc-ville'),tel:getVal('insc-tel'),mail:getVal('insc-mail'),mail_secretariat:getVal('insc-mail-secretariat')},
+    responsable:{nom:getVal('insc-resp-nom'),prenom:getVal('insc-resp-prenom'),fonction:getVal('insc-resp-fonction'),chef_service:getVal('insc-chef-service'),foyer:getVal('insc-foyer-nom'),adresse:getVal('insc-adresse'),cp:getVal('insc-cp'),ville:getVal('insc-ville'),tel:getVal('insc-tel'),mail:getVal('insc-mail'),mail_secretariat:getVal('insc-mail-secretariat'),mail_educatif:getVal('insc-mail-educatif')},
     releve_frais:{organisme:getVal('insc-org-nom'),contact:getVal('insc-org-contact'),tel:getVal('insc-org-tel'),adresse:getVal('insc-org-adresse'),cp:getVal('insc-org-cp'),ville:getVal('insc-org-ville'),mail:getVal('insc-org-mail'),mail_compta:getVal('insc-org-mail-compta')},
     convoyage:getRadioVal('insc-convoyage'),
     signature:{fait_a:getVal('insc-fait-a'),date:getVal('insc-date-signature'),qualite:getVal('insc-qualite'),acceptation:getChecked('insc-acceptation')}
@@ -2297,17 +2361,34 @@ function collectAllData(){
     personnalite:getVal('conf-personnalite'),
     vie_quotidienne:getVal('conf-vie-quotidienne'),
     comportement:getVal('conf-comportement'),
-    hygiene:{tableau:hygieneData,presence_douche:getRadioVal('conf-presence-douche'),timer_douche:getRadioVal('conf-timer-douche'),linge:getRadioVal('conf-linge'),protocoles_toilette:getVal('conf-toilette-info'),stomie:getRadioVal('conf-stomie'),stomie_aide:getVal('conf-stomie-aide'),pistolet:getRadioVal('conf-pistolet'),pistolet_aide:getVal('conf-pistolet-aide'),enurese:getRadioVal('conf-enurese'),enurese_freq:getVal('conf-enurese-freq'),enurese_aide:getRadioVal('conf-enurese-aide'),enurese_type:getVal('conf-enurese-type'),encopresie:getRadioVal('conf-encop'),encop_freq:getVal('conf-encop-freq'),encop_aide:getRadioVal('conf-encop-aide'),encop_type:getVal('conf-encop-type')},
+    hygiene:{
+      tableau:hygieneData,
+      presence_douche:getRadioVal('conf-presence-douche'),timer_douche:getRadioVal('conf-timer-douche'),linge:getRadioVal('conf-linge'),
+      protocoles_toilette:getVal('conf-toilette-info'),
+      stomie:getRadioVal('conf-stomie'),stomie_aide:getVal('conf-stomie-aide'),
+      pistolet:getRadioVal('conf-pistolet'),pistolet_aide:getVal('conf-pistolet-aide'),
+      enurese:{jour:getChecked('conf-enurese-jour'),nuit:getChecked('conf-enurese-nuit'),non:getChecked('conf-enurese-non'),freq:getVal('conf-enurese-freq'),aide:getRadioVal('conf-enurese-aide'),type:getVal('conf-enurese-type')},
+      encopresie:{jour:getChecked('conf-encop-jour'),nuit:getChecked('conf-encop-nuit'),non:getChecked('conf-encop-non'),freq:getVal('conf-encop-freq'),aide:getRadioVal('conf-encop-aide'),type:getVal('conf-encop-type')}
+    },
     alimentation:{tableau:alimentData,presentation:getRadioVal('conf-alim-pres'),couverts:getRadioVal('conf-couverts'),couverts_detail:getVal('conf-couverts-detail'),gelifiant:getRadioVal('conf-gelifiant'),gelifiant_detail:getVal('conf-gelifiant-detail'),fausses_routes:getRadioVal('conf-fausses-routes'),fausses_routes_detail:getVal('conf-fausses-routes-detail'),regime:getVal('conf-regime'),addictions:getVal('conf-addictions-alim'),troubles:getVal('conf-troubles-alim'),allergies:getVal('conf-allergies'),info_comp:getVal('conf-alim-info')},
     repos:{peurs_nuit:getRadioVal('conf-peurs-nuit'),peurs_nuit_detail:getVal('conf-peurs-nuit-detail'),leve_nuit:getRadioVal('conf-leve-nuit'),leve_nuit_detail:getVal('conf-leve-nuit-detail'),surveillance_nuit:getRadioVal('conf-surveillance-nuit'),surveillance_nuit_detail:getVal('conf-surveillance-nuit-detail'),heure_coucher:getVal('conf-heure-coucher'),heure_lever:getVal('conf-heure-lever'),info_comp:getVal('conf-repos-info')},
     communication:{comprehension:getRadioVal('conf-comprehension'),mode:getRadioVal('conf-mode-comm'),exprime_besoins:getRadioVal('conf-exprimer-besoins'),conversation:getRadioVal('conf-conversation'),ecrit:getRadioVal('conf-ecrit'),lit:getRadioVal('conf-lit'),telephone:getRadioVal('conf-telephone'),telephone_protocole:getVal('conf-telephone-protocole'),info_comp:getVal('conf-comm-info')},
     relation:{sociable:getRadioVal('conf-sociable'),isole:getRadioVal('conf-isole'),agressivite_verbale:getRadioVal('conf-agressivite-verbale'),agressivite_physique:getRadioVal('conf-agressivite-physique'),agressivite_detail:getVal('conf-agressivite-detail'),agressivite_preconisation:getVal('conf-agressivite-preconisation'),couple_avec:getVal('conf-couple-avec'),meme_chambre:getRadioVal('conf-meme-chambre-rel'),meme_lit:getRadioVal('conf-meme-lit')},
     deplacements:{repere_espace:getRadioVal('conf-repere-espace'),repere_temps:getRadioVal('conf-repere-temps'),fatigable:getRadioVal('conf-fatigable'),marche:getRadioVal('conf-marche'),marche_modalites:{seul:getChecked('conf-marche-seul'),aide:getChecked('conf-marche-aide'),materiel:getChecked('conf-marche-materiel'),moins_30:getChecked('conf-marche-30min'),trente_a_soixante:getChecked('conf-marche-30a60'),plus_1h:getChecked('conf-marche-1h')},marche_vitesse:getVal('conf-marche-vitesse'),info_comp:getVal('conf-deplacement-info'),escalier:getRadioVal('conf-escalier-monte'),deplacement_int:getRadioVal('conf-deplacement-int'),deplacement_ext:getRadioVal('conf-deplacement-ext'),tenir_bras:getRadioVal('conf-tenir-bras'),fauteuil:{occasionnel:getRadioVal('conf-fr-occasionnel'),permanent:getRadioVal('conf-fr-permanent'),debout:getRadioVal('conf-fr-debout'),appui_plantaire:getRadioVal('conf-appui-plantaire'),transfert_vehicule:getRadioVal('conf-transfert-vehicule'),manoeuvre_int:getRadioVal('conf-fr-manoeuvre-int'),manoeuvre_ext:getRadioVal('conf-fr-manoeuvre-ext')}},
-    sorties:{seul:getRadioVal('conf-sortie-seul'),groupe:getRadioVal('conf-sortie-groupe'),chemin:getRadioVal('conf-demander-chemin'),heure_fixe:getRadioVal('conf-heure-fixe'),argent:getRadioVal('conf-argent'),danger:getRadioVal('conf-danger'),danger_detail:getVal('conf-danger-detail')},
+    sorties:{seul:getRadioVal('conf-sortie-seul'),groupe:getRadioVal('conf-sortie-groupe'),chemin:getRadioVal('conf-demander-chemin'),heure_fixe:getRadioVal('conf-heure-fixe'),argent_garde:getRadioVal('conf-argent-garde'),argent:getRadioVal('conf-argent'),danger:getRadioVal('conf-danger'),danger_detail:getVal('conf-danger-detail')},
     activites:{nage:getRadioVal('conf-nage'),choix:getRadioVal('conf-choix-activite'),interets:getVal('conf-interets'),interdites:getVal('conf-activites-interdites')},
     troubles:{liste:troublesData,solutions:getVal('conf-troubles-solutions')},
     habitudes:{fumeur:getRadioVal('conf-fumeur'),fumeur_freq:getVal('conf-fumeur-freq'),fumeur_seul:getRadioVal('conf-fumeur-seul'),fumeur_frustre:getRadioVal('conf-fumeur-frustre'),fumeur_comportement:getVal('conf-fumeur-comportement'),fumeur_protocole:getVal('conf-fumeur-protocole'),alcool:getRadioVal('conf-alcool'),alcool_freq:getVal('conf-alcool-freq'),alcool_eviter:getVal('conf-alcool-eviter'),alcool_preferences:getVal('conf-alcool-preferences')},
-    sante:{traitement:getRadioVal('conf-traitement'),traitement_seul:getRadioVal('conf-traitement-seul'),soins_corporels:getRadioVal('conf-soins-corp'),soins_detail:getVal('conf-soins-detail'),bas_contention:getRadioVal('conf-bas-contention'),contention_protocole:getVal('conf-contention-protocole'),soins_infirmiers:getRadioVal('conf-soins-infirm'),soins_infirm_detail:getVal('conf-soins-infirm-detail'),injections:getRadioVal('conf-injections'),diabete:getRadioVal('conf-diabete'),diabete_injections:getRadioVal('conf-diabete-inject'),asthme:getRadioVal('conf-asthme'),epilepsie:getRadioVal('conf-epilepsie'),epilepsie_stabilisee:getRadioVal('conf-epilepsie-stab'),epilepsie_date:getVal('conf-epilepsie-date'),epilepsie_protocole:getVal('conf-epilepsie-protocole'),non_voyant:getRadioVal('conf-non-voyant'),mal_voyant:getRadioVal('conf-mal-voyant'),sourd:getRadioVal('conf-sourd'),malentendant:getRadioVal('conf-malentendant'),appareillage:getRadioVal('conf-appareillage'),appareillage_type:getVal('conf-appareillage-type'),dentier:getRadioVal('conf-dentier'),dentier_seul:getRadioVal('conf-dentier-seul'),poids:getVal('conf-poids'),taille:getVal('conf-taille'),antecedents:getVal('conf-antecedents')},
+    sante:{
+      traitement:getRadioVal('conf-traitement'),traitement_seul:getRadioVal('conf-traitement-seul'),soins_corporels:getRadioVal('conf-soins-corp'),soins_detail:getVal('conf-soins-detail'),bas_contention:getRadioVal('conf-bas-contention'),contention_protocole:getVal('conf-contention-protocole'),
+      soins_infirmiers:getRadioVal('conf-soins-infirm'),soins_infirm_detail:getVal('conf-soins-infirm-detail'),
+      injections:{matin:getChecked('conf-inject-matin'),midi:getChecked('conf-inject-midi'),soir:getChecked('conf-inject-soir'),non:getChecked('conf-inject-non')},
+      diabete:getRadioVal('conf-diabete'),diabete_injections:{matin:getChecked('conf-diabete-matin'),midi:getChecked('conf-diabete-midi'),soir:getChecked('conf-diabete-soir'),non:getChecked('conf-diabete-non')},
+      asthme:getRadioVal('conf-asthme'),epilepsie:getRadioVal('conf-epilepsie'),epilepsie_stabilisee:getRadioVal('conf-epilepsie-stab'),epilepsie_date:getVal('conf-epilepsie-date'),epilepsie_protocole:getVal('conf-epilepsie-protocole'),
+      non_voyant:getRadioVal('conf-non-voyant'),mal_voyant:getRadioVal('conf-mal-voyant'),sourd:getRadioVal('conf-sourd'),malentendant:getRadioVal('conf-malentendant'),appareillage:getRadioVal('conf-appareillage'),appareillage_type:getVal('conf-appareillage-type'),
+      dentier:getRadioVal('conf-dentier'),dentier_seul:getRadioVal('conf-dentier-seul'),lunettes:getRadioVal('conf-lunettes'),
+      poids:getVal('conf-poids'),taille:getVal('conf-taille'),antecedents:getVal('conf-antecedents')
+    },
     autorisation_image:{nom:getVal('conf-image-nom'),autorisation:getRadioVal('conf-autorisation-image')},
     signature:{fait_a:getVal('conf-fait-a'),date:getVal('conf-date-signature'),qualite:getVal('conf-qualite'),acceptation:getChecked('conf-acceptation')}
   };
@@ -2454,19 +2535,360 @@ function buildRecap(data){
   document.getElementById('recap-content').innerHTML=lines.join('<br>');
 }
 
+function buildFullPdfHtml(data){
+  const insc=data.inscription, conf=data.confidentielle;
+  const p=insc.participant||{}, resp=insc.responsable||{}, rf=insc.releve_frais||{};
+  const id=conf.identite||{}, mob=conf.mobilite||{}, hyg=conf.hygiene||{};
+  const alim=conf.alimentation||{}, rep=conf.repos||{}, comm=conf.communication||{};
+  const rel=conf.relation||{}, dep=conf.deplacements||{}, sort=conf.sorties||{};
+  const act=conf.activites||{}, trou=conf.troubles||{}, hab=conf.habitudes||{};
+  const sante=conf.sante||{}, astr=conf.astreinte||{};
+  const typLabel={weekend_theme:'Week-ends à thèmes',mini_sejour:'Les Mini Séjours',weekend_ordinaire:'Week-end et séjour ordinaire',sejour:'Fiche d\'inscription séjour'}[selectedTypeSejour]||'';
+
+  const yn=v=>v==='oui'?'<b>Oui</b>':v==='non'?'Non':v||'—';
+  const chks=obj=>Object.entries(obj||{}).filter(([k,v])=>v).map(([k])=>({matin:'Matin',midi:'Midi',soir:'Soir',non:'Aucune',jour:'Jour',nuit:'Nuit',seul:'Seul',aide:'Avec aide'})[k]||k).join(', ')||'Non';
+
+  const S=(title,color='#18534F')=>`<div style="background:${color};color:white;font-size:12px;font-weight:700;padding:5px 10px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.5px">${title}</div>`;
+  const R=(label,val)=>val?`<tr><td style="padding:3px 8px;font-size:11px;color:#555;width:45%">${label}</td><td style="padding:3px 8px;font-size:11px;font-weight:600">${val}</td></tr>`:'';
+  const TEXTAREA=(label,val)=>val?`<div style="margin:6px 0"><div style="font-size:11px;color:#555;margin-bottom:2px">${label}</div><div style="background:#f5f5f5;border-left:3px solid #18534F;padding:6px 10px;font-size:11px;line-height:1.5">${val.replace(/\n/g,'<br>')}</div></div>`:'';
+  const TABLE_START=()=>`<table style="width:100%;border-collapse:collapse;margin:4px 0">`;
+  const TABLE_END=()=>`</table>`;
+
+  // Hygiène tableau
+  const COLS=['Seul(e)','Stimulation verbale','Aide partielle','Aide totale'];
+  let hygieneHtml=`<table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0"><tr style="background:#e8f5e9"><th style="padding:3px 6px;text-align:left;border:1px solid #ccc">Activité</th>${COLS.map(c=>`<th style="padding:3px 6px;text-align:center;border:1px solid #ccc">${c}</th>`).join('')}</tr>`;
+  HYGIENE_ITEMS.forEach((item,i)=>{
+    const row=hyg.tableau?.[item.label]||{};
+    hygieneHtml+=`<tr><td style="padding:2px 6px;border:1px solid #eee;${item.sub?'padding-left:14px;color:#666':''}">${item.label}</td>${['seul','stim','aide_partielle','aide_totale'].map(k=>`<td style="text-align:center;border:1px solid #eee">${row[k]?'☑':'☐'}</td>`).join('')}</tr>`;
+  });
+  hygieneHtml+='</table>';
+
+  let alimentHtml=`<table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0"><tr style="background:#e8f5e9"><th style="padding:3px 6px;text-align:left;border:1px solid #ccc">Activité</th>${COLS.map(c=>`<th style="padding:3px 6px;text-align:center;border:1px solid #ccc">${c}</th>`).join('')}</tr>`;
+  ALIM_ITEMS.forEach((item,i)=>{
+    const row=alim.tableau?.[item.label]||{};
+    alimentHtml+=`<tr><td style="padding:2px 6px;border:1px solid #eee">${item.label}</td>${['seul','stim','aide_partielle','aide_totale'].map(k=>`<td style="text-align:center;border:1px solid #eee">${row[k]?'☑':'☐'}</td>`).join('')}</tr>`;
+  });
+  alimentHtml+='</table>';
+
+  // Troubles
+  const troublesList=Object.entries(trou.liste||{}).map(([k,v])=>{
+    const label=TROUBLES_ITEMS.find(t=>t.key===k)?.label||k;
+    const val=v?.valeur==='oui'?`<b>Oui</b>${v.detail?' — '+v.detail:''}`:v?.valeur==='non'?'Non':'—';
+    return `<tr><td style="padding:2px 8px;font-size:11px;border:1px solid #eee">${label}</td><td style="padding:2px 8px;font-size:11px;border:1px solid #eee">${val}</td></tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#222;margin:0;padding:0}
+    h1{font-size:16px;color:#18534F;margin:0 0 4px}
+    h2{font-size:13px;color:#18534F;border-bottom:2px solid #18534F;padding-bottom:3px;margin:12px 0 6px}
+    table{width:100%;border-collapse:collapse}
+    td{vertical-align:top}
+    .page-break{page-break-before:always}
+    .header-box{background:#18534F;color:white;padding:12px 16px;margin-bottom:12px}
+    .header-box h1{color:white;font-size:18px}
+    .header-box .sub{font-size:11px;opacity:0.8;margin-top:2px}
+    .row-box{display:flex;gap:10px}
+    .col{flex:1}
+  </style></head><body>
+
+  <div class="header-box">
+    <h1>La Lysardière — Dossier de ${p.prenom||''} ${(p.nom||'').toUpperCase()}</h1>
+    <div class="sub">${typLabel} • Soumis le ${new Date().toLocaleDateString('fr-FR')}</div>
+  </div>
+
+  ${S('Fiche d\'inscription — '+typLabel)}
+  ${TABLE_START()}
+  ${R('Séjour choisi',insc.sejour_choisi)}
+  ${R('Nom',p.nom)} ${R('Prénom',p.prenom)}
+  ${R('Date de naissance',p.naissance)} ${R('Sexe',p.sexe)} ${R('Autonomie',p.autonomie)}
+  ${R('Inscription en couple',yn(p.couple))} ${p.couple==='oui'?R('Avec',p.couple_detail):''}
+  ${p.tutelle?R('Tutelle/Curatelle',yn(p.tutelle)):''}
+  ${R('Numéro d\'astreinte',p.astreinte)}
+  ${R('Convoyage',insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière')}
+  ${TABLE_END()}
+
+  ${S('Responsable de l\'inscription','#2a6b66')}
+  ${TABLE_START()}
+  ${R('Nom',resp.prenom+' '+resp.nom)} ${R('Fonction',resp.fonction)}
+  ${R('Chef de service',resp.chef_service)}
+  ${R('Foyer',resp.foyer)} ${R('Adresse',resp.adresse)}
+  ${R('Code postal / Ville',resp.cp+' '+resp.ville)} ${R('Tél',resp.tel)}
+  ${R('Mail',resp.mail)} ${R('Mail secrétariat',resp.mail_secretariat)}
+  ${resp.mail_educatif?R('Mail éducatif',resp.mail_educatif):''}
+  ${TABLE_END()}
+
+  ${S('Relevé de frais','#2a6b66')}
+  ${TABLE_START()}
+  ${R('Organisme',rf.organisme)} ${R('Contact',rf.contact)} ${R('Tél',rf.tel)}
+  ${R('Adresse',rf.adresse)} ${R('CP / Ville',rf.cp+' '+rf.ville)}
+  ${R('Mail',rf.mail)} ${R('Mail comptabilité',rf.mail_compta)}
+  ${TABLE_END()}
+
+  ${S('Signature','#555')}
+  ${TABLE_START()}
+  ${R('Signé à',resp.fait_a||insc.signature?.fait_a)} ${R('Le',insc.signature?.date)} ${R('Qualité',insc.signature?.qualite)}
+  ${TABLE_END()}
+
+  <div class="page-break"></div>
+
+  <div class="header-box">
+    <h1>Fiche Confidentielle — ${p.prenom||conf.identite?.prenom||''} ${((p.nom||conf.identite?.nom||'')).toUpperCase()}</h1>
+    <div class="sub">Page 1/6 — Identité, mobilité, personnalité</div>
+  </div>
+
+  ${S('Identité & mobilité')}
+  ${TABLE_START()}
+  ${R('Nom',id.nom)} ${R('Prénom',id.prenom)} ${R('Âge',id.age)}
+  ${R('Séjour',id.sejour)} ${R('Autonomie',id.autonomie)}
+  ${R('Besoin infirmière',yn(mob.infirmiere))}
+  ${mob.infirmiere==='oui'?R('Moments',Object.entries(mob.infirmiere_moments||{}).filter(([,v])=>v).map(([k])=>k).join(', ')):''}
+  ${mob.infirmiere==='oui'?R('Qui s\'agit-il',mob.infirmiere_detail):''}
+  ${R('En couple',yn(mob.couple))}
+  ${mob.couple==='oui'?R('Même chambre',yn(mob.meme_chambre)):''}
+  ${R('Fauteuil roulant',yn(mob.fauteuil)+(mob.fauteuil_sortie?' (sorties uniquement)':''))}
+  ${R('Déambulateur',yn(mob.deambulateur))}
+  ${R('Monte les escaliers',yn(mob.escaliers))}
+  ${TABLE_END()}
+
+  ${S('Personne d\'astreinte','#C0392B')}
+  ${TABLE_START()}
+  ${R('Type',astr.type==='responsable_inscription'?'Responsable inscription':astr.type==='responsable_legal'?'Responsable légal':'Autre personne')}
+  ${astr.type==='autre'?R('Nom',astr.prenom+' '+astr.nom):''}
+  ${astr.type==='autre'?R('Tél',astr.tel):''}
+  ${astr.type==='autre'?R('Mail',astr.mail):''}
+  ${TABLE_END()}
+
+  ${TEXTAREA('Description de la personnalité',conf.personnalite)}
+  ${TEXTAREA('Vie quotidienne (recommandations médicales, toilettes, habitudes…)',conf.vie_quotidienne)}
+  ${TEXTAREA('Comportement (relation avec inconnus, encadrants, autres vacanciers…)',conf.comportement)}
+
+  <div class="page-break"></div>
+  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 2/6 — Hygiène & alimentation</div></div>
+
+  ${S('Hygiène')}
+  ${hygieneHtml}
+  ${TABLE_START()}
+  ${R('Présence physique douche',yn(hyg.presence_douche))}
+  ${R('Timer douche',yn(hyg.timer_douche))}
+  ${R('Gestion linge',yn(hyg.linge))}
+  ${R('Stomie',yn(hyg.stomie))} ${hyg.stomie==='oui'?R('Aide stomie',hyg.stomie_aide):''}
+  ${R('Pistolet',yn(hyg.pistolet))} ${hyg.pistolet==='oui'?R('Aide pistolet',hyg.pistolet_aide):''}
+  ${TABLE_END()}
+  ${TEXTAREA('Protocoles et habitudes de toilette',hyg.protocoles_toilette)}
+
+  ${S('Énurésies & Encoprésie','#E67E22')}
+  ${TABLE_START()}
+  ${R('Énurésies',chks(hyg.enurese))}
+  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Fréquence changes (énurésies)',hyg.enurese?.freq):''}
+  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Aide changes',yn(hyg.enurese?.aide)):''}
+  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Type de change',hyg.enurese?.type):''}
+  ${R('Encoprésie',chks(hyg.encopresie))}
+  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Fréquence changes (encoprésie)',hyg.encopresie?.freq):''}
+  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Aide changes',yn(hyg.encopresie?.aide)):''}
+  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Type de change',hyg.encopresie?.type):''}
+  ${TABLE_END()}
+
+  ${S('Alimentation','#E67E22')}
+  ${alimentHtml}
+  ${TABLE_START()}
+  ${R('Présentation aliments',alim.presentation)}
+  ${R('Couverts adaptés',yn(alim.couverts))} ${alim.couverts==='oui'?R('Lesquels',alim.couverts_detail):''}
+  ${R('Gélifiant',yn(alim.gelifiant))} ${alim.gelifiant==='oui'?R('Avec quels aliments',alim.gelifiant_detail):''}
+  ${R('Risque fausses routes',yn(alim.fausses_routes))} ${alim.fausses_routes==='oui'?R('Précision',alim.fausses_routes_detail):''}
+  ${R('Régime alimentaire',alim.regime)}
+  ${R('Addictions alimentaires',alim.addictions)}
+  ${R('Troubles alimentaires',alim.troubles)}
+  ${R('Allergies',alim.allergies)}
+  ${TABLE_END()}
+  ${TEXTAREA('Informations complémentaires (alimentation)',alim.info_comp)}
+
+  <div class="page-break"></div>
+  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 3/6 — Rythme, repos, communication, relation</div></div>
+
+  ${S('Rythme et Repos')}
+  ${TABLE_START()}
+  ${R('Peurs / angoisses nocturnes',yn(rep.peurs_nuit))} ${rep.peurs_nuit==='oui'?R('Précision',rep.peurs_nuit_detail):''}
+  ${R('Se lève la nuit',yn(rep.leve_nuit))} ${rep.leve_nuit==='oui'?R('Raisons',rep.leve_nuit_detail):''}
+  ${R('Surveillance nocturne',yn(rep.surveillance_nuit))} ${rep.surveillance_nuit==='oui'?R('Raisons',rep.surveillance_nuit_detail):''}
+  ${R('Heure coucher',rep.heure_coucher)} ${R('Heure lever',rep.heure_lever)}
+  ${TABLE_END()}
+  ${TEXTAREA('Informations complémentaires (repos)',rep.info_comp)}
+
+  ${S('Communication','#E67E22')}
+  ${TABLE_START()}
+  ${R('Compréhension',comm.comprehension)}
+  ${R('Mode de communication',comm.mode)}
+  ${R('Peut exprimer ses besoins',yn(comm.exprime_besoins))}
+  ${R('Tient une conversation fluide',yn(comm.conversation))}
+  ${R('Écrit',comm.ecrit)} ${R('Lit',comm.lit)}
+  ${R('Téléphone portable',yn(comm.telephone))} ${comm.telephone==='oui'?R('Protocole téléphone',comm.telephone_protocole):''}
+  ${TABLE_END()}
+  ${TEXTAREA('Informations complémentaires (communication)',comm.info_comp)}
+
+  ${S('Relation','#E67E22')}
+  ${TABLE_START()}
+  ${R('Sociable',yn(rel.sociable))} ${R('S\'isole',yn(rel.isole))}
+  ${R('Agressivité verbale',yn(rel.agressivite_verbale))}
+  ${R('Agressivité physique',yn(rel.agressivite_physique))}
+  ${rel.agressivite_physique==='oui'?R('Envers qui',rel.agressivite_detail):''}
+  ${rel.agressivite_physique==='oui'?R('Préconisations',rel.agressivite_preconisation):''}
+  ${rel.couple_avec?R('En couple avec',rel.couple_avec):''}
+  ${R('Même chambre',yn(rel.meme_chambre))} ${R('Même lit',yn(rel.meme_lit))}
+  ${TABLE_END()}
+
+  <div class="page-break"></div>
+  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 4/6 — Déplacements, fauteuil, sorties, activités</div></div>
+
+  ${S('Déplacements')}
+  ${TABLE_START()}
+  ${R('Se repère dans l\'espace',yn(dep.repere_espace))}
+  ${R('Se repère dans le temps',yn(dep.repere_temps))}
+  ${R('Fatigable',yn(dep.fatigable))} ${R('Marche',yn(dep.marche))}
+  ${R('Modalités marche',[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Avec matériel',dep.marche_modalites?.moins_30&&'< 30 min',dep.marche_modalites?.trente_a_soixante&&'30 min – 1h',dep.marche_modalites?.plus_1h&&'> 1h'].filter(Boolean).join(', '))}
+  ${R('Vitesse / rythme',dep.marche_vitesse)}
+  ${R('Monte un escalier',dep.escalier)}
+  ${R('Déplacement intérieur',dep.deplacement_int)}
+  ${R('Déplacement extérieur',dep.deplacement_ext)}
+  ${R('Tient le bras accompagnateur',yn(dep.tenir_bras))}
+  ${TABLE_END()}
+  ${TEXTAREA('Informations complémentaires (déplacements)',dep.info_comp)}
+
+  ${S('Pour les personnes en fauteuil','#E67E22')}
+  ${TABLE_START()}
+  ${R('Occasionnellement (sorties longues)',yn(dep.fauteuil?.occasionnel))}
+  ${R('En permanence',yn(dep.fauteuil?.permanent))}
+  ${R('Peut se tenir debout',yn(dep.fauteuil?.debout))}
+  ${R('Appui plantaire',yn(dep.fauteuil?.appui_plantaire))}
+  ${R('Transfert avec aide dans trafic',yn(dep.fauteuil?.transfert_vehicule))}
+  ${R('Manœuvre seul intérieur',yn(dep.fauteuil?.manoeuvre_int))}
+  ${R('Manœuvre seul extérieur',yn(dep.fauteuil?.manoeuvre_ext))}
+  ${TABLE_END()}
+
+  ${S('Sorties','#E67E22')}
+  ${TABLE_START()}
+  ${R('Peut sortir seul sans accompagnement',yn(sort.seul))}
+  ${R('Peut sortir seul en groupe',yn(sort.groupe))}
+  ${R('Sait demander son chemin',yn(sort.chemin))}
+  ${R('Rentre à une heure fixe',yn(sort.heure_fixe))}
+  ${R('Garde son argent sur lui/elle',yn(sort.argent_garde))}
+  ${R('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':sort.argent==='non'?'Non':'—')}
+  ${R('Peut se mettre en danger',yn(sort.danger))} ${sort.danger==='oui'?R('Comment',sort.danger_detail):''}
+  ${TABLE_END()}
+
+  ${S('Activités','#E67E22')}
+  ${TABLE_START()}
+  ${R('Sait nager',yn(act.nage))}
+  ${R('Sait choisir parmi des activités',yn(act.choix))}
+  ${TABLE_END()}
+  ${TEXTAREA('Centres d\'intérêt',act.interets)}
+  ${TEXTAREA('Activités interdites',act.interdites)}
+
+  <div class="page-break"></div>
+  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 5/6 — Troubles, habitudes de vie</div></div>
+
+  ${S('Troubles')}
+  <table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0">
+    <tr style="background:#f5f5f5"><th style="padding:3px 8px;text-align:left;border:1px solid #ddd">Trouble</th><th style="padding:3px 8px;border:1px solid #ddd">Réponse</th></tr>
+    ${troublesList}
+  </table>
+  ${TEXTAREA('Solutions pour gérer les troubles du comportement',trou.solutions)}
+
+  ${S('Habitudes de vie — Tabac','#E67E22')}
+  ${TABLE_START()}
+  ${R('Fumeur',yn(hab.fumeur))}
+  ${hab.fumeur==='oui'?R('Fréquence',hab.fumeur_freq):''}
+  ${hab.fumeur==='oui'?R('Gère seul(e)',yn(hab.fumeur_seul)):''}
+  ${hab.fumeur==='oui'?R('Peut être frustré(e)',yn(hab.fumeur_frustre)):''}
+  ${hab.fumeur==='oui'?R('Comportement si frustré',hab.fumeur_comportement):''}
+  ${hab.fumeur==='oui'?R('Protocole cigarette',hab.fumeur_protocole):''}
+  ${TABLE_END()}
+
+  ${S('Habitudes de vie — Alcool','#E67E22')}
+  ${TABLE_START()}
+  ${R('Peut consommer de l\'alcool',yn(hab.alcool))}
+  ${hab.alcool==='oui'?R('Fréquence / gère seul(e)',hab.alcool_freq):''}
+  ${R('Type d\'achat à éviter',hab.alcool_eviter||'—')}
+  ${R('Préférences d\'achat',hab.alcool_preferences||'—')}
+  ${TABLE_END()}
+
+  <div class="page-break"></div>
+  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 6/6 — Santé, médicaments, déficiences</div></div>
+
+  ${S('Traitement médical & soins')}
+  ${TABLE_START()}
+  ${R('Traitement médical',yn(sante.traitement))}
+  ${sante.traitement==='oui'?R('Prend seul(e)',yn(sante.traitement_seul)):''}
+  ${sante.traitement==='oui'?R('Soins corporels',yn(sante.soins_corporels)):''}
+  ${sante.traitement==='oui'?R('Bas de contention',yn(sante.bas_contention)):''}
+  ${sante.traitement==='oui'?R('Protocole contention',sante.contention_protocole):''}
+  ${TABLE_END()}
+  ${sante.traitement==='oui'?TEXTAREA('Précision soins corporels et fréquence',sante.soins_detail):''}
+
+  ${S('Soins infirmiers','#C0392B')}
+  ${TABLE_START()}
+  ${R('Soins infirmiers',yn(sante.soins_infirmiers))}
+  ${sante.soins_infirmiers==='oui'?R('Injections',chks(sante.injections)):''}
+  ${TABLE_END()}
+  ${sante.soins_infirmiers==='oui'?TEXTAREA('Détail soins infirmiers et fréquence',sante.soins_infirm_detail):''}
+
+  ${S('Pathologies','#C0392B')}
+  ${TABLE_START()}
+  ${R('Diabétique',yn(sante.diabete))}
+  ${sante.diabete==='oui'?R('Injections diabète',chks(sante.diabete_injections)):''}
+  ${R('Asthmatique',yn(sante.asthme))}
+  ${R('Épilepsie',yn(sante.epilepsie))}
+  ${sante.epilepsie==='oui'?R('Stabilisée',yn(sante.epilepsie_stabilisee)):''}
+  ${sante.epilepsie==='oui'?R('Dernière crise',sante.epilepsie_date):''}
+  ${TABLE_END()}
+  ${sante.epilepsie==='oui'?TEXTAREA('Protocole en cas de crise',sante.epilepsie_protocole):''}
+
+  ${S('Déficiences','#2a6b66')}
+  ${TABLE_START()}
+  ${R('Non voyant',yn(sante.non_voyant))} ${R('Mal voyant',yn(sante.mal_voyant))}
+  ${R('Sourd',yn(sante.sourd))} ${R('Malentendant',yn(sante.malentendant))}
+  ${R('Port d\'appareillage',yn(sante.appareillage))} ${sante.appareillage==='oui'?R('Type appareil',sante.appareillage_type):''}
+  ${R('Dentier',yn(sante.dentier))} ${sante.dentier?R('Gère seul(e)',yn(sante.dentier_seul)):''}
+  ${R('Lunettes',yn(sante.lunettes))}
+  ${TABLE_END()}
+
+  ${S('Données médicales','#2a6b66')}
+  ${TABLE_START()}
+  ${R('Poids',sante.poids?sante.poids+' kg':'—')} ${R('Taille',sante.taille?sante.taille+' cm':'—')}
+  ${TABLE_END()}
+  ${TEXTAREA('Antécédents médicaux',sante.antecedents)}
+
+  ${S('Autorisation & Signature','#555')}
+  ${TABLE_START()}
+  ${R('Autorisation image de '+(conf.autorisation_image?.nom||''),yn(conf.autorisation_image?.autorisation))}
+  ${R('Signé à',conf.signature?.fait_a)} ${R('Le',conf.signature?.date)}
+  ${R('Qualité du signataire',conf.signature?.qualite)}
+  ${TABLE_END()}
+
+  <div style="margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#888;text-align:center">
+    La Lysardière — LE BOURG, 24370 ST JULIEN DE LAMPON — TEL: 0603881513 / 0553305715
+  </div>
+
+  </body></html>`;
+}
+
 async function downloadRecap(){
   const data=collectAllData();
-  const nom=data.inscription.participant.nom;
-  const prenom=data.inscription.participant.prenom;
-  const el=document.getElementById('recap-content').cloneNode(true);
-  const wrap=document.createElement('div');
-  wrap.style.cssText='font-family:Arial,sans-serif;font-size:13px;padding:20px;color:#222;line-height:1.8';
-  const title=document.createElement('h2');
-  title.style.cssText='color:#18534F;font-size:18px;margin-bottom:16px';
-  title.textContent='Récapitulatif — '+prenom+' '+nom;
-  wrap.appendChild(title);
-  wrap.appendChild(el);
-  await html2pdf().set({margin:15,filename:`recapitulatif-${nom}-${prenom}.pdf`,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(wrap,'element').save();
+  const nom=data.inscription.participant.nom||data.confidentielle.identite.nom||'';
+  const prenom=data.inscription.participant.prenom||data.confidentielle.identite.prenom||'';
+  const fullHtml=buildFullPdfHtml(data);
+  try{
+    await html2pdf().set({
+      margin:[10,10,12,10],
+      filename:`dossier-${nom}-${prenom}.pdf`,
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy']}
+    }).from(fullHtml,'string').save();
+  } catch(e){
+    alert('Erreur PDF : '+(e.message||e));
+  }
 }
 
 // ══ INIT ══
