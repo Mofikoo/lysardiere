@@ -992,6 +992,23 @@ input:focus, select:focus {
         </select>
       </div>
     </div>
+    <div class="cols2" style="margin-top:12px">
+      <div>
+        <label>🚏 Point de départ</label>
+        <select id="lys-depart-select" onchange="updateLysDepart(this.value)" style="width:100%">
+          <option value="_lys">La Lysardière (défaut)</option>
+        </select>
+      </div>
+      <div>
+        <label>🏁 Point d'arrivée</label>
+        <select id="lys-arrivee-select" onchange="updateLysArrivee(this.value)" style="width:100%">
+          <option value="_same">Même que le départ</option>
+        </select>
+      </div>
+    </div>
+    <div id="lys-points-info" style="font-size:11px;color:var(--text-light);margin-top:6px;padding:6px 10px;background:var(--mint);border-radius:var(--radius-xs)">
+      Départ et arrivée : <strong id="lys-dep-label">La Lysardière</strong>
+    </div>
     <!-- Collapsible constraints -->
     <div style="margin-top:14px;border:1px solid var(--border-light);border-radius:var(--radius-sm);overflow:hidden">
       <div onclick="toggleConstraints()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--mint);transition:background 0.15s;user-select:none" onmouseover="this.style.background='var(--mint-deep)'" onmouseout="this.style.background='var(--mint)'">
@@ -1468,6 +1485,49 @@ async function dbUpsert(table,id,data){try{await supaFetch(table,'POST',{id:id,d
 async function dbDelete(table,id){try{await supaFetch(table+'?id=eq.'+id,'DELETE')}catch(e){}}
 
 var LYS={lat:44.86052584434775,lng:1.361973981464905,nom:'La Lysardiere',adresse:'64 route de Sainte Mondane, 24370 Saint-Julien-de-Lampon'};
+
+// Current departure/arrival points (default = LYS)
+var LYS_DEPART=LYS;
+var LYS_ARRIVEE=LYS;
+
+function refreshLysSelects(){
+  var dep=document.getElementById('lys-depart-select');
+  var arr=document.getElementById('lys-arrivee-select');
+  if(!dep||!arr) return;
+  var opts='<option value="_lys">La Lysardière (défaut)</option>'
+    +lieux.filter(function(l){return l.lat&&l.lng}).sort(function(a,b){return a.nom.localeCompare(b.nom)}).map(function(l){return '<option value="'+l.id+'">'+l.nom+'</option>'}).join('');
+  var depVal=dep.value,arrVal=arr.value;
+  dep.innerHTML=opts;
+  arr.innerHTML='<option value="_same">Même que le départ</option>'+opts;
+  dep.value=depVal||'_lys';
+  arr.value=arrVal||'_same';
+  updateLysInfo();
+}
+
+function updateLysDepart(val){
+  if(val==='_lys'){LYS_DEPART=LYS;}
+  else{var l=getLieu(val);if(l) LYS_DEPART={lat:parseFloat(l.lat),lng:parseFloat(l.lng),nom:l.nom,adresse:l.adresse||''};}
+  var arrSel=document.getElementById('lys-arrivee-select');
+  if(arrSel&&arrSel.value==='_same') LYS_ARRIVEE=LYS_DEPART;
+  updateLysInfo();
+}
+
+function updateLysArrivee(val){
+  if(val==='_same'){LYS_ARRIVEE=LYS_DEPART;}
+  else if(val==='_lys'){LYS_ARRIVEE=LYS;}
+  else{var l=getLieu(val);if(l) LYS_ARRIVEE={lat:parseFloat(l.lat),lng:parseFloat(l.lng),nom:l.nom,adresse:l.adresse||''};}
+  updateLysInfo();
+}
+
+function updateLysInfo(){
+  var info=document.getElementById('lys-points-info');
+  if(!info) return;
+  if(LYS_DEPART.nom===LYS_ARRIVEE.nom){
+    info.innerHTML='Départ et arrivée : <strong>'+LYS_DEPART.nom+'</strong>';
+  } else {
+    info.innerHTML='Départ : <strong>'+LYS_DEPART.nom+'</strong> &nbsp;→&nbsp; Arrivée : <strong>'+LYS_ARRIVEE.nom+'</strong>';
+  }
+}
 var COLORS=['#18534F','#D6955B','#226D68','#6B3FA0','#0077A8','#C0392B','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
 var lieux=[],personnes=[],semaines=[],archives=[],foyers=[];
 var vehicles=[];
@@ -1509,6 +1569,8 @@ async function loadData(){
     if(veh&&veh.length>0) vehicles=veh;
     else{vehicles=DEFAULT_VEHICLES;await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v)}))}
     initSelV();updatePersistBadge();
+    // Refresh LYS selects now that lieux are loaded
+    refreshLysSelects();
   }catch(e){setPersist('Erreur Supabase','err')}
   renderLieux();renderPersonnes();refreshLieuSelect();renderSemaines();renderFlotte();
   // Initialize foyers from existing personnes data
@@ -1953,7 +2015,7 @@ function getPersonLieuLabel(p){
 function hasGPS(f){return f&&f.lat!=null&&f.lng!=null&&!isNaN(parseFloat(f.lat))&&!isNaN(parseFloat(f.lng))}
 function hav(la1,lo1,la2,lo2){var R=6371,r=Math.PI/180,a=Math.sin((la2-la1)*r/2)*Math.sin((la2-la1)*r/2)+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)*Math.sin((lo2-lo1)*r/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
 function dp(a,b){return hav(parseFloat(a.lat),parseFloat(a.lng),parseFloat(b.lat),parseFloat(b.lng))}
-function dLys(f){return hav(LYS.lat,LYS.lng,parseFloat(f.lat),parseFloat(f.lng))}
+function dLys(f){var ref=LYS_DEPART||LYS;return hav(ref.lat,ref.lng,parseFloat(f.lat),parseFloat(f.lng))}
 function routeLen(pts){var d=0;for(var i=1;i<pts.length;i++) d+=dp(pts[i-1],pts[i]);return d}
 function bearing(from,to){var r=Math.PI/180,dL=(parseFloat(to.lng)-parseFloat(from.lng))*r,y=Math.sin(dL)*Math.cos(parseFloat(to.lat)*r),x=Math.cos(parseFloat(from.lat)*r)*Math.sin(parseFloat(to.lat)*r)-Math.sin(parseFloat(from.lat)*r)*Math.cos(parseFloat(to.lat)*r)*Math.cos(dL);return(Math.atan2(y,x)*180/Math.PI+360)%360}
 function angleDiff(a,b){var d=Math.abs(a-b)%360;return d>180?360-d:d}
@@ -1976,7 +2038,7 @@ function show(t){
   }
   if(t==='personnes'){refreshLieuSelect();refreshFoyerSelect();renderPersonnes()}
   if(t==='foyers'){renderFoyers()}
-  if(t==='saisie'){renderSelectors();renderVGrid();checkGPSWarnings()}
+  if(t==='saisie'){refreshLysSelects();renderSelectors();renderVGrid();checkGPSWarnings()}
   if(t==='semaines'){renderSemaines()}
   if(t==='flotte'){renderFlotte()}
   if(t==='stats'){renderStats()}
@@ -3130,20 +3192,20 @@ function buildNodes(deps,arrs){var map={};function add(p,side){
   }
   if(!bestLieu) return;
   var fid=bestLieu.id;
-  if(!map[fid]) map[fid]={fid:fid,lat:parseFloat(bestLieu.lat),lng:parseFloat(bestLieu.lng),nom:bestLieu.nom,adresse:bestLieu.adresse,depPers:[],arrPers:[],distLys:dLys(bestLieu),cap:bearing(LYS,bestLieu)};
+  if(!map[fid]) map[fid]={fid:fid,lat:parseFloat(bestLieu.lat),lng:parseFloat(bestLieu.lng),nom:bestLieu.nom,adresse:bestLieu.adresse,depPers:[],arrPers:[],distLys:dLys(bestLieu),cap:bearing(LYS_DEPART||LYS,bestLieu)};
   var pc=Object.assign({},p);pc.lieu=fid;pc.altLieux=ll;
   if(side==='dep') map[fid].depPers.push(pc);else map[fid].arrPers.push(pc);
 }deps.forEach(function(p){add(p,'dep')});arrs.forEach(function(p){add(p,'arr')});return Object.values(map)}
 function nnSort(nodes,startPt){if(!nodes.length) return[];var rem=nodes.slice(),route=[],cur=startPt;while(rem.length){var bi=0,bd=Infinity;for(var i=0;i<rem.length;i++){var d=dp(cur,rem[i]);if(d<bd){bd=d;bi=i}}route.push(rem.splice(bi,1)[0]);cur=route[route.length-1]}return route}
-function shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin){if(!n.arrPers.length) return false;var allPers=n.depPers.concat(n.arrPers);var foyerRef=allPers[0].foyer||'';if(!foyerRef) return false;if(!allPers.every(function(p){return(p.foyer||'')===foyerRef})) return false;var idxInDep=depNodes.indexOf(n);var restPts=depNodes.slice(idxInDep+1);var kmAller=0,prev=n;for(var i=0;i<restPts.length;i++){kmAller+=dp(prev,restPts[i]);prev=restPts[i]}kmAller+=dp(prev,LYS);var lastPt=restPts.length?restPts[restPts.length-1]:n;var kmRetour=dp(lastPt,n)+dp(n,LYS);return(kmAller-kmRetour)/vitesse*60<=maxPassengerSurplusMin}
-function buildStops(cluster,maxRetourDetour,vitesse,maxPassengerSurplusMin){var depNodes=cluster.filter(function(n){return n.depPers.length>0}).slice().sort(function(a,b){return a.distLys-b.distLys});var arrOnlyNodes=cluster.filter(function(n){return n.arrPers.length>0&&n.depPers.length===0});var lastDepPt=depNodes.length?depNodes[depNodes.length-1]:LYS;var distSansRef=dp(lastDepPt,LYS);var rotAllerNodes=[],rotRetourNodes=[];depNodes.forEach(function(n){if(!n.arrPers.length) return;if(shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin)){rotAllerNodes.push(n)}else{var detour=dp(lastDepPt,n)+dp(n,LYS)-distSansRef;if(detour<=maxRetourDetour) rotRetourNodes.push(n);else rotAllerNodes.push(n)}});var retourRoute=nnSort(arrOnlyNodes.concat(rotRetourNodes),lastDepPt);var seats=depNodes.reduce(function(s,n){return s+n.depPers.length},0);var stops=[{action:'depart',pt:LYS,seats:seats}];depNodes.forEach(function(n){seats-=n.depPers.length;var recupAller=rotAllerNodes.indexOf(n)>=0;if(recupAller) seats+=n.arrPers.length;stops.push({action:recupAller?'rotation':'depot',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:n.depPers,arrPers:recupAller?n.arrPers:[],seats:seats,retourPrevu:rotRetourNodes.indexOf(n)>=0?n.arrPers:null,sameFoyer:recupAller})});retourRoute.forEach(function(n){seats+=n.arrPers.length;
+function shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin){if(!n.arrPers.length) return false;var allPers=n.depPers.concat(n.arrPers);var foyerRef=allPers[0].foyer||'';if(!foyerRef) return false;if(!allPers.every(function(p){return(p.foyer||'')===foyerRef})) return false;var idxInDep=depNodes.indexOf(n);var restPts=depNodes.slice(idxInDep+1);var kmAller=0,prev=n;for(var i=0;i<restPts.length;i++){kmAller+=dp(prev,restPts[i]);prev=restPts[i]}kmAller+=dp(prev,LYS_ARRIVEE||LYS);var lastPt=restPts.length?restPts[restPts.length-1]:n;var kmRetour=dp(lastPt,n)+dp(n,LYS_ARRIVEE||LYS);return(kmAller-kmRetour)/vitesse*60<=maxPassengerSurplusMin}
+function buildStops(cluster,maxRetourDetour,vitesse,maxPassengerSurplusMin){var DEP=LYS_DEPART||LYS;var ARR=LYS_ARRIVEE||LYS;var depNodes=cluster.filter(function(n){return n.depPers.length>0}).slice().sort(function(a,b){return a.distLys-b.distLys});var arrOnlyNodes=cluster.filter(function(n){return n.arrPers.length>0&&n.depPers.length===0});var lastDepPt=depNodes.length?depNodes[depNodes.length-1]:DEP;var distSansRef=dp(lastDepPt,DEP);var rotAllerNodes=[],rotRetourNodes=[];depNodes.forEach(function(n){if(!n.arrPers.length) return;if(shouldPickupAller(n,depNodes,vitesse,maxPassengerSurplusMin)){rotAllerNodes.push(n)}else{var detour=dp(lastDepPt,n)+dp(n,DEP)-distSansRef;if(detour<=maxRetourDetour) rotRetourNodes.push(n);else rotAllerNodes.push(n)}});var retourRoute=nnSort(arrOnlyNodes.concat(rotRetourNodes),lastDepPt);var seats=depNodes.reduce(function(s,n){return s+n.depPers.length},0);var stops=[{action:'depart',pt:DEP,seats:seats}];depNodes.forEach(function(n){seats-=n.depPers.length;var recupAller=rotAllerNodes.indexOf(n)>=0;if(recupAller) seats+=n.arrPers.length;stops.push({action:recupAller?'rotation':'depot',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:n.depPers,arrPers:recupAller?n.arrPers:[],seats:seats,retourPrevu:rotRetourNodes.indexOf(n)>=0?n.arrPers:null,sameFoyer:recupAller})});retourRoute.forEach(function(n){seats+=n.arrPers.length;
 // Check if there's already a depot stop at this same fid - merge into rotation
 var existingStop=null;for(var ei=0;ei<stops.length;ei++){if(stops[ei].fid===n.fid&&stops[ei].action==='depot'){existingStop=stops[ei];break}}
 if(existingStop){existingStop.action='rotation';existingStop.arrPers=n.arrPers;existingStop.seats=existingStop.seats+n.arrPers.length;existingStop.sameFoyer=true}
 else{stops.push({action:'pickup',pt:{lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse},fid:n.fid,depPers:[],arrPers:n.arrPers,seats:seats,isRetourRotation:rotRetourNodes.indexOf(n)>=0})}
 });
 // Add retour to La Lysardière
-stops.push({action:'retour',pt:LYS,seats:seats});
+stops.push({action:'retour',pt:ARR,seats:seats});
 // Final merge: combine all stops at the same physical location into single rotation stops
 var mergedStops=[stops[0]]; // keep depart
 for(var mi=1;mi<stops.length;mi++){
@@ -3262,7 +3324,7 @@ nodes.forEach(function(n){
     var remaining=maxCap-chunkDep.length;
     var chunkArr=ars.splice(0,Math.min(ars.length,remaining));
     if(chunkDep.length===0&&chunkArr.length===0) break;
-    splitNodes.push({fid:n.fid,lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse,depPers:chunkDep,arrPers:chunkArr,distLys:n.distLys,cap:n.cap||bearing(LYS,{lat:n.lat,lng:n.lng})});
+    splitNodes.push({fid:n.fid,lat:n.lat,lng:n.lng,nom:n.nom,adresse:n.adresse,depPers:chunkDep,arrPers:chunkArr,distLys:n.distLys,cap:n.cap||bearing(LYS_DEPART||LYS,{lat:n.lat,lng:n.lng})});
   }
 });
 nodes=splitNodes;
@@ -3778,11 +3840,11 @@ function deplacerStop(convoiIdx,stopIdx){
       if(s2.action==='depart'||s2.action==='retour') return;
       dstCluster.push({fid:s2.fid,lat:parseFloat(s2.pt.lat),lng:parseFloat(s2.pt.lng),nom:s2.pt.nom,adresse:s2.pt.adresse||'',
         depPers:(s2.depPers||[]).slice(),arrPers:(s2.arrPers||[]).slice(),
-        distLys:dLys(s2.pt),cap:bearing(LYS,s2.pt)});
+        distLys:dLys(s2.pt),cap:bearing(LYS_DEPART||LYS,s2.pt)});
     });
     var movedNode={fid:stop.fid,lat:parseFloat(stop.pt.lat),lng:parseFloat(stop.pt.lng),nom:stop.pt.nom,adresse:stop.pt.adresse||'',
       depPers:(stop.depPers||[]).slice(),arrPers:(stop.arrPers||[]).slice(),
-      distLys:dLys(stop.pt),cap:bearing(LYS,stop.pt)};
+      distLys:dLys(stop.pt),cap:bearing(LYS_DEPART||LYS,stop.pt)};
     dstCluster.push(movedNode);
     var simStops=buildStops(dstCluster,p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
     var newPeak=peakSeatsStops(simStops);
@@ -3880,7 +3942,7 @@ function execDeplacerStop(fromIdx,stopIdx,toIdx,upgradeVehId){
   
   var movedNode={fid:stop.fid,lat:parseFloat(stop.pt.lat),lng:parseFloat(stop.pt.lng),nom:stop.pt.nom,adresse:stop.pt.adresse||'',
     depPers:(stop.depPers||[]).slice(),arrPers:(stop.arrPers||[]).slice(),
-    distLys:dLys(stop.pt),cap:bearing(LYS,stop.pt)};
+    distLys:dLys(stop.pt),cap:bearing(LYS_DEPART||LYS,stop.pt)};
   
   // CAPACITY CHECK — count persons being added to destination
   var nbAdded=(movedNode.depPers.length+movedNode.arrPers.length);
@@ -3970,7 +4032,7 @@ function rebuildConvoi(convoi,removeFid,removePt,addNode,p){
     convoi.type=(dep.length&&arr.length)?'rotation':dep.length?'depart_only':'arrivee_only';
     convoi.mapsEnrichi=false;convoi.legDurations=null;
   } else {
-    convoi.stops=[{action:'depart',pt:LYS,seats:0},{action:'retour',pt:LYS,seats:0}];
+    convoi.stops=[{action:'depart',pt:LYS_DEPART||LYS,seats:0},{action:'retour',pt:LYS_ARRIVEE||LYS,seats:0}];
     convoi.km=0;convoi.dureeMin=0;convoi.depart=[];convoi.arrivee=[];convoi.peakSeats=0;convoi.remplissage=0;
   }
 }
@@ -4273,7 +4335,7 @@ function execIsolerStop(fromIdx,stopIdx,vehId){
   
   var node={fid:stop.fid,lat:parseFloat(stop.pt.lat),lng:parseFloat(stop.pt.lng),nom:stop.pt.nom,adresse:stop.pt.adresse||'',
     depPers:(stop.depPers||[]).slice(),arrPers:(stop.arrPers||[]).slice(),
-    distLys:dLys(stop.pt),cap:bearing(LYS,stop.pt)};
+    distLys:dLys(stop.pt),cap:bearing(LYS_DEPART||LYS,stop.pt)};
   
   // Remove from source
   rebuildConvoi(fromConvoi,stop.fid,stop.pt,null,p);
@@ -4891,7 +4953,7 @@ function renderMapSVG(convois){
 }
 
 function buildMapsUrl(c){return buildMapsUrlFromConvoi(c)}
-function buildMapsUrlFromConvoi(c){var wps=[LYS.lat+','+LYS.lng];c.stops.forEach(function(s){if(s.action!=='depart'&&s.action!=='retour'&&s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});wps.push(LYS.lat+','+LYS.lng);return 'https://www.google.com/maps/dir/'+wps.join('/')}
+function buildMapsUrlFromConvoi(c){var wps=[];c.stops.forEach(function(s){if(s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)});return 'https://www.google.com/maps/dir/'+wps.join('/')}
 function setH(cid,val){
   var c=convoisOptimises.find(function(x){return x.id===cid});
   if(!c) return;
