@@ -4463,6 +4463,20 @@ function getBadgeSt(t){if(t==='rotation') return 'background:#FFF3E0;color:var(-
 function renderOptim(dateStr,errors){
   var scrollY=window.scrollY; // preserve scroll for edits
   var d=dateStr||'';var dateLabel=fmtDate(d);var el=document.getElementById('optim-content');
+
+  // Always rebuild depart/arrivee from stops to stay in sync after any manual edits
+  convoisOptimises.forEach(function(c){
+    var newDep=[],newArr=[];
+    (c.stops||[]).forEach(function(s){
+      if(s.action==='depart'||s.action==='retour') return;
+      (s.depPers||[]).forEach(function(p){if(!p.isTransfert) newDep.push(p)});
+      (s.arrPers||[]).forEach(function(p){newArr.push(p)});
+    });
+    c.depart=newDep;
+    c.arrivee=newArr;
+    c.type=(c.depart.length&&c.arrivee.length)?'rotation':c.depart.length?'depart_only':'arrivee_only';
+  });
+
   var tDep=convoisOptimises.reduce(function(s,c){return s+c.depart.length},0);
   var tArr=convoisOptimises.reduce(function(s,c){return s+c.arrivee.length},0);
   var tKm=convoisOptimises.reduce(function(s,c){return s+c.km},0);
