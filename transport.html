@@ -4950,21 +4950,25 @@ function execInsertStop(convoiIdx,insertAtIdx){
   c.stops.splice(insertAtIdx,0,newStop);
   
   // Remove moved persons from their original stops
-  // BUT: if a person is marked isTransfert in depPers of another stop, keep them there
-  // (they intentionally appear in two stops: arrive at stop A, depart at stop B for vehicle change)
+  // TRANSFERT LOGIC: if a person in depPers is marked isTransfert, they are intentionally
+  // at TWO stops: arrPers at stop A (pickup), depPers at stop B (vehicle change).
+  // So: do NOT remove them from arrPers of other stops.
   var allMoved=depPers.concat(arrPers);
   allMoved.forEach(function(mp){
     var mpKey=mp.prenom.toLowerCase()+'|'+(mp.nom||'').toLowerCase();
+    var isTransfert=mp.isTransfert||false;
     c.stops.forEach(function(s,si){
       if(si===insertAtIdx) return;
       if(s.action==='depart'||s.action==='retour') return;
-      // Remove from arrPers always (person is moving to a new stop)
-      if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
-      // Remove from depPers ONLY if NOT marked isTransfert
-      if(s.depPers) s.depPers=s.depPers.filter(function(pp){
-        if(pp.isTransfert) return true; // keep transfer passengers
-        return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;
-      });
+      if(isTransfert){
+        // Transfer: ONLY remove from depPers elsewhere (keep arrPers — they still board at stop A)
+        if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
+        // do NOT touch arrPers
+      } else {
+        // Normal move: remove from both dep and arr everywhere else
+        if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
+        if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
+      }
     });
   });
   
