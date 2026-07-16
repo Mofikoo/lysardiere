@@ -4970,23 +4970,29 @@ function execInsertStop(convoiIdx,insertAtIdx){
   // at TWO stops: arrPers at stop A (pickup), depPers at stop B (vehicle change).
   // So: do NOT remove them from arrPers of other stops.
   var allMoved=depPers.concat(arrPers);
+  console.log('[TRANSFERT] allMoved:', JSON.stringify(allMoved.map(function(p){return {prenom:p.prenom,isTransfert:p.isTransfert}})));
+  console.log('[TRANSFERT] stops AVANT filtre:', JSON.stringify(c.stops.map(function(s,i){return {i:i,action:s.action,arr:(s.arrPers||[]).map(function(p){return p.prenom}),dep:(s.depPers||[]).map(function(p){return p.prenom+'(T:'+p.isTransfert+')'})}})));
   allMoved.forEach(function(mp){
     var mpKey=mp.prenom.toLowerCase()+'|'+(mp.nom||'').toLowerCase();
     var isTransfert=mp.isTransfert||false;
+    console.log('[TRANSFERT] traitement de',mp.prenom,'isTransfert='+isTransfert);
     c.stops.forEach(function(s,si){
       if(si===insertAtIdx) return;
       if(s.action==='depart'||s.action==='retour') return;
       if(isTransfert){
         // Transfer: ONLY remove from depPers elsewhere (keep arrPers — they still board at stop A)
         if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
+        console.log('[TRANSFERT] stop',si,'('+s.action+') — arrPers PRÉSERVÉ:', (s.arrPers||[]).map(function(p){return p.prenom}));
         // do NOT touch arrPers
       } else {
         // Normal move: remove from both dep and arr everywhere else
         if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
         if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;});
+        console.log('[TRANSFERT] stop',si,'('+s.action+') — suppression normale, arrPers restant:', (s.arrPers||[]).map(function(p){return p.prenom}));
       }
     });
   });
+  console.log('[TRANSFERT] stops APRÈS filtre allMoved:', JSON.stringify(c.stops.map(function(s,i){return {i:i,action:s.action,arr:(s.arrPers||[]).map(function(p){return p.prenom}),dep:(s.depPers||[]).map(function(p){return p.prenom})}})));
   
   // Identify which stops will be removed (empty ones except depart/retour)
   var removedIndices=[];
