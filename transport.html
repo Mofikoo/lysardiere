@@ -2442,8 +2442,8 @@ function renderSemaineCard(s,idx,isArchive,isMer){
           var dotC=s2.action==='depart'||s2.action==='retour'?'var(--forest)':s2.action==='pickup'?'var(--green)':'var(--red)';
           var heureStr=heuresSem[si]!==undefined?' <span class="tl-time">'+fmtH(heuresSem[si])+'</span>':'';
           var label='';
-          if(s2.action==='depart') label='Départ La Lysardiere';
-          else if(s2.action==='retour') label='Retour La Lysardiere';
+          if(s2.action==='depart') label='<span style="color:var(--forest);font-weight:600">⬆ Départ : '+s2.pt.nom+'</span>';
+          else if(s2.action==='retour') label='<span style="color:var(--forest-mid);font-weight:600">⬇ Arrivée : '+s2.pt.nom+'</span>';
           else if(s2.action==='depot') label='Depot : '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.retourPrevu&&s2.retourPrevu.length?' [recup. retour : '+s2.retourPrevu.map(function(p){return p.prenom}).join(', ')+']':'');
           else if(s2.action==='pickup') label='Arrivee : '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ');
           else if(s2.action==='rotation') label='Dep: '+(s2.depPers||[]).map(function(p){return p.prenom}).join(', ')+' / Arr: '+(s2.arrPers||[]).map(function(p){return p.prenom}).join(', ')+(s2.sameFoyer?' [meme foyer]':'');
@@ -4585,7 +4585,9 @@ function renderTimelineStops(stops,cap,convoiIdx){
   
   stops.forEach(function(s,si){
     var dotC,pLine='',phaseHtml='';var sn=s.seats;
-    if(s.action==='depart'){dotC='var(--forest)';phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à bord</span>'}
+    if(s.action==='depart'){dotC='var(--forest)';phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';
+      var depBtn=convoiIdx!==undefined?'<button class="btn btn-sm no-print" onclick="modifierPointDepartRetour('+convoiIdx+','+si+',\'depart\')" style="font-size:9px;padding:2px 8px;margin-left:6px;background:var(--forest);color:white;border:none">🚏 Changer point de départ</button>':'';
+      pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à bord</span>'+depBtn}
     else if(s.action==='depot'){dotC='var(--red)';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer cette personne">'+p.prenom+'</button>'}).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'')}
     else if(s.action==='rotation'){dotC=s.sameFoyer?'var(--green)':'var(--copper)';
       pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')
@@ -4593,7 +4595,9 @@ function renderTimelineStops(stops,cap,convoiIdx){
       +'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(s.sameFoyer?'<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Même foyer</span>':'')}
     else if(s.action==='pickup'){dotC='var(--green)';phaseHtml='<span class="phase-pill" style="background:var(--green-bg);color:var(--green)">Phase retour</span>';
       pLine='<span style="color:var(--green);font-weight:600">'+(s.isRetourRotation?'⟳ Arr. : ':'Arr. : ')+'</span>'+(s.arrPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'arr\')" style="background:none;border:1px dashed var(--green);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--green)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'}
-    else if(s.action==='retour'){dotC='var(--forest)';pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à l\'arrivée</span>'}
+    else if(s.action==='retour'){dotC='var(--forest)';
+      var arrBtn=convoiIdx!==undefined?'<button class="btn btn-sm no-print" onclick="modifierPointDepartRetour('+convoiIdx+','+si+',\'retour\')" style="font-size:9px;padding:2px 8px;margin-left:6px;background:var(--forest-mid);color:white;border:none">🏁 Changer point d\'arrivée</button>':'';
+      pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à l\'arrivée</span>'+arrBtn}
     
     // Hour display and edit for this stop
     var heureHtml='';
@@ -4632,6 +4636,74 @@ function renderTimelineStops(stops,cap,convoiIdx){
   });
   return html+'</div>';
 }
+
+async function modifierPointDepartRetour(convoiIdx, stopIdx, type){
+  var c=convoisOptimises[convoiIdx];
+  if(!c) return;
+  var s=c.stops[stopIdx];
+  if(!s) return;
+
+  var lieuxAvecGPS=lieux.filter(function(l){return l.lat&&l.lng}).sort(function(a,b){return a.nom.localeCompare(b.nom)});
+  var label=type==='depart'?'Point de départ':'Point d\'arrivée';
+
+  var opts='<option value="_lys">La Lysardière (défaut)</option>'
+    +lieuxAvecGPS.map(function(l){return '<option value="'+l.id+'"'+(s.fid===l.id?' selected':'')+'>'+l.nom+'</option>'}).join('');
+
+  var overlay=document.createElement('div');
+  overlay.className='ly-modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML='<div style="background:var(--card);border-radius:var(--radius);padding:24px;max-width:420px;width:93%;box-shadow:var(--shadow-lg)">'
+    +'<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;color:var(--forest);margin-bottom:4px">'+(type==='depart'?'🚏':'🏁')+' Modifier le '+label.toLowerCase()+'</div>'
+    +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:16px">Convoi '+(convoiIdx+1)+' — '+(c.vehicule?c.vehicule.label:'')+'</div>'
+    +'<div style="margin-bottom:8px"><label style="font-size:12px;color:var(--text-mid)">Choisir le nouveau point</label>'
+    +'<select id="modal-point-select" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px">'+opts+'</select></div>'
+    +'<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">'
+    +'<button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button>'
+    +'<button class="btn btn-primary btn-sm" onclick="execModifierPointDepartRetour('+convoiIdx+','+stopIdx+',\''+type+'\')">Confirmer</button>'
+    +'</div></div>';
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove()};
+  document.body.appendChild(overlay);
+}
+
+function execModifierPointDepartRetour(convoiIdx, stopIdx, type){
+  var c=convoisOptimises[convoiIdx];
+  if(!c) return;
+  var s=c.stops[stopIdx];
+  if(!s) return;
+
+  var sel=document.getElementById('modal-point-select');
+  if(!sel) return;
+  var val=sel.value;
+
+  var newPt;
+  if(val==='_lys'){
+    newPt={lat:LYS.lat,lng:LYS.lng,nom:LYS.nom,adresse:LYS.adresse||''};
+    s.fid=undefined;
+  } else {
+    var l=getLieu(val);
+    if(!l){document.querySelector('.ly-modal-overlay').remove();return}
+    newPt={lat:parseFloat(l.lat),lng:parseFloat(l.lng),nom:l.nom,adresse:l.adresse||''};
+    s.fid=l.id;
+  }
+
+  s.pt=newPt;
+
+  // Update global LYS_DEPART/LYS_ARRIVEE to match
+  if(type==='depart') LYS_DEPART=newPt;
+  else LYS_ARRIVEE=newPt;
+
+  // Invalidate Maps for recalc
+  c.legDurations=null;
+  c.mapsEnrichi=false;
+
+  document.querySelector('.ly-modal-overlay').remove();
+
+  var date=document.getElementById('ldate').value;
+  renderOptim(date,[]);
+  setPersist('Point modifié — recalcul Maps en cours...','neutral');
+  triggerAutoRecalcOptim(c);
+}
+
 
 async function supprimerConvoi(convoiIdx){
   var c=convoisOptimises[convoiIdx];
