@@ -1699,10 +1699,7 @@ function buildFicheInscription(){
       <div class="field-group"><label class="field-label">Tél <span class="req">*</span></label><input type="tel" id="insc-tel"></div>
     </div>
     <div class="field-row cols2">
-      <div class="field-group"><label class="field-label">Mail <span class="req">*</span></label><input type="email" id="insc-mail"></div>
       <div class="field-group"><label class="field-label">Mail du secrétariat <span class="req">*</span></label><input type="email" id="insc-mail-secretariat"></div>
-    </div>
-    <div class="field-row">
       <div class="field-group"><label class="field-label">Mail à l'éducatif <span class="req">*</span></label><input type="email" id="insc-mail-educatif" placeholder="mail@educatif.fr"></div>
     </div>
   </div>`;
@@ -2050,7 +2047,6 @@ function validateStep(step){
     req('insc-cp','Code postal');
     req('insc-ville','Ville');
     req('insc-tel','Téléphone');
-    req('insc-mail','Mail');
     req('insc-mail-secretariat','Mail du secrétariat');
     // Relevé frais
     req('insc-org-nom','Organisme (relevé de frais)');
@@ -2341,7 +2337,7 @@ function collectAllData(){
     type_sejour:selectedTypeSejour,
     sejour_choisi:sejourChoisi,
     participant:{nom:getVal('insc-nom'),prenom:getVal('insc-prenom'),naissance:getVal('insc-naissance'),sexe:getRadioVal('insc-sexe'),autonomie:getRadioVal('insc-autonomie'),couple:getRadioVal('insc-couple'),couple_detail:getVal('insc-couple-detail'),tutelle:getRadioVal('insc-tutelle'),protection:getRadioVal('insc-protection'),astreinte:getVal('insc-astreinte')},
-    responsable:{nom:getVal('insc-resp-nom'),prenom:getVal('insc-resp-prenom'),fonction:getVal('insc-resp-fonction'),chef_service:getVal('insc-chef-service'),foyer:getVal('insc-foyer-nom'),adresse:getVal('insc-adresse'),cp:getVal('insc-cp'),ville:getVal('insc-ville'),tel:getVal('insc-tel'),mail:getVal('insc-mail'),mail_secretariat:getVal('insc-mail-secretariat'),mail_educatif:getVal('insc-mail-educatif')},
+    responsable:{nom:getVal('insc-resp-nom'),prenom:getVal('insc-resp-prenom'),fonction:getVal('insc-resp-fonction'),chef_service:getVal('insc-chef-service'),foyer:getVal('insc-foyer-nom'),adresse:getVal('insc-adresse'),cp:getVal('insc-cp'),ville:getVal('insc-ville'),tel:getVal('insc-tel'),mail_secretariat:getVal('insc-mail-secretariat'),mail_educatif:getVal('insc-mail-educatif')},
     releve_frais:{organisme:getVal('insc-org-nom'),contact:getVal('insc-org-contact'),tel:getVal('insc-org-tel'),adresse:getVal('insc-org-adresse'),cp:getVal('insc-org-cp'),ville:getVal('insc-org-ville'),mail:getVal('insc-org-mail'),mail_compta:getVal('insc-org-mail-compta')},
     convoyage:getRadioVal('insc-convoyage'),
     signature:{fait_a:getVal('insc-fait-a'),date:getVal('insc-date-signature'),qualite:getVal('insc-qualite'),acceptation:getChecked('insc-acceptation')}
