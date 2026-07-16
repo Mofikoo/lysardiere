@@ -885,19 +885,19 @@ textarea{resize:vertical;min-height:80px}
         <div class="field-group">
           <label class="field-label">Se déplace en intérieur avec <span class="req">*</span></label>
           <div class="radio-group" style="flex-wrap:wrap;gap:8px">
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="aucun"> Pas de matériel</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="fauteuil"> Fauteuil</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="canne"> Canne</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="deambulateur"> Déambulateur</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="aucun" onchange="updateFauteuilSection()"> Pas de matériel</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="fauteuil" onchange="updateFauteuilSection()"> Fauteuil</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="canne" onchange="updateFauteuilSection()"> Canne</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-int" value="deambulateur" onchange="updateFauteuilSection()"> Déambulateur</label>
           </div>
         </div>
         <div class="field-group">
           <label class="field-label">Se déplace en extérieur avec <span class="req">*</span></label>
           <div class="radio-group" style="flex-wrap:wrap;gap:8px">
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="aucun"> Pas de matériel</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="fauteuil"> Fauteuil</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="canne"> Canne</label>
-            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="deambulateur"> Déambulateur</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="aucun" onchange="updateFauteuilSection()"> Pas de matériel</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="fauteuil" onchange="updateFauteuilSection()"> Fauteuil</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="canne" onchange="updateFauteuilSection()"> Canne</label>
+            <label class="radio-opt"><input type="radio" name="conf-deplacement-ext" value="deambulateur" onchange="updateFauteuilSection()"> Déambulateur</label>
           </div>
         </div>
       </div>
@@ -909,7 +909,8 @@ textarea{resize:vertical;min-height:80px}
         </div>
       </div>
 
-      <!-- Fauteuil roulant -->
+      <!-- Fauteuil roulant - conditionnel -->
+      <div id="section-fauteuil" style="display:none">
       <div class="section-header orange">Pour les personnes en fauteuils</div>
       <div style="background:var(--mint);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px">
         <div class="yn-row">
@@ -968,6 +969,7 @@ textarea{resize:vertical;min-height:80px}
           </div>
         </div>
       </div>
+      </div><!-- end section-fauteuil -->
 
       <!-- Sorties -->
       <div class="section-header orange">Sorties</div>
@@ -1195,14 +1197,14 @@ textarea{resize:vertical;min-height:80px}
             <div class="field-group">
               <label class="field-label">Porte des bas de contention ? <span class="req">*</span></label>
               <div class="radio-group">
-                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="oui"> Oui</label>
-                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="non"> Non</label>
+                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="oui" onchange="toggleConditional('cond-contention',true)"> Oui</label>
+                <label class="radio-opt"><input type="radio" name="conf-bas-contention" value="non" onchange="toggleConditional('cond-contention',false)"> Non</label>
               </div>
             </div>
-            <div class="field-group">
-              <label class="field-label">Protocole <span class="req">*</span></label>
-              <input type="text" id="conf-contention-protocole" placeholder="Précisez">
-            </div>
+          </div>
+          <div class="conditional hidden" id="cond-contention">
+            <label class="field-label">Protocole contention <span class="req">*</span></label>
+            <input type="text" id="conf-contention-protocole" placeholder="Précisez">
           </div>
         </div>
 
@@ -1335,15 +1337,17 @@ textarea{resize:vertical;min-height:80px}
         <div class="yn-row">
           <span class="yn-label">Porte un dentier</span>
           <div class="yn-cols">
-            <label class="yn-opt"><input type="radio" name="conf-dentier" value="oui"> Oui</label>
-            <label class="yn-opt"><input type="radio" name="conf-dentier" value="non"> Non</label>
+            <label class="yn-opt"><input type="radio" name="conf-dentier" value="oui" onchange="toggleConditional('cond-dentier-seul',true)"> Oui</label>
+            <label class="yn-opt"><input type="radio" name="conf-dentier" value="non" onchange="toggleConditional('cond-dentier-seul',false)"> Non</label>
           </div>
         </div>
-        <div class="yn-row">
-          <span class="yn-label">Le gère t-il seul</span>
-          <div class="yn-cols">
-            <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="oui"> Oui</label>
-            <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="non"> Non</label>
+        <div class="conditional hidden" id="cond-dentier-seul">
+          <div class="yn-row">
+            <span class="yn-label">Le gère t-il seul</span>
+            <div class="yn-cols">
+              <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="oui"> Oui</label>
+              <label class="yn-opt"><input type="radio" name="conf-dentier-seul" value="non"> Non</label>
+            </div>
           </div>
         </div>
         <div class="yn-row">
@@ -1551,6 +1555,7 @@ function goToStep(n){
   document.getElementById('step-'+currentStep).classList.add('active');
   updateStepper();
   updateNavButtons();
+  if(n===6) updateFauteuilSection();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -1834,6 +1839,18 @@ function buildTroublesList(){
 }
 
 // ══ CONDITIONAL TOGGLE ══
+function updateFauteuilSection(){
+  // Show if fauteuil=oui (page 1) OR deplacement int/ext = fauteuil (page 4)
+  var fauteuilP1 = document.querySelector('input[name="conf-fauteuil"]:checked');
+  var intVal = document.querySelector('input[name="conf-deplacement-int"]:checked');
+  var extVal = document.querySelector('input[name="conf-deplacement-ext"]:checked');
+  var show = (fauteuilP1&&fauteuilP1.value==='oui')
+    || (intVal&&intVal.value==='fauteuil')
+    || (extVal&&extVal.value==='fauteuil');
+  var sec = document.getElementById('section-fauteuil');
+  if(sec) sec.style.display = show ? 'block' : 'none';
+}
+
 function toggleConditional(id,show){
   const el=document.getElementById(id);
   if(!el) return;
@@ -2205,13 +2222,17 @@ function validateStep(step){
     reqRadio('conf-deplacement-int','Déplacement en intérieur');
     reqRadio('conf-deplacement-ext','Déplacement en extérieur');
     reqRadio('conf-tenir-bras','Tenir le bras de l\'accompagnateur');
-    reqRadio('conf-fr-occasionnel','Fauteuil : occasionnellement');
-    reqRadio('conf-fr-permanent','Fauteuil : en permanence');
-    reqRadio('conf-fr-debout','Peut se tenir debout');
-    reqRadio('conf-appui-plantaire','Appui plantaire (obligatoire)');
-    reqRadio('conf-transfert-vehicule','Transfert véhicule (obligatoire)');
-    reqRadio('conf-fr-manoeuvre-int','Manœuvre fauteuil en intérieur');
-    reqRadio('conf-fr-manoeuvre-ext','Manœuvre fauteuil en extérieur');
+    // Fauteuil — seulement si la section est visible
+    var fauteuilVisible = document.getElementById('section-fauteuil')&&document.getElementById('section-fauteuil').style.display!=='none';
+    if(fauteuilVisible){
+      reqRadio('conf-fr-occasionnel','Fauteuil : occasionnellement');
+      reqRadio('conf-fr-permanent','Fauteuil : en permanence');
+      reqRadio('conf-fr-debout','Peut se tenir debout');
+      reqRadio('conf-appui-plantaire','Appui plantaire (obligatoire)');
+      reqRadio('conf-transfert-vehicule','Transfert véhicule (obligatoire)');
+      reqRadio('conf-fr-manoeuvre-int','Manœuvre fauteuil en intérieur');
+      reqRadio('conf-fr-manoeuvre-ext','Manœuvre fauteuil en extérieur');
+    }
     reqRadio('conf-sortie-seul','Peut sortir seul sans accompagnement');
     reqRadio('conf-sortie-groupe','Peut sortir seul en groupe');
     reqRadio('conf-demander-chemin','Sait demander son chemin');
@@ -2575,295 +2596,282 @@ function buildFullPdfHtml(data){
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#222;margin:0;padding:0}
-    h1{font-size:16px;color:#18534F;margin:0 0 4px}
-    h2{font-size:13px;color:#18534F;border-bottom:2px solid #18534F;padding-bottom:3px;margin:12px 0 6px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#1a1a1a;background:white;width:190mm}
+    .header-box{background:#18534F;color:white;padding:10px 14px;margin-bottom:0}
+    .header-box h1{font-size:15px;font-weight:700;margin:0 0 2px}
+    .header-box .sub{font-size:10px;opacity:0.8}
+    .section-bar{background:#2a6b66;color:white;font-size:10px;font-weight:700;padding:4px 10px;margin:8px 0 4px;text-transform:uppercase;letter-spacing:0.4px}
+    .section-bar.red{background:#C0392B}
+    .section-bar.orange{background:#d35400}
+    .section-bar.grey{background:#555}
     table{width:100%;border-collapse:collapse}
-    td{vertical-align:top}
-    .page-break{page-break-before:always}
-    .header-box{background:#18534F;color:white;padding:12px 16px;margin-bottom:12px}
-    .header-box h1{color:white;font-size:18px}
-    .header-box .sub{font-size:11px;opacity:0.8;margin-top:2px}
-    .row-box{display:flex;gap:10px}
-    .col{flex:1}
+    tr td:first-child{width:48%;color:#555;padding:2px 6px;font-size:10px;vertical-align:top}
+    tr td:last-child{padding:2px 6px;font-size:10px;font-weight:600;vertical-align:top}
+    tr{border-bottom:1px solid #f0f0f0}
+    .ta-box{background:#f7f3ec;border-left:3px solid #18534F;padding:4px 8px;font-size:10px;line-height:1.5;margin:2px 0 6px;white-space:pre-wrap}
+    .ta-label{font-size:10px;color:#555;margin:4px 0 2px}
+    .chk-table{width:100%;border-collapse:collapse;margin:3px 0}
+    .chk-table th{background:#e8f5e9;padding:2px 5px;font-size:9px;text-align:center;border:1px solid #ccc}
+    .chk-table th.left{text-align:left}
+    .chk-table td{padding:1px 5px;border:1px solid #eee;text-align:center;font-size:9px}
+    .chk-table td.left{text-align:left;font-size:9.5px}
+    .chk-table tr.sub td.left{padding-left:12px;color:#666}
+    .troubles-table{width:100%;border-collapse:collapse;margin:3px 0}
+    .troubles-table th{background:#f5f5f5;padding:3px 8px;font-size:9px;text-align:left;border:1px solid #ddd}
+    .troubles-table td{padding:2px 8px;font-size:10px;border:1px solid #eee}
+    .page-break{page-break-before:always;margin:0;padding:0}
+    .footer{margin-top:12px;padding-top:6px;border-top:1px solid #ddd;font-size:9px;color:#999;text-align:center}
   </style></head><body>
 
   <div class="header-box">
     <h1>La Lysardière — Dossier de ${p.prenom||''} ${(p.nom||'').toUpperCase()}</h1>
-    <div class="sub">${typLabel} • Soumis le ${new Date().toLocaleDateString('fr-FR')}</div>
+    <div class="sub">${typLabel} &bull; Soumis le ${new Date().toLocaleDateString('fr-FR')}</div>
   </div>
 
-  ${S('Fiche d\'inscription — '+typLabel)}
-  ${TABLE_START()}
+  <div class="section-bar">Fiche d'inscription — ${typLabel}</div>
+  <table>
   ${R('Séjour choisi',insc.sejour_choisi)}
-  ${R('Nom',p.nom)} ${R('Prénom',p.prenom)}
+  ${R('Nom / Prénom',(p.nom||'')+' '+(p.prenom||''))}
   ${R('Date de naissance',p.naissance)} ${R('Sexe',p.sexe)} ${R('Autonomie',p.autonomie)}
-  ${R('Inscription en couple',yn(p.couple))} ${p.couple==='oui'?R('Avec',p.couple_detail):''}
+  ${R('En couple',yn(p.couple)+(p.couple==='oui'?' — avec '+p.couple_detail:''))}
   ${p.tutelle?R('Tutelle/Curatelle',yn(p.tutelle)):''}
   ${R('Numéro d\'astreinte',p.astreinte)}
   ${R('Convoyage',insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière')}
-  ${TABLE_END()}
+  </table>
 
-  ${S('Responsable de l\'inscription','#2a6b66')}
-  ${TABLE_START()}
-  ${R('Nom',resp.prenom+' '+resp.nom)} ${R('Fonction',resp.fonction)}
+  <div class="section-bar">Responsable de l'inscription</div>
+  <table>
+  ${R('Nom',(resp.prenom||'')+' '+(resp.nom||''))} ${R('Fonction',resp.fonction)}
   ${R('Chef de service',resp.chef_service)}
-  ${R('Foyer',resp.foyer)} ${R('Adresse',resp.adresse)}
-  ${R('Code postal / Ville',resp.cp+' '+resp.ville)} ${R('Tél',resp.tel)}
-  ${R('Mail',resp.mail)} ${R('Mail secrétariat',resp.mail_secretariat)}
-  ${resp.mail_educatif?R('Mail éducatif',resp.mail_educatif):''}
-  ${TABLE_END()}
+  ${R('Foyer',resp.foyer)} ${R('Adresse',(resp.adresse||'')+', '+(resp.cp||'')+' '+(resp.ville||''))}
+  ${R('Tél',resp.tel)} ${R('Mail secrétariat',resp.mail_secretariat)} ${R('Mail éducatif',resp.mail_educatif)}
+  </table>
 
-  ${S('Relevé de frais','#2a6b66')}
-  ${TABLE_START()}
+  <div class="section-bar">Relevé de frais</div>
+  <table>
   ${R('Organisme',rf.organisme)} ${R('Contact',rf.contact)} ${R('Tél',rf.tel)}
-  ${R('Adresse',rf.adresse)} ${R('CP / Ville',rf.cp+' '+rf.ville)}
+  ${R('Adresse',(rf.adresse||'')+', '+(rf.cp||'')+' '+(rf.ville||''))}
   ${R('Mail',rf.mail)} ${R('Mail comptabilité',rf.mail_compta)}
-  ${TABLE_END()}
+  </table>
 
-  ${S('Signature','#555')}
-  ${TABLE_START()}
-  ${R('Signé à',resp.fait_a||insc.signature?.fait_a)} ${R('Le',insc.signature?.date)} ${R('Qualité',insc.signature?.qualite)}
-  ${TABLE_END()}
+  <div class="section-bar grey">Signature</div>
+  <table>
+  ${R('Signé à',(insc.signature?.fait_a||'')+' le '+(insc.signature?.date||'')+' par '+(insc.signature?.qualite||''))}
+  </table>
 
   <div class="page-break"></div>
 
   <div class="header-box">
-    <h1>Fiche Confidentielle — ${p.prenom||conf.identite?.prenom||''} ${((p.nom||conf.identite?.nom||'')).toUpperCase()}</h1>
-    <div class="sub">Page 1/6 — Identité, mobilité, personnalité</div>
+    <h1>Fiche Confidentielle — ${p.prenom||id.prenom||''} ${((p.nom||id.nom||'')).toUpperCase()}</h1>
+    <div class="sub">Page 1/6 — Identité, mobilité, astreinte, personnalité</div>
   </div>
 
-  ${S('Identité & mobilité')}
-  ${TABLE_START()}
-  ${R('Nom',id.nom)} ${R('Prénom',id.prenom)} ${R('Âge',id.age)}
+  <div class="section-bar">Identité & mobilité</div>
+  <table>
+  ${R('Nom / Prénom',(id.nom||'')+' '+(id.prenom||''))} ${R('Âge',id.age)}
   ${R('Séjour',id.sejour)} ${R('Autonomie',id.autonomie)}
   ${R('Besoin infirmière',yn(mob.infirmiere))}
-  ${mob.infirmiere==='oui'?R('Moments',Object.entries(mob.infirmiere_moments||{}).filter(([,v])=>v).map(([k])=>k).join(', ')):''}
-  ${mob.infirmiere==='oui'?R('Qui s\'agit-il',mob.infirmiere_detail):''}
-  ${R('En couple',yn(mob.couple))}
-  ${mob.couple==='oui'?R('Même chambre',yn(mob.meme_chambre)):''}
+  ${mob.infirmiere==='oui'?R('Moments',chks(mob.infirmiere_moments)+' — '+(mob.infirmiere_detail||'')):''}
+  ${R('En couple',yn(mob.couple)+(mob.couple==='oui'?' — même chambre : '+yn(mob.meme_chambre):''))}
   ${R('Fauteuil roulant',yn(mob.fauteuil)+(mob.fauteuil_sortie?' (sorties uniquement)':''))}
-  ${R('Déambulateur',yn(mob.deambulateur))}
-  ${R('Monte les escaliers',yn(mob.escaliers))}
-  ${TABLE_END()}
+  ${R('Déambulateur',yn(mob.deambulateur))} ${R('Monte escaliers',yn(mob.escaliers))}
+  </table>
 
-  ${S('Personne d\'astreinte','#C0392B')}
-  ${TABLE_START()}
+  <div class="section-bar red">Personne d'astreinte</div>
+  <table>
   ${R('Type',astr.type==='responsable_inscription'?'Responsable inscription':astr.type==='responsable_legal'?'Responsable légal':'Autre personne')}
-  ${astr.type==='autre'?R('Nom',astr.prenom+' '+astr.nom):''}
-  ${astr.type==='autre'?R('Tél',astr.tel):''}
-  ${astr.type==='autre'?R('Mail',astr.mail):''}
-  ${TABLE_END()}
+  ${astr.type==='autre'?R('Nom',(astr.prenom||'')+' '+(astr.nom||'')):''} 
+  ${astr.type==='autre'?R('Tél / Mail',(astr.tel||'')+' — '+(astr.mail||'')):''}
+  </table>
 
-  ${TEXTAREA('Description de la personnalité',conf.personnalite)}
-  ${TEXTAREA('Vie quotidienne (recommandations médicales, toilettes, habitudes…)',conf.vie_quotidienne)}
-  ${TEXTAREA('Comportement (relation avec inconnus, encadrants, autres vacanciers…)',conf.comportement)}
+  <div class="ta-label">Description de la personnalité</div>
+  <div class="ta-box">${(conf.personnalite||'—').replace(/\n/g,'<br>')}</div>
+  <div class="ta-label">Vie quotidienne (recommandations médicales, toilettes, habitudes…)</div>
+  <div class="ta-box">${(conf.vie_quotidienne||'—').replace(/\n/g,'<br>')}</div>
+  <div class="ta-label">Comportement (relation avec inconnus, encadrants, autres vacanciers…)</div>
+  <div class="ta-box">${(conf.comportement||'—').replace(/\n/g,'<br>')}</div>
 
   <div class="page-break"></div>
   <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 2/6 — Hygiène & alimentation</div></div>
 
-  ${S('Hygiène')}
+  <div class="section-bar">Hygiène</div>
   ${hygieneHtml}
-  ${TABLE_START()}
-  ${R('Présence physique douche',yn(hyg.presence_douche))}
-  ${R('Timer douche',yn(hyg.timer_douche))}
+  <table>
+  ${R('Présence physique douche',yn(hyg.presence_douche))} ${R('Timer douche',yn(hyg.timer_douche))}
   ${R('Gestion linge',yn(hyg.linge))}
   ${R('Stomie',yn(hyg.stomie))} ${hyg.stomie==='oui'?R('Aide stomie',hyg.stomie_aide):''}
   ${R('Pistolet',yn(hyg.pistolet))} ${hyg.pistolet==='oui'?R('Aide pistolet',hyg.pistolet_aide):''}
-  ${TABLE_END()}
-  ${TEXTAREA('Protocoles et habitudes de toilette',hyg.protocoles_toilette)}
+  </table>
+  ${hyg.protocoles_toilette?'<div class="ta-label">Protocoles et habitudes de toilette</div><div class="ta-box">'+hyg.protocoles_toilette.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Énurésies & Encoprésie','#E67E22')}
-  ${TABLE_START()}
+  <div class="section-bar orange">Énurésies & Encoprésie</div>
+  <table>
   ${R('Énurésies',chks(hyg.enurese))}
-  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Fréquence changes (énurésies)',hyg.enurese?.freq):''}
-  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Aide changes',yn(hyg.enurese?.aide)):''}
-  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('Type de change',hyg.enurese?.type):''}
+  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('→ Fréquence / aide / type',(hyg.enurese?.freq||'—')+' | Aide : '+yn(hyg.enurese?.aide)+' | Type : '+(hyg.enurese?.type||'—')):''}
   ${R('Encoprésie',chks(hyg.encopresie))}
-  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Fréquence changes (encoprésie)',hyg.encopresie?.freq):''}
-  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Aide changes',yn(hyg.encopresie?.aide)):''}
-  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('Type de change',hyg.encopresie?.type):''}
-  ${TABLE_END()}
+  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('→ Fréquence / aide / type',(hyg.encopresie?.freq||'—')+' | Aide : '+yn(hyg.encopresie?.aide)+' | Type : '+(hyg.encopresie?.type||'—')):''}
+  </table>
 
-  ${S('Alimentation','#E67E22')}
+  <div class="section-bar orange">Alimentation</div>
   ${alimentHtml}
-  ${TABLE_START()}
-  ${R('Présentation aliments',alim.presentation)}
-  ${R('Couverts adaptés',yn(alim.couverts))} ${alim.couverts==='oui'?R('Lesquels',alim.couverts_detail):''}
-  ${R('Gélifiant',yn(alim.gelifiant))} ${alim.gelifiant==='oui'?R('Avec quels aliments',alim.gelifiant_detail):''}
-  ${R('Risque fausses routes',yn(alim.fausses_routes))} ${alim.fausses_routes==='oui'?R('Précision',alim.fausses_routes_detail):''}
-  ${R('Régime alimentaire',alim.regime)}
-  ${R('Addictions alimentaires',alim.addictions)}
-  ${R('Troubles alimentaires',alim.troubles)}
-  ${R('Allergies',alim.allergies)}
-  ${TABLE_END()}
-  ${TEXTAREA('Informations complémentaires (alimentation)',alim.info_comp)}
+  <table>
+  ${R('Présentation',alim.presentation)} ${R('Couverts adaptés',yn(alim.couverts)+(alim.couverts==='oui'?' — '+alim.couverts_detail:''))}
+  ${R('Gélifiant',yn(alim.gelifiant)+(alim.gelifiant==='oui'?' — '+alim.gelifiant_detail:''))}
+  ${R('Fausses routes',yn(alim.fausses_routes)+(alim.fausses_routes==='oui'?' — '+alim.fausses_routes_detail:''))}
+  ${R('Régime',alim.regime)} ${R('Addictions',alim.addictions)}
+  ${R('Troubles alim.',alim.troubles)} ${R('Allergies',alim.allergies)}
+  </table>
+  ${alim.info_comp?'<div class="ta-label">Informations complémentaires (alimentation)</div><div class="ta-box">'+alim.info_comp.replace(/\n/g,'<br>')+'</div>':''}
 
   <div class="page-break"></div>
   <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 3/6 — Rythme, repos, communication, relation</div></div>
 
-  ${S('Rythme et Repos')}
-  ${TABLE_START()}
-  ${R('Peurs / angoisses nocturnes',yn(rep.peurs_nuit))} ${rep.peurs_nuit==='oui'?R('Précision',rep.peurs_nuit_detail):''}
-  ${R('Se lève la nuit',yn(rep.leve_nuit))} ${rep.leve_nuit==='oui'?R('Raisons',rep.leve_nuit_detail):''}
-  ${R('Surveillance nocturne',yn(rep.surveillance_nuit))} ${rep.surveillance_nuit==='oui'?R('Raisons',rep.surveillance_nuit_detail):''}
+  <div class="section-bar">Rythme et Repos</div>
+  <table>
+  ${R('Peurs nocturnes',yn(rep.peurs_nuit)+(rep.peurs_nuit==='oui'?' — '+rep.peurs_nuit_detail:''))}
+  ${R('Se lève la nuit',yn(rep.leve_nuit)+(rep.leve_nuit==='oui'?' — '+rep.leve_nuit_detail:''))}
+  ${R('Surveillance nocturne',yn(rep.surveillance_nuit)+(rep.surveillance_nuit==='oui'?' — '+rep.surveillance_nuit_detail:''))}
   ${R('Heure coucher',rep.heure_coucher)} ${R('Heure lever',rep.heure_lever)}
-  ${TABLE_END()}
-  ${TEXTAREA('Informations complémentaires (repos)',rep.info_comp)}
+  </table>
+  ${rep.info_comp?'<div class="ta-label">Informations complémentaires (repos)</div><div class="ta-box">'+rep.info_comp.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Communication','#E67E22')}
-  ${TABLE_START()}
-  ${R('Compréhension',comm.comprehension)}
-  ${R('Mode de communication',comm.mode)}
-  ${R('Peut exprimer ses besoins',yn(comm.exprime_besoins))}
-  ${R('Tient une conversation fluide',yn(comm.conversation))}
+  <div class="section-bar orange">Communication</div>
+  <table>
+  ${R('Compréhension',comm.comprehension)} ${R('Mode',comm.mode)}
+  ${R('Exprime ses besoins',yn(comm.exprime_besoins))} ${R('Conversation fluide',yn(comm.conversation))}
   ${R('Écrit',comm.ecrit)} ${R('Lit',comm.lit)}
-  ${R('Téléphone portable',yn(comm.telephone))} ${comm.telephone==='oui'?R('Protocole téléphone',comm.telephone_protocole):''}
-  ${TABLE_END()}
-  ${TEXTAREA('Informations complémentaires (communication)',comm.info_comp)}
+  ${R('Téléphone',yn(comm.telephone)+(comm.telephone==='oui'?' — '+comm.telephone_protocole:''))}
+  </table>
+  ${comm.info_comp?'<div class="ta-label">Informations complémentaires (communication)</div><div class="ta-box">'+comm.info_comp.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Relation','#E67E22')}
-  ${TABLE_START()}
+  <div class="section-bar orange">Relation</div>
+  <table>
   ${R('Sociable',yn(rel.sociable))} ${R('S\'isole',yn(rel.isole))}
   ${R('Agressivité verbale',yn(rel.agressivite_verbale))}
-  ${R('Agressivité physique',yn(rel.agressivite_physique))}
-  ${rel.agressivite_physique==='oui'?R('Envers qui',rel.agressivite_detail):''}
+  ${R('Agressivité physique',yn(rel.agressivite_physique)+(rel.agressivite_physique==='oui'?' — '+rel.agressivite_detail:''))}
   ${rel.agressivite_physique==='oui'?R('Préconisations',rel.agressivite_preconisation):''}
   ${rel.couple_avec?R('En couple avec',rel.couple_avec):''}
   ${R('Même chambre',yn(rel.meme_chambre))} ${R('Même lit',yn(rel.meme_lit))}
-  ${TABLE_END()}
+  </table>
 
   <div class="page-break"></div>
   <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 4/6 — Déplacements, fauteuil, sorties, activités</div></div>
 
-  ${S('Déplacements')}
-  ${TABLE_START()}
-  ${R('Se repère dans l\'espace',yn(dep.repere_espace))}
-  ${R('Se repère dans le temps',yn(dep.repere_temps))}
+  <div class="section-bar">Déplacements</div>
+  <table>
+  ${R('Se repère espace',yn(dep.repere_espace))} ${R('Se repère temps',yn(dep.repere_temps))}
   ${R('Fatigable',yn(dep.fatigable))} ${R('Marche',yn(dep.marche))}
-  ${R('Modalités marche',[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Avec matériel',dep.marche_modalites?.moins_30&&'< 30 min',dep.marche_modalites?.trente_a_soixante&&'30 min – 1h',dep.marche_modalites?.plus_1h&&'> 1h'].filter(Boolean).join(', '))}
-  ${R('Vitesse / rythme',dep.marche_vitesse)}
-  ${R('Monte un escalier',dep.escalier)}
-  ${R('Déplacement intérieur',dep.deplacement_int)}
-  ${R('Déplacement extérieur',dep.deplacement_ext)}
-  ${R('Tient le bras accompagnateur',yn(dep.tenir_bras))}
-  ${TABLE_END()}
-  ${TEXTAREA('Informations complémentaires (déplacements)',dep.info_comp)}
+  ${R('Modalités',[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Matériel',dep.marche_modalites?.moins_30&&'<30min',dep.marche_modalites?.trente_a_soixante&&'30–60min',dep.marche_modalites?.plus_1h&&'>1h'].filter(Boolean).join(', '))}
+  ${R('Vitesse / rythme',dep.marche_vitesse)} ${R('Monte un escalier',dep.escalier)}
+  ${R('Intérieur',dep.deplacement_int)} ${R('Extérieur',dep.deplacement_ext)}
+  ${R('Tient le bras',yn(dep.tenir_bras))}
+  </table>
+  ${dep.info_comp?'<div class="ta-label">Informations complémentaires (déplacements)</div><div class="ta-box">'+dep.info_comp.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Pour les personnes en fauteuil','#E67E22')}
-  ${TABLE_START()}
-  ${R('Occasionnellement (sorties longues)',yn(dep.fauteuil?.occasionnel))}
-  ${R('En permanence',yn(dep.fauteuil?.permanent))}
-  ${R('Peut se tenir debout',yn(dep.fauteuil?.debout))}
+  ${(dep.fauteuil?.appui_plantaire||dep.fauteuil?.occasionnel)?`
+  <div class="section-bar orange">Pour les personnes en fauteuil</div>
+  <table>
+  ${R('Occasionnellement',yn(dep.fauteuil?.occasionnel))} ${R('En permanence',yn(dep.fauteuil?.permanent))}
+  ${R('Se tient debout',yn(dep.fauteuil?.debout))}
   ${R('Appui plantaire',yn(dep.fauteuil?.appui_plantaire))}
-  ${R('Transfert avec aide dans trafic',yn(dep.fauteuil?.transfert_vehicule))}
-  ${R('Manœuvre seul intérieur',yn(dep.fauteuil?.manoeuvre_int))}
-  ${R('Manœuvre seul extérieur',yn(dep.fauteuil?.manoeuvre_ext))}
-  ${TABLE_END()}
+  ${R('Transfert avec aide (trafic)',yn(dep.fauteuil?.transfert_vehicule))}
+  ${R('Manœuvre seul int.',yn(dep.fauteuil?.manoeuvre_int))} ${R('Manœuvre seul ext.',yn(dep.fauteuil?.manoeuvre_ext))}
+  </table>`:''}
 
-  ${S('Sorties','#E67E22')}
-  ${TABLE_START()}
-  ${R('Peut sortir seul sans accompagnement',yn(sort.seul))}
-  ${R('Peut sortir seul en groupe',yn(sort.groupe))}
-  ${R('Sait demander son chemin',yn(sort.chemin))}
-  ${R('Rentre à une heure fixe',yn(sort.heure_fixe))}
-  ${R('Garde son argent sur lui/elle',yn(sort.argent_garde))}
-  ${R('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':sort.argent==='non'?'Non':'—')}
-  ${R('Peut se mettre en danger',yn(sort.danger))} ${sort.danger==='oui'?R('Comment',sort.danger_detail):''}
-  ${TABLE_END()}
+  <div class="section-bar orange">Sorties</div>
+  <table>
+  ${R('Sort seul',yn(sort.seul))} ${R('Sort en groupe',yn(sort.groupe))}
+  ${R('Demande son chemin',yn(sort.chemin))} ${R('Heure fixe',yn(sort.heure_fixe))}
+  ${R('Garde argent sur lui',yn(sort.argent_garde))}
+  ${R('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':'Non')}
+  ${R('Peut se mettre en danger',yn(sort.danger)+(sort.danger==='oui'?' — '+sort.danger_detail:''))}
+  </table>
 
-  ${S('Activités','#E67E22')}
-  ${TABLE_START()}
-  ${R('Sait nager',yn(act.nage))}
-  ${R('Sait choisir parmi des activités',yn(act.choix))}
-  ${TABLE_END()}
-  ${TEXTAREA('Centres d\'intérêt',act.interets)}
-  ${TEXTAREA('Activités interdites',act.interdites)}
+  <div class="section-bar orange">Activités</div>
+  <table>
+  ${R('Sait nager',yn(act.nage))} ${R('Choisit ses activités',yn(act.choix))}
+  </table>
+  ${act.interets?'<div class="ta-label">Centres d\'intérêt</div><div class="ta-box">'+act.interets+'</div>':''}
+  ${act.interdites?'<div class="ta-label">Activités interdites</div><div class="ta-box">'+act.interdites+'</div>':''}
 
   <div class="page-break"></div>
   <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 5/6 — Troubles, habitudes de vie</div></div>
 
-  ${S('Troubles')}
-  <table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0">
-    <tr style="background:#f5f5f5"><th style="padding:3px 8px;text-align:left;border:1px solid #ddd">Trouble</th><th style="padding:3px 8px;border:1px solid #ddd">Réponse</th></tr>
+  <div class="section-bar">Troubles</div>
+  <table class="troubles-table">
+    <tr><th>Trouble</th><th>Réponse</th></tr>
     ${troublesList}
   </table>
-  ${TEXTAREA('Solutions pour gérer les troubles du comportement',trou.solutions)}
+  ${trou.solutions?'<div class="ta-label">Solutions pour gérer les troubles du comportement</div><div class="ta-box">'+trou.solutions.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Habitudes de vie — Tabac','#E67E22')}
-  ${TABLE_START()}
+  <div class="section-bar orange">Habitudes de vie — Tabac</div>
+  <table>
   ${R('Fumeur',yn(hab.fumeur))}
   ${hab.fumeur==='oui'?R('Fréquence',hab.fumeur_freq):''}
-  ${hab.fumeur==='oui'?R('Gère seul(e)',yn(hab.fumeur_seul)):''}
-  ${hab.fumeur==='oui'?R('Peut être frustré(e)',yn(hab.fumeur_frustre)):''}
-  ${hab.fumeur==='oui'?R('Comportement si frustré',hab.fumeur_comportement):''}
+  ${hab.fumeur==='oui'?R('Gère seul / frustration',yn(hab.fumeur_seul)+' / '+yn(hab.fumeur_frustre)):''}
+  ${hab.fumeur==='oui'&&hab.fumeur_frustre==='oui'?R('Comportement si frustré',hab.fumeur_comportement):''}
   ${hab.fumeur==='oui'?R('Protocole cigarette',hab.fumeur_protocole):''}
-  ${TABLE_END()}
+  </table>
 
-  ${S('Habitudes de vie — Alcool','#E67E22')}
-  ${TABLE_START()}
-  ${R('Peut consommer de l\'alcool',yn(hab.alcool))}
-  ${hab.alcool==='oui'?R('Fréquence / gère seul(e)',hab.alcool_freq):''}
+  <div class="section-bar orange">Habitudes de vie — Alcool</div>
+  <table>
+  ${R('Peut consommer alcool',yn(hab.alcool))}
+  ${hab.alcool==='oui'?R('Fréquence / gère seul',hab.alcool_freq):''}
   ${R('Type d\'achat à éviter',hab.alcool_eviter||'—')}
   ${R('Préférences d\'achat',hab.alcool_preferences||'—')}
-  ${TABLE_END()}
+  </table>
 
   <div class="page-break"></div>
   <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 6/6 — Santé, médicaments, déficiences</div></div>
 
-  ${S('Traitement médical & soins')}
-  ${TABLE_START()}
+  <div class="section-bar red">Traitement médical & soins</div>
+  <table>
   ${R('Traitement médical',yn(sante.traitement))}
   ${sante.traitement==='oui'?R('Prend seul(e)',yn(sante.traitement_seul)):''}
   ${sante.traitement==='oui'?R('Soins corporels',yn(sante.soins_corporels)):''}
-  ${sante.traitement==='oui'?R('Bas de contention',yn(sante.bas_contention)):''}
-  ${sante.traitement==='oui'?R('Protocole contention',sante.contention_protocole):''}
-  ${TABLE_END()}
-  ${sante.traitement==='oui'?TEXTAREA('Précision soins corporels et fréquence',sante.soins_detail):''}
+  ${sante.traitement==='oui'?R('Bas de contention',yn(sante.bas_contention)+(sante.bas_contention==='oui'?' — '+sante.contention_protocole:'')):''}
+  </table>
+  ${sante.traitement==='oui'&&sante.soins_detail?'<div class="ta-label">Précision soins et fréquence</div><div class="ta-box">'+sante.soins_detail+'</div>':''}
 
-  ${S('Soins infirmiers','#C0392B')}
-  ${TABLE_START()}
+  <div class="section-bar red">Soins infirmiers</div>
+  <table>
   ${R('Soins infirmiers',yn(sante.soins_infirmiers))}
   ${sante.soins_infirmiers==='oui'?R('Injections',chks(sante.injections)):''}
-  ${TABLE_END()}
-  ${sante.soins_infirmiers==='oui'?TEXTAREA('Détail soins infirmiers et fréquence',sante.soins_infirm_detail):''}
+  </table>
+  ${sante.soins_infirmiers==='oui'&&sante.soins_infirm_detail?'<div class="ta-label">Détail soins infirmiers</div><div class="ta-box">'+sante.soins_infirm_detail+'</div>':''}
 
-  ${S('Pathologies','#C0392B')}
-  ${TABLE_START()}
-  ${R('Diabétique',yn(sante.diabete))}
-  ${sante.diabete==='oui'?R('Injections diabète',chks(sante.diabete_injections)):''}
+  <div class="section-bar red">Pathologies</div>
+  <table>
+  ${R('Diabétique',yn(sante.diabete)+(sante.diabete==='oui'?' — injections : '+chks(sante.diabete_injections):''))}
   ${R('Asthmatique',yn(sante.asthme))}
   ${R('Épilepsie',yn(sante.epilepsie))}
-  ${sante.epilepsie==='oui'?R('Stabilisée',yn(sante.epilepsie_stabilisee)):''}
-  ${sante.epilepsie==='oui'?R('Dernière crise',sante.epilepsie_date):''}
-  ${TABLE_END()}
-  ${sante.epilepsie==='oui'?TEXTAREA('Protocole en cas de crise',sante.epilepsie_protocole):''}
+  ${sante.epilepsie==='oui'?R('Stabilisée / dernière crise',yn(sante.epilepsie_stabilisee)+' / '+(sante.epilepsie_date||'—')):''}
+  </table>
+  ${sante.epilepsie==='oui'&&sante.epilepsie_protocole?'<div class="ta-label">Protocole crise épilepsie</div><div class="ta-box">'+sante.epilepsie_protocole+'</div>':''}
 
-  ${S('Déficiences','#2a6b66')}
-  ${TABLE_START()}
+  <div class="section-bar">Déficiences</div>
+  <table>
   ${R('Non voyant',yn(sante.non_voyant))} ${R('Mal voyant',yn(sante.mal_voyant))}
   ${R('Sourd',yn(sante.sourd))} ${R('Malentendant',yn(sante.malentendant))}
-  ${R('Port d\'appareillage',yn(sante.appareillage))} ${sante.appareillage==='oui'?R('Type appareil',sante.appareillage_type):''}
-  ${R('Dentier',yn(sante.dentier))} ${sante.dentier?R('Gère seul(e)',yn(sante.dentier_seul)):''}
+  ${R('Appareillage',yn(sante.appareillage)+(sante.appareillage==='oui'?' — '+sante.appareillage_type:''))}
+  ${R('Dentier',yn(sante.dentier)+(sante.dentier==='oui'?' — gère seul : '+yn(sante.dentier_seul):''))}
   ${R('Lunettes',yn(sante.lunettes))}
-  ${TABLE_END()}
+  </table>
 
-  ${S('Données médicales','#2a6b66')}
-  ${TABLE_START()}
+  <div class="section-bar">Données médicales</div>
+  <table>
   ${R('Poids',sante.poids?sante.poids+' kg':'—')} ${R('Taille',sante.taille?sante.taille+' cm':'—')}
-  ${TABLE_END()}
-  ${TEXTAREA('Antécédents médicaux',sante.antecedents)}
+  </table>
+  ${sante.antecedents?'<div class="ta-label">Antécédents médicaux</div><div class="ta-box">'+sante.antecedents.replace(/\n/g,'<br>')+'</div>':''}
 
-  ${S('Autorisation & Signature','#555')}
-  ${TABLE_START()}
-  ${R('Autorisation image de '+(conf.autorisation_image?.nom||''),yn(conf.autorisation_image?.autorisation))}
-  ${R('Signé à',conf.signature?.fait_a)} ${R('Le',conf.signature?.date)}
-  ${R('Qualité du signataire',conf.signature?.qualite)}
-  ${TABLE_END()}
+  <div class="section-bar grey">Autorisation & signature</div>
+  <table>
+  ${R('Autorisation image',yn(conf.autorisation_image?.autorisation)+' — '+(conf.autorisation_image?.nom||''))}
+  ${R('Signature','À '+(conf.signature?.fait_a||'')+' le '+(conf.signature?.date||'')+' — '+(conf.signature?.qualite||''))}
+  </table>
 
-  <div style="margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#888;text-align:center">
-    La Lysardière — LE BOURG, 24370 ST JULIEN DE LAMPON — TEL: 0603881513 / 0553305715
-  </div>
+  <div class="footer">La Lysardière — LE BOURG, 24370 ST JULIEN DE LAMPON — Tél : 06 03 88 15 13 / 05 53 30 57 15</div>
 
   </body></html>`;
 }
@@ -2875,12 +2883,12 @@ async function downloadRecap(){
   const fullHtml=buildFullPdfHtml(data);
   try{
     await html2pdf().set({
-      margin:[10,10,12,10],
+      margin:[8,8,10,8],
       filename:`dossier-${nom}-${prenom}.pdf`,
       image:{type:'jpeg',quality:0.95},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css','legacy']}
+      pagebreak:{mode:'css',before:'.page-break'}
     }).from(fullHtml,'string').save();
   } catch(e){
     alert('Erreur PDF : '+(e.message||e));
