@@ -4588,7 +4588,12 @@ function renderTimelineStops(stops,cap,convoiIdx){
     if(s.action==='depart'){dotC='var(--forest)';phaseHtml='<span class="phase-pill" style="background:var(--mint-deep);color:var(--forest)">Phase aller</span>';
       var depBtn=convoiIdx!==undefined?'<button class="btn btn-sm no-print" onclick="modifierPointDepartRetour('+convoiIdx+','+si+',\'depart\')" style="font-size:9px;padding:2px 8px;margin-left:6px;background:var(--forest);color:white;border:none">🚏 Changer point de départ</button>':'';
       pLine='<span style="font-size:11px;color:var(--text-light)">'+sn+' à bord</span>'+depBtn}
-    else if(s.action==='depot'){dotC='var(--red)';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer cette personne">'+p.prenom+'</button>'}).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'')}
+    else if(s.action==='depot'){dotC='var(--red)';var rp=s.retourPrevu&&s.retourPrevu.length;pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){
+      var isT=p.isTransfert;
+      var style='background:none;border:1px dashed '+(isT?'#f59e0b':'var(--red)')+';border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:'+(isT?'#92400e':'var(--red)');
+      var label=isT?p.prenom+' 🔁':p.prenom;
+      return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="'+style+'" title="'+(isT?'Transfert de véhicule — ':'')+'Déplacer">'+label+'</button>';
+    }).join(' ')+'<span class="seats-pill">'+sn+'/'+cap+'</span>'+(rp?'<span class="retour-pill">⟳ retour : '+s.retourPrevu.map(function(p){return p.prenom}).join(', ')+'</span>':'')}
     else if(s.action==='rotation'){dotC=s.sameFoyer?'var(--green)':'var(--copper)';
       pLine='<span style="color:var(--red);font-weight:600">Dép. : </span>'+(s.depPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'dep\')" style="background:none;border:1px dashed var(--red);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--red)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')
       +'&nbsp;<span style="color:var(--green);font-weight:600">Arr. : </span>'+(s.arrPers||[]).map(function(p){return '<button class="no-print" onclick="deplacerPersonne('+convoiIdx+','+si+',\''+p.prenom.replace(/'/g,"\\'")+'\',\''+(p.nom||'').replace(/'/g,"\\'")+'\',\'arr\')" style="background:none;border:1px dashed var(--green);border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;color:var(--green)" title="Déplacer">'+p.prenom+'</button>'}).join(' ')
@@ -4783,7 +4788,8 @@ function insertStopInConvoi(convoiIdx,insertAtIdx){
     +'<option value="rotation">Rotation (les deux)</option>'
     +'</select></div>';
   // Person search for dep
-  html+='<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:600;color:var(--red)">Passagers en départ</label>'
+  html+='<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:600;color:var(--red)">Passagers en départ (descendent ici)</label>'
+    +'<div style="font-size:10px;color:var(--text-light);margin-bottom:3px">💡 Pour un <strong>transfert de véhicule</strong> (personne montée ailleurs dans ce convoi), ajoutez-la ici puis cliquez 🔁 pour la marquer comme transfert — elle ne sera pas retirée de son arrêt de montée.</div>'
     +'<input id="insert-stop-dep-search" placeholder="Rechercher..." style="width:100%;font-size:11px;padding:5px 8px;margin-top:4px" oninput="insertStopSearchPers(\'dep\')">'
     +'<div id="insert-stop-dep-results" style="max-height:100px;overflow-y:auto;margin-top:2px"></div>'
     +'<div id="insert-stop-dep-selected" style="margin-top:4px;font-size:11px"></div></div>';
@@ -4836,37 +4842,45 @@ function insertStopSearchPers(side){
 
 function insertStopAddPers(side,persId,prenom,nom,foyer){
   var p;
-  if(persId){
+  if(persId&&persId!=='__refresh__'){
     p=personnes.find(function(x){return x.id===persId});
     if(!p) return;
     prenom=p.prenom;nom=p.nom||'';foyer=p.foyer||'';
   }
-  if(!prenom) return;
-  var list=side==='dep'?window._insertStopDep:window._insertStopArr;
-  var key=prenom.toLowerCase()+'|'+(nom||'').toLowerCase();
-  if(list.some(function(x){return x.prenom.toLowerCase()+'|'+(x.nom||'').toLowerCase()===key})) return;
-  list.push({id:persId||null,prenom:prenom,nom:nom||'',foyer:foyer||''});
+  if(persId!=='__refresh__'){
+    if(!prenom) return;
+    var list=side==='dep'?window._insertStopDep:window._insertStopArr;
+    var key=prenom.toLowerCase()+'|'+(nom||'').toLowerCase();
+    if(list.some(function(x){return x.prenom.toLowerCase()+'|'+(x.nom||'').toLowerCase()===key})) return;
+    list.push({id:persId||null,prenom:prenom,nom:nom||'',foyer:foyer||'',isTransfert:false});
+  }
   // Refresh display
+  var list=side==='dep'?window._insertStopDep:window._insertStopArr;
   var el=document.getElementById('insert-stop-'+side+'-selected');
   el.innerHTML=list.map(function(pp,i){
-    return '<span style="display:inline-flex;align-items:center;gap:3px;background:'+(side==='dep'?'var(--red-bg)':'var(--green-bg)')+';color:'+(side==='dep'?'var(--red)':'var(--green)')+';padding:2px 8px;border-radius:10px;font-size:10px;margin:2px">'
+    var isTransfert=pp.isTransfert||false;
+    var transfertBtn=side==='dep'
+      ?'<span onclick="toggleTransfert(\''+side+'\','+i+')" title="'+(isTransfert?'Annuler le transfert':'Marquer comme transfert de véhicule')+'" style="cursor:pointer;margin-left:3px;font-size:9px;background:'+(isTransfert?'#f59e0b':'rgba(255,255,255,0.3)')+';padding:1px 4px;border-radius:6px;color:'+(isTransfert?'#1a1a1a':'inherit')+'">'+(isTransfert?'🔁 transfert':'🔁')+'</span>'
+      :'';
+    return '<span style="display:inline-flex;align-items:center;gap:3px;background:'+(isTransfert?'#fef3c7':'(side===\'dep\'?\'var(--red-bg)\'  :\'var(--green-bg)\')')+';background:'+(isTransfert?'#fef3c7':side==='dep'?'var(--red-bg)':'var(--green-bg)')+';color:'+(isTransfert?'#92400e':side==='dep'?'var(--red)':'var(--green)')+';padding:2px 8px;border-radius:10px;font-size:10px;margin:2px">'
       +pp.prenom+' '+pp.nom
+      +transfertBtn
       +'<span style="cursor:pointer;font-weight:700" onclick="insertStopRemovePers(\''+side+'\','+i+')">×</span></span>';
   }).join('');
   document.getElementById('insert-stop-'+side+'-search').value='';
   document.getElementById('insert-stop-'+side+'-results').innerHTML='';
 }
 
+function toggleTransfert(side,idx){
+  var list=side==='dep'?window._insertStopDep:window._insertStopArr;
+  if(list[idx]) list[idx].isTransfert=!list[idx].isTransfert;
+  insertStopAddPers(side,'__refresh__');
+}
+
 function insertStopRemovePers(side,idx){
   var list=side==='dep'?window._insertStopDep:window._insertStopArr;
   list.splice(idx,1);
-  insertStopAddPers(side,'__refresh__');// just refresh display
-  var el=document.getElementById('insert-stop-'+side+'-selected');
-  el.innerHTML=list.map(function(pp,i){
-    return '<span style="display:inline-flex;align-items:center;gap:3px;background:'+(side==='dep'?'var(--red-bg)':'var(--green-bg)')+';color:'+(side==='dep'?'var(--red)':'var(--green)')+';padding:2px 8px;border-radius:10px;font-size:10px;margin:2px">'
-      +pp.prenom+' '+pp.nom
-      +'<span style="cursor:pointer;font-weight:700" onclick="insertStopRemovePers(\''+side+'\','+i+')">×</span></span>';
-  }).join('');
+  insertStopAddPers(side,'__refresh__');
 }
 
 function execInsertStop(convoiIdx,insertAtIdx){
@@ -4936,14 +4950,21 @@ function execInsertStop(convoiIdx,insertAtIdx){
   c.stops.splice(insertAtIdx,0,newStop);
   
   // Remove moved persons from their original stops
+  // BUT: if a person is marked isTransfert in depPers of another stop, keep them there
+  // (they intentionally appear in two stops: arrive at stop A, depart at stop B for vehicle change)
   var allMoved=depPers.concat(arrPers);
   allMoved.forEach(function(mp){
     var mpKey=mp.prenom.toLowerCase()+'|'+(mp.nom||'').toLowerCase();
     c.stops.forEach(function(s,si){
       if(si===insertAtIdx) return;
       if(s.action==='depart'||s.action==='retour') return;
-      if(s.depPers) s.depPers=s.depPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
+      // Remove from arrPers always (person is moving to a new stop)
       if(s.arrPers) s.arrPers=s.arrPers.filter(function(pp){return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey});
+      // Remove from depPers ONLY if NOT marked isTransfert
+      if(s.depPers) s.depPers=s.depPers.filter(function(pp){
+        if(pp.isTransfert) return true; // keep transfer passengers
+        return pp.prenom.toLowerCase()+'|'+(pp.nom||'').toLowerCase()!==mpKey;
+      });
     });
   });
   
@@ -4978,20 +4999,26 @@ function execInsertStop(convoiIdx,insertAtIdx){
   });
   
   // Update convoi totals from stops
+  // isTransfert persons in depPers are NOT added to c.depart (they're already there from their original stop)
   var newDep=[],newArr=[];
   c.stops.forEach(function(s){
     if(s.action==='depart'||s.action==='retour') return;
-    (s.depPers||[]).forEach(function(p){newDep.push(p)});
+    (s.depPers||[]).forEach(function(p){if(!p.isTransfert) newDep.push(p)});
     (s.arrPers||[]).forEach(function(p){newArr.push(p)});
   });
   c.depart=newDep;
   c.arrivee=newArr;
   
   // Recalculate seats for each stop (fixes "X à bord" display)
+  // Transfer persons don't add to initial seat count (they're already counted)
   var seatCount=newDep.length;
   c.stops[0].seats=seatCount;
   for(var si=1;si<c.stops.length;si++){
-    seatCount=seatCount-(c.stops[si].depPers||[]).length+(c.stops[si].arrPers||[]).length;
+    var depCount=(c.stops[si].depPers||[]).filter(function(p){return !p.isTransfert}).length;
+    var transfertDep=(c.stops[si].depPers||[]).filter(function(p){return p.isTransfert}).length;
+    // Transfer persons decrement seats (they leave this convoi) but weren't in initial count of c.depart
+    // So we treat them as -1 from boarding count since they ARE physically in the vehicle from their pickup stop
+    seatCount=seatCount-depCount-transfertDep+(c.stops[si].arrPers||[]).length;
     c.stops[si].seats=seatCount;
   }
   
