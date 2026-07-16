@@ -982,12 +982,17 @@ function buildFichesSection() {
   const total = allFiches.length;
   if (!total) return '';
 
-  const approx = allFiches.filter(f => f.statut_matching === 'approx');
-  const nouveau = allFiches.filter(f => f.statut_matching === 'nouveau');
+  // Ne montrer dans "à classer" que les fiches approx ou nouveau (pas les exact déjà liées)
+  const aClasser = allFiches.filter(f => f.statut_matching !== 'exact');
+  const approx = aClasser.filter(f => f.statut_matching === 'approx');
+  const nouveau = aClasser.filter(f => f.statut_matching === 'nouveau');
+
+  if(!aClasser.length) return '';
+
   const alertHtml = approx.length ? `<div style="background:#fff9e6;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px">⚠️ <strong>${approx.length} fiche(s)</strong> avec correspondance approximative à vérifier.</div>` : '';
   const nouveauHtml = nouveau.length ? `<div style="background:#f0f9ff;border:1px solid #7dd3fc;border-radius:6px;padding:8px 12px;font-size:12px;color:#0369a1;margin-bottom:10px">🆕 <strong>${nouveau.length} nouveau(x) vacancier(s)</strong> créés depuis le formulaire.</div>` : '';
 
-  const rows = allFiches.map(f => {
+  const rows = aClasser.map(f => {
     const p = allPersonnes.find(x => x.id === f.personne_id);
     const typLabel = {weekend_theme:'🎭 Week-end thème',mini_sejour:'🌿 Mini séjour',weekend_ordinaire:'🏡 Week-end ordinaire',sejour:'📋 Séjour long'}[f.type_sejour]||f.type_sejour;
     const matchBadge = f.statut_matching==='exact'
@@ -1013,7 +1018,7 @@ function buildFichesSection() {
   }).join('');
 
   return `<div class="section-title" onclick="toggleFiches()" style="cursor:pointer;user-select:none">
-    📋 Fiches formulaire reçues <span class="count">${total}</span>
+    📋 Fiches formulaire à classer <span class="count">${aClasser.length}</span>
     <span class="chevron" id="fiches-chevron" style="margin-left:auto">▶</span>
   </div>
   <div id="fiches-container" style="display:none">
