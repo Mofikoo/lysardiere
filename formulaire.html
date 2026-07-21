@@ -109,15 +109,16 @@ textarea{resize:vertical;min-height:80px}
 .progress-bar-fill{height:4px;border-radius:4px;background:var(--forest);transition:width 0.4s}
 
 /* ── NAVIGATION BUTTONS ── */
-.nav-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.06)}
+.nav-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:2px solid var(--border);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;z-index:100;box-shadow:0 -6px 24px rgba(0,0,0,0.10)}
 .btn{padding:10px 22px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
-.btn-primary{background:var(--forest);color:white}
-.btn-primary:hover{background:var(--forest-mid)}
-.btn-secondary{background:var(--border);color:var(--text-mid)}
+.btn-primary{background:var(--forest);color:white;font-size:16px;padding:14px 40px;border-radius:12px;box-shadow:0 4px 14px rgba(24,83,79,0.35);letter-spacing:0.2px}
+.btn-primary:hover{background:var(--forest-mid);transform:translateY(-1px);box-shadow:0 6px 18px rgba(24,83,79,0.4)}
+.btn-primary:active{transform:translateY(0);box-shadow:0 2px 8px rgba(24,83,79,0.3)}
+.btn-secondary{background:var(--border);color:var(--text-mid);font-size:13px;padding:10px 20px}
 .btn-secondary:hover{background:#ddd}
-.btn-submit{background:var(--copper);color:white;font-size:15px;padding:12px 32px}
-.btn-submit:hover{background:#b56b4a}
-.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-submit{background:var(--copper);color:white;font-size:16px;padding:14px 40px;border-radius:12px;box-shadow:0 4px 14px rgba(199,123,90,0.35)}
+.btn-submit:hover{background:#b56b4a;transform:translateY(-1px)}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
 
 /* ── STEP PAGES ── */
 .step-page{display:none}
@@ -1453,7 +1454,7 @@ textarea{resize:vertical;min-height:80px}
 <div class="nav-bar" id="nav-bar">
   <button class="btn btn-secondary" id="btn-prev" onclick="prevStep()" style="display:none">← Précédent</button>
   <div style="font-size:12px;color:var(--text-light)" id="step-indicator">Étape 1 sur 9</div>
-  <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Suivant →</button>
+  <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Suivant &nbsp;→</button>
   <button class="btn btn-submit" id="btn-submit" onclick="submitForm()" style="display:none">✅ Envoyer la fiche</button>
 </div>
 
