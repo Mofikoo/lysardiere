@@ -7,171 +7,63 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F7F3EC;
-    --card: #FFFFFF;
-    --forest: #18534F;
-    --mint: #ECF8F6;
-    --gold: #FEEAA1;
-    --copper: #C77B5A;
-    --red: #C84B4B;
-    --green: #2E8B57;
-    --text-dark: #1A2E2C;
-    --text-mid: #5C6B6A;
-    --text-light: #8A9695;
-    --border: #E5E0D6;
-    --shadow-lg: 0 10px 40px rgba(24,83,79,0.15);
-    --radius: 16px;
-    --radius-xs: 8px;
+    --bg: #F7F3EC; --card: #FFFFFF; --forest: #18534F; --mint: #ECF8F6;
+    --red: #C84B4B; --text-dark: #1A2E2C; --text-mid: #5C6B6A;
+    --text-light: #8A9695; --border: #E5E0D6;
+    --shadow-lg: 0 10px 40px rgba(24,83,79,0.15); --radius: 16px; --radius-xs: 8px;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text-dark);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .container {
-    width: 100%;
-    max-width: 500px;
-  }
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 48px 40px;
-    box-shadow: var(--shadow-lg);
-    text-align: center;
-  }
-  .title {
-    font-family: 'Fraunces', serif;
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--forest);
-    margin: 0 0 6px 0;
-  }
-  .subtitle {
-    font-size: 14px;
-    color: var(--text-mid);
-    margin-bottom: 32px;
-  }
-  .input {
-    width: 100%;
-    font-size: 15px;
-    padding: 14px 18px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-xs);
-    margin-bottom: 12px;
-    text-align: center;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .input:focus { border-color: var(--forest); }
-  .btn {
-    width: 100%;
-    background: var(--forest);
-    color: white;
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    padding: 14px;
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: background 0.2s;
-  }
-  .btn:hover { background: #144742; }
-  .error {
-    font-size: 13px;
-    color: var(--red);
-    margin-bottom: 12px;
-    display: none;
-  }
-  .apps-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 8px;
-  }
-  .app-card {
-    background: var(--mint);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-xs);
-    padding: 28px 16px;
-    text-decoration: none;
-    color: var(--text-dark);
-    text-align: center;
-    transition: all 0.2s;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  .app-card:hover {
-    border-color: var(--forest);
-    background: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(24,83,79,0.1);
-  }
-  .app-icon { font-size: 40px; }
-  .app-name {
-    font-family: 'Fraunces', serif;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--forest);
-  }
-  .app-desc {
-    font-size: 12px;
-    color: var(--text-mid);
-  }
-  .logout {
-    margin-top: 24px;
-    background: none;
-    border: none;
-    color: var(--text-light);
-    font-size: 12px;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-  .logout:hover { color: var(--red); }
-  @media (max-width: 500px) {
-    .apps-grid { grid-template-columns: 1fr; }
-    .card { padding: 32px 24px; }
-  }
+  body { margin:0;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-dark);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px; }
+  .container { width:100%;max-width:500px; }
+  .card { background:var(--card);border-radius:var(--radius);padding:48px 40px;box-shadow:var(--shadow-lg);text-align:center; }
+  .title { font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--forest);margin:0 0 6px 0; }
+  .subtitle { font-size:14px;color:var(--text-mid);margin-bottom:32px; }
+  .input { width:100%;font-size:15px;padding:14px 18px;border:2px solid var(--border);border-radius:var(--radius-xs);margin-bottom:12px;text-align:center;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s; }
+  .input:focus { border-color:var(--forest); }
+  .btn { width:100%;background:var(--forest);color:white;border:none;font-size:15px;font-weight:600;padding:14px;border-radius:var(--radius-xs);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.2s; }
+  .btn:hover { background:#144742; }
+  .btn:disabled { opacity:0.6;cursor:not-allowed; }
+  .error { font-size:13px;color:var(--red);margin-bottom:12px;display:none; }
+  .apps-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px; }
+  .app-card { background:var(--mint);border:2px solid var(--border);border-radius:var(--radius-xs);padding:28px 16px;text-decoration:none;color:var(--text-dark);text-align:center;transition:all 0.2s;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px; }
+  .app-card:hover { border-color:var(--forest);background:white;transform:translateY(-2px);box-shadow:0 4px 12px rgba(24,83,79,0.1); }
+  .app-icon { font-size:40px; }
+  .app-name { font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--forest); }
+  .app-desc { font-size:12px;color:var(--text-mid); }
+  .logout { margin-top:24px;background:none;border:none;color:var(--text-light);font-size:12px;cursor:pointer;text-decoration:underline; }
+  .logout:hover { color:var(--red); }
+  .user-info { font-size:12px;color:var(--text-mid);margin-bottom:16px; }
+  @media (max-width:500px) { .apps-grid{grid-template-columns:1fr} .card{padding:32px 24px} }
 </style>
 </head>
 <body>
-
 <div class="container">
   <!-- LOGIN VIEW -->
   <div id="login-view" class="card">
     <div class="title">La Lysardière</div>
     <div class="subtitle">Accès à l'espace privé</div>
-    <input type="password" id="pw" class="input" placeholder="Mot de passe" onkeydown="if(event.key==='Enter') checkLogin()">
+    <input type="email" id="email" class="input" placeholder="Adresse e-mail" onkeydown="if(event.key==='Enter') document.getElementById('pw').focus()" autocomplete="email">
+    <input type="password" id="pw" class="input" placeholder="Mot de passe" onkeydown="if(event.key==='Enter') checkLogin()" autocomplete="current-password">
     <label style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-mid);margin-bottom:14px;cursor:pointer;user-select:none">
       <input type="checkbox" id="remember" style="width:auto;cursor:pointer">
       <span>Rester connecté sur cet appareil</span>
     </label>
-    <div id="error" class="error">Mot de passe incorrect</div>
-    <button class="btn" onclick="checkLogin()">Se connecter</button>
+    <div id="error" class="error">Email ou mot de passe incorrect</div>
+    <button class="btn" id="login-btn" onclick="checkLogin()">Se connecter</button>
   </div>
 
   <!-- APP SELECTOR VIEW -->
   <div id="selector-view" class="card" style="display:none">
     <div class="title">La Lysardière</div>
     <div class="subtitle">Choisissez une application</div>
+    <div id="user-info" class="user-info"></div>
     <div class="apps-grid">
       <a href="transport.html" class="app-card">
         <div class="app-icon">🚐</div>
         <div class="app-name">Transport</div>
         <div class="app-desc">Trajets et optimisation</div>
       </a>
-      <a href="document.html" class="app-card">
+      <a href="documents.html" class="app-card">
         <div class="app-icon">📄</div>
         <div class="app-name">Documents</div>
         <div class="app-desc">Gestion documentaire</div>
@@ -181,58 +73,83 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Mot de passe par défaut : "Lysardiere2026"
-// Pour changer : génère le SHA-256 sur https://emn178.github.io/online-tools/sha256.html
-var APP_PASS_HASH='2e22c2cd22ebec02b8de4a82585aef6b9489a37178becb09236471355af16c58';
+const SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
+const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 
-async function sha256(str){
-  var buf=new TextEncoder().encode(str);
-  var hash=await crypto.subtle.digest('SHA-256',buf);
-  return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
-}
+const supa=supabase.createClient(SUPA_URL,SUPA_ANON,{
+  auth:{
+    persistSession:true,
+    storageKey:'lys_session',
+    storage:localStorage,
+    autoRefreshToken:true
+  }
+});
 
 async function checkLogin(){
+  var email=document.getElementById('email').value.trim();
   var pw=document.getElementById('pw').value;
-  if(!pw) return;
-  var h=await sha256(pw);
-  if(h===APP_PASS_HASH){
-    var remember=document.getElementById('remember').checked;
-    if(remember){
-      localStorage.setItem('lys_auth','1');
-    }
-    sessionStorage.setItem('lys_auth','1');
-    showSelector();
-  } else {
-    document.getElementById('error').style.display='block';
+  var btn=document.getElementById('login-btn');
+  var errEl=document.getElementById('error');
+  if(!email||!pw) return;
+  btn.disabled=true;
+  btn.textContent='Connexion...';
+  errEl.style.display='none';
+  var {data,error}=await supa.auth.signInWithPassword({email,password:pw});
+  if(error){
+    errEl.textContent=error.message==='Invalid login credentials'?'Email ou mot de passe incorrect':error.message;
+    errEl.style.display='block';
     document.getElementById('pw').value='';
     document.getElementById('pw').focus();
+    btn.disabled=false;
+    btn.textContent='Se connecter';
+    return;
   }
+  // If "rester connecté" unchecked, use signOut on tab close via sessionStorage flag
+  if(!document.getElementById('remember').checked){
+    sessionStorage.setItem('lys_session_only','1');
+  } else {
+    sessionStorage.removeItem('lys_session_only');
+  }
+  showSelector(data.user);
 }
 
-function showSelector(){
+function showSelector(user){
   document.getElementById('login-view').style.display='none';
   document.getElementById('selector-view').style.display='block';
+  if(user) document.getElementById('user-info').textContent='Connecté : '+user.email;
 }
 
-function logout(){
-  sessionStorage.removeItem('lys_auth');
-  localStorage.removeItem('lys_auth');
+async function logout(){
+  await supa.auth.signOut();
+  sessionStorage.removeItem('lys_session_only');
   document.getElementById('selector-view').style.display='none';
   document.getElementById('login-view').style.display='block';
+  document.getElementById('email').value='';
   document.getElementById('pw').value='';
   document.getElementById('remember').checked=false;
-  document.getElementById('pw').focus();
+  document.getElementById('user-info').textContent='';
+  document.getElementById('email').focus();
 }
 
-// Auto-skip if already authenticated (session or persistent)
-if(sessionStorage.getItem('lys_auth')==='1'||localStorage.getItem('lys_auth')==='1'){
-  // Restore session flag for transport.html compatibility
-  sessionStorage.setItem('lys_auth','1');
-  showSelector();
-} else {
-  document.getElementById('pw').focus();
-}
+// Auto-skip if already authenticated
+(async function(){
+  var {data:{session}}=await supa.auth.getSession();
+  if(session){
+    // If session_only flag set and no active session tab, sign out
+    showSelector(session.user);
+  } else {
+    document.getElementById('email').focus();
+  }
+})();
+
+// Sign out if session-only and page is closed/refreshed
+window.addEventListener('beforeunload',function(){
+  if(sessionStorage.getItem('lys_session_only')==='1'){
+    supa.auth.signOut();
+  }
+});
 </script>
 </body>
 </html>

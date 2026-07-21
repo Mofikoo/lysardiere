@@ -328,6 +328,7 @@ body {
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
@@ -338,14 +339,28 @@ let allPersonnes=[], allDocuments=[], allSejours=[], allSejoursPersonnes=[], all
 
 function esc(str) { return (str||'').replace(/'/g, "\\'"); }
 
+async function getJWT(){
+  try{
+    const {data:{session}}=await window._supaClient.auth.getSession();
+    if(session&&session.access_token) return session.access_token;
+  }catch(e){}
+  return SUPABASE_ANON_KEY;
+}
+
 async function api(path, method='GET', body=null) {
-  const opts = { method, headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type':'application/json', Prefer:'return=representation' } };
+  const jwt = await getJWT();
+  const opts = { method, headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${jwt}`, 'Content-Type':'application/json', Prefer:'return=representation' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(SUPABASE_URL + path, opts);
   if (!res.ok) return null;
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
+
+// ── AUTH ──────────────────────────────────
+window._supaClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth:{persistSession:true,storageKey:'lys_session',storage:localStorage,autoRefreshToken:true}
+});
 
 async function fetchData() {
   const [pRaw, docs, sejours, sp, archivedSejours, fiches] = await Promise.all([
@@ -512,7 +527,7 @@ function buildStats() {
 async function deleteDoc(docId, storagePath) {
   if (!confirm('Supprimer ce document définitivement ?')) return;
   await api(`/rest/v1/documents?id=eq.${docId}`, 'DELETE');
-  await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, { method:'DELETE', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}` } });
+  await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, { method:'DELETE', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${await getJWT()}` } });
   await init();
 }
 

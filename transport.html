@@ -1214,6 +1214,7 @@ input:focus, select:focus {
   </div>
   <div id="guide-sections"></div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var guideSections=[
 {title:'1. Personnes',icon:'&#128100;',content:''
@@ -1468,11 +1469,22 @@ function lyConfirm(msg){
 }
 
 var SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+var SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+
+// Returns the current JWT (authenticated user token) or falls back to anon
+async function getJWT(){
+  var session=null;
+  try{
+    var r=await window._supaClient.auth.getSession();
+    session=r.data.session;
+  } catch(e){}
+  return session&&session.access_token?session.access_token:SUPA_ANON;
+}
 
 async function supaFetch(path,method,body,extraHeaders){
   var url=SUPA_URL+'/rest/v1/'+path;
-  var headers={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
+  var jwt=await getJWT();
+  var headers={'apikey':SUPA_ANON,'Authorization':'Bearer '+jwt,'Content-Type':'application/json','Prefer':'return=minimal'};
   if(extraHeaders){for(var k in extraHeaders) headers[k]=extraHeaders[k]}
   var opts={method:method||'GET',headers:headers};
   if(body) opts.body=JSON.stringify(body);
@@ -1637,7 +1649,7 @@ async function fetchAllFromTable(table){
   var from=0;
   while(true){
     var url=SUPA_URL+'/rest/v1/'+table+'?select=*&order=id.asc&limit='+pageSize+'&offset='+from;
-    var res=await fetch(url,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    var res=await fetch(url,{headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}});
     if(!res.ok){
       if(res.status===404){return null} // table n'existe pas
       throw new Error('Erreur fetch '+table+' : '+res.status);
@@ -1656,7 +1668,7 @@ async function listStorageFiles(bucket,prefix){
   var url=SUPA_URL+'/storage/v1/object/list/'+bucket;
   var res=await fetch(url,{
     method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+    headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({prefix:prefix,limit:1000,offset:0})
   });
   if(!res.ok) return [];
@@ -1679,7 +1691,7 @@ async function listStorageFiles(bucket,prefix){
 
 async function downloadStorageFile(bucket,path){
   var url=SUPA_URL+'/storage/v1/object/'+bucket+'/'+path;
-  var res=await fetch(url,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  var res=await fetch(url,{headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}});
   if(!res.ok) throw new Error('Erreur téléchargement '+path);
   return await res.blob();
 }
@@ -1891,7 +1903,7 @@ async function restoreBackup(file){
           try{
             await fetch(SUPA_URL+'/storage/v1/object/'+bucket+'/'+fInfo.path,{
               method:'POST',
-              headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'x-upsert':'true','Content-Type':fInfo.contentType||'application/octet-stream'},
+              headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON,'x-upsert':'true','Content-Type':fInfo.contentType||'application/octet-stream'},
               body:blob
             });
           } catch(e){console.warn('Upload storage echoué :',fInfo.path,e)}
@@ -6442,20 +6454,28 @@ async function manSaveToSemaines(){
   document.getElementById('man-preview-card').style.display='none';
 }
 
-// Vérification d'authentification (depuis index.html)
-if(sessionStorage.getItem('lys_auth')!=='1'&&localStorage.getItem('lys_auth')!=='1'){
-  window.location.href='index.html';
-} else {
-  // Sync flags
-  if(localStorage.getItem('lys_auth')==='1') sessionStorage.setItem('lys_auth','1');
+// ── AUTH CHECK ──────────────────────────────
+(async function(){
+  if(typeof supabase==='undefined'){
+    // supabase.js not loaded yet — wait briefly
+    await new Promise(r=>setTimeout(r,200));
+  }
+  window._supaClient=supabase.createClient(SUPA_URL,SUPA_ANON,{
+    auth:{persistSession:true,storageKey:'lys_session',storage:localStorage,autoRefreshToken:true}
+  });
+  var {data:{session}}=await window._supaClient.auth.getSession();
+  if(!session){
+    window.location.href='index.html';
+    return;
+  }
   loadData();
-}
+})();
 
 // ── REALTIME SYNC ────────────────────────────
 var realtimeWs=null;
 function initRealtime(){
   try{
-    var wsUrl=SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0';
+    var wsUrl=SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_ANON+'&vsn=1.0.0';
     realtimeWs=new WebSocket(wsUrl);
     var heartbeat=null;
     realtimeWs.onopen=function(){
