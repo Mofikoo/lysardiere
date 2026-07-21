@@ -1453,7 +1453,7 @@ textarea{resize:vertical;min-height:80px}
 <!-- NAV BAR -->
 <div class="nav-bar" id="nav-bar">
   <button class="btn btn-secondary" id="btn-prev" onclick="prevStep()" style="display:none">← Précédent</button>
-  <div style="font-size:12px;color:var(--text-light)" id="step-indicator">Étape 1 sur 9</div>
+  <div style="font-size:12px;color:var(--text-light)" id="step-indicator">Étape 1 sur 8</div>
   <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Suivant &nbsp;→</button>
   <button class="btn btn-submit" id="btn-submit" onclick="submitForm()" style="display:none">✅ Envoyer la fiche</button>
 </div>
@@ -1473,7 +1473,7 @@ async function api(path, method='GET', body=null){
 
 // ══ STATE ══
 let currentStep = 1;
-const TOTAL_STEPS = 9;
+const TOTAL_PAGES = 9; // nombre réel de pages DOM (la dernière = confirmation)
 let selectedTypeSejour = null;
 let ficheInscriptionBuiltFor = null;
 let formData = {};
@@ -1524,9 +1524,10 @@ let SEJOURS_CONFIG = {
 };
 
 // ══ STEPPER ══
+const TOTAL_STEPS = 8; // étapes numérotées (sans la confirmation)
 const STEP_LABELS = [
   'Type de séjour','Inscription','Identité & mobilité','Hygiène & alimentation',
-  'Communication & relation','Déplacements & activités','Troubles & habitudes','Santé','Confirmation'
+  'Communication & relation','Déplacements & activités','Troubles & habitudes','Santé'
 ];
 
 function initStepper(){
@@ -1544,8 +1545,13 @@ function updateStepper(){
     el.className='step-item '+(i===currentStep?'active':i<currentStep?'done':'todo');
     el.querySelector('.step-num').textContent=i<currentStep?'✓':String(i);
   }
-  document.getElementById('step-indicator').textContent=`Étape ${currentStep} sur ${TOTAL_STEPS}`;
-  document.getElementById('progress-fill').style.width=(currentStep/TOTAL_STEPS*100)+'%';
+  if(currentStep<=TOTAL_STEPS){
+    document.getElementById('step-indicator').textContent=`Étape ${currentStep} sur ${TOTAL_STEPS}`;
+    document.getElementById('progress-fill').style.width=(currentStep/TOTAL_STEPS*100)+'%';
+  } else {
+    document.getElementById('step-indicator').textContent='';
+    document.getElementById('progress-fill').style.width='100%';
+  }
 }
 
 function tryGoToStep(n){if(n<currentStep) goToStep(n);}
@@ -1566,9 +1572,11 @@ function updateNavButtons(){
   const next=document.getElementById('btn-next');
   const submit=document.getElementById('btn-submit');
   const nav=document.getElementById('nav-bar');
+  // Step 9 = confirmation page, hide entire nav bar
+  if(currentStep===9){nav.style.display='none';return;}
+  nav.style.display='flex';
   prev.style.display=currentStep>1?'block':'none';
-  if(currentStep===9){next.style.display='none';submit.style.display='none';nav.style.display='none';}
-  else if(currentStep===8){next.style.display='none';submit.style.display='block';}
+  if(currentStep===8){next.style.display='none';submit.style.display='block';}
   else{next.style.display='block';submit.style.display='none';}
 }
 
@@ -1579,7 +1587,7 @@ function nextStep(){
   // if(!validateStep(currentStep)) return;
   if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
   if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
-  if(currentStep<TOTAL_STEPS) goToStep(currentStep+1);
+  if(currentStep<9) goToStep(currentStep+1);
 }
 
 // ══ TYPE SÉJOUR ══
