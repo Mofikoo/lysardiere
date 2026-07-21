@@ -1313,44 +1313,54 @@ function openFicheDetail(ficheId){
 }
 
 // ── SÉJOURS CONFIG FORMULAIRE ──
-const SEJOURS_STORAGE_KEY = 'lys_sejours_config';
+// ── SÉJOURS CONFIG FORMULAIRE (Supabase) ──
+const SEJOURS_DEFAULT = {
+  weekend_theme:{ sessions:["COUPLES du 27 au 29 Mars : 3 jours","PÂQUES du 4 au 6 Avril : 3 jours","PLAISIRS EN PERIGORD du 25 au 27 Avril : 3 jours","ENTRE COPINES du 25 au 27 avril : 3 jours","AUTOUR DES ANIMAUX du 1 au 3 Mai : 3 jours","Z'ANIMAUX du 27 au 29 Novembre : 3 jours","MUSIC AND CO du 27 au 29 Novembre : 3 jours"], prix:'390€ TTC' },
+  mini_sejour:{ sessions:["TRESOR PERDU DU PERIGORD du 7 au 11 Mai","C'EST LA FETE ! du 7 au 11 Mai","GRAND MIXTE du 14 au 18 Mai","MELI MELO du 14 au 18 Mai","PECHE ET PETANQUE PARTY","ENTRE COPINES du 4 au 8 Novembre","GOURMANDISES D'AUTOMNE du 4 au 8 Novembre","DOUCEUR D'AUTOMNE du 11 au 15 Novembre"], prix:'590€ TTC' }
+};
 
-function loadSejoursConfig(){
-  try{ return JSON.parse(localStorage.getItem(SEJOURS_STORAGE_KEY))||null; } catch(e){ return null; }
+async function loadSejoursConfig(){
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/sejours_config?select=id,sessions,prix&id=in.(weekend_theme,mini_sejour)`,{
+      headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'}
+    });
+    if(!res.ok) return SEJOURS_DEFAULT;
+    const rows=await res.json();
+    if(!rows||!rows.length) return SEJOURS_DEFAULT;
+    const cfg=JSON.parse(JSON.stringify(SEJOURS_DEFAULT));
+    rows.forEach(r=>{
+      if(cfg[r.id]){
+        cfg[r.id].sessions=Array.isArray(r.sessions)?r.sessions:JSON.parse(r.sessions||'[]');
+        cfg[r.id].prix=r.prix||cfg[r.id].prix;
+      }
+    });
+    return cfg;
+  }catch(e){ return SEJOURS_DEFAULT; }
 }
 
-function openSejoursConfig(){
-  const saved = loadSejoursConfig();
-  const cfg = saved || {
-    weekend_theme: { sessions:['COUPLES du 27 au 29 Mars : 3 jours','PÂQUES du 4 au 6 Avril : 3 jours','PLAISIRS EN PERIGORD du 25 au 27 Avril : 3 jours','ENTRE COPINES du 25 au 27 avril : 3 jours','AUTOUR DES ANIMAUX du 1 au 3 Mai : 3 jours','Z\'ANIMAUX du 27 au 29 Novembre : 3 jours','MUSIC AND CO du 27 au 29 Novembre : 3 jours'], prix:'390€ TTC' },
-    mini_sejour: { sessions:['TRESOR PERDU DU PERIGORD du 7 au 11 Mai','C\'EST LA FETE ! du 7 au 11 Mai','GRAND MIXTE du 14 au 18 Mai','MELI MELO du 14 au 18 Mai','PECHE ET PETANQUE PARTY','ENTRE COPINES du 4 au 8 Novembre','GOURMANDISES D\'AUTOMNE du 4 au 8 Novembre','DOUCEUR D\'AUTOMNE du 11 au 15 Novembre'], prix:'590€ TTC' }
-  };
-
-  const makeRows = (type) => cfg[type].sessions.map((s,i) =>
+async function openSejoursConfig(){
+  const cfg=await loadSejoursConfig();
+  const makeRows=(type)=>cfg[type].sessions.map((s,i)=>
     `<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
       <input type="text" value="${s.replace(/"/g,'&quot;')}" id="cfg-${type}-${i}" style="flex:1;padding:6px 10px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px">
-      <button onclick="removeCfgRow('${type}',${i})" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;color:#991b1b;font-size:12px">✕</button>
+      <button onclick="this.parentElement.remove()" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;color:#991b1b;font-size:12px">✕</button>
     </div>`
   ).join('');
-
-  let overlay = document.getElementById('sejours-config-overlay');
-  if(!overlay){ overlay=document.createElement('div'); overlay.id='sejours-config-overlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(overlay); }
-
-  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+  let overlay=document.getElementById('sejours-config-overlay');
+  if(!overlay){overlay=document.createElement('div');overlay.id='sejours-config-overlay';overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';document.body.appendChild(overlay);}
+  overlay.innerHTML=`<div style="background:white;border-radius:12px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="background:#18534F;padding:16px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
       <span style="color:white;font-family:'Fraunces',serif;font-size:16px">⚙️ Séjours du formulaire en ligne</span>
       <button onclick="document.getElementById('sejours-config-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:14px">✕</button>
     </div>
     <div style="padding:20px">
-      <p style="font-size:12px;color:#5C6B6A;margin-bottom:16px">Ces séjours apparaissent dans le formulaire public que vous envoyez aux structures. Modifier ici les met à jour automatiquement.</p>
+      <p style="font-size:12px;color:#5C6B6A;margin-bottom:16px">Ces séjours apparaissent dans le formulaire public. Les modifications sont sauvegardées dans Supabase et s'appliquent immédiatement.</p>
       <div style="font-weight:700;font-size:13px;color:#18534F;margin-bottom:8px">🎭 Week-ends à thèmes — <input type="text" id="cfg-wt-prix" value="${cfg.weekend_theme.prix}" style="padding:4px 8px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px;width:100px"></div>
       <div id="cfg-wt-rows">${makeRows('weekend_theme')}</div>
       <button onclick="addCfgRow('weekend_theme')" style="background:#ECF8F6;border:1px solid #b8e4df;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;color:#18534F;margin-bottom:16px">+ Ajouter un week-end</button>
-
       <div style="font-weight:700;font-size:13px;color:#18534F;margin-bottom:8px">🌿 Mini Séjours — <input type="text" id="cfg-ms-prix" value="${cfg.mini_sejour.prix}" style="padding:4px 8px;border:1px solid #E5E0D6;border-radius:6px;font-size:12px;width:100px"></div>
       <div id="cfg-ms-rows">${makeRows('mini_sejour')}</div>
       <button onclick="addCfgRow('mini_sejour')" style="background:#ECF8F6;border:1px solid #b8e4df;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;color:#18534F;margin-bottom:16px">+ Ajouter un mini séjour</button>
-
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid #E5E0D6">
         <button onclick="document.getElementById('sejours-config-overlay').remove()" style="padding:8px 18px;border:1px solid #E5E0D6;border-radius:8px;cursor:pointer;font-size:13px;background:white">Annuler</button>
         <button onclick="saveSejoursConfig()" style="padding:8px 18px;background:#18534F;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">💾 Enregistrer</button>
@@ -1370,22 +1380,30 @@ function addCfgRow(type){
   container.appendChild(div);
 }
 
-function removeCfgRow(type, idx){
-  const el=document.getElementById('cfg-'+type+'-'+idx);
-  if(el) el.closest('div[style]').remove();
-}
-
-function saveSejoursConfig(){
+async function saveSejoursConfig(){
   const wtRows=document.querySelectorAll('#cfg-wt-rows input[type=text]');
   const msRows=document.querySelectorAll('#cfg-ms-rows input[type=text]');
-  const cfg={
-    weekend_theme:{ sessions:[...wtRows].map(i=>i.value.trim()).filter(Boolean), prix:document.getElementById('cfg-wt-prix').value.trim()||'390€ TTC' },
-    mini_sejour:{ sessions:[...msRows].map(i=>i.value.trim()).filter(Boolean), prix:document.getElementById('cfg-ms-prix').value.trim()||'590€ TTC' }
-  };
-  localStorage.setItem(SEJOURS_STORAGE_KEY, JSON.stringify(cfg));
-  document.getElementById('sejours-config-overlay').remove();
-  alert('✅ Configuration enregistrée. Le formulaire utilisera ces séjours à la prochaine ouverture.');
+  const updates=[
+    {id:'weekend_theme',sessions:[...wtRows].map(i=>i.value.trim()).filter(Boolean),prix:document.getElementById('cfg-wt-prix').value.trim()||'390€ TTC'},
+    {id:'mini_sejour',sessions:[...msRows].map(i=>i.value.trim()).filter(Boolean),prix:document.getElementById('cfg-ms-prix').value.trim()||'590€ TTC'}
+  ];
+  try{
+    const jwt=await getJWT();
+    for(const row of updates){
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/sejours_config?id=eq.${row.id}`,{
+        method:'PATCH',
+        headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json',Prefer:'return=minimal'},
+        body:JSON.stringify({sessions:row.sessions,prix:row.prix,updated_at:new Date().toISOString()})
+      });
+      if(!res.ok) throw new Error(await res.text());
+    }
+    document.getElementById('sejours-config-overlay').remove();
+    alert('✅ Séjours mis à jour dans Supabase. Le formulaire utilisera ces nouvelles données immédiatement.');
+  }catch(e){
+    alert('Erreur lors de la sauvegarde : '+e.message);
+  }
 }
+
 
 function renderAll() {
   const personnes=getFilteredPersonnes(), fSejour=document.getElementById('filterSejour').value;

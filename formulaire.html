@@ -1478,7 +1478,8 @@ let ficheInscriptionBuiltFor = null;
 let formData = {};
 
 // ══ SÉJOURS CONFIG (modifiable dans documents.html) ══
-const SEJOURS_CONFIG = {
+// Séjours config — chargé depuis Supabase, fallback sur valeurs par défaut
+let SEJOURS_CONFIG = {
   weekend_theme: {
     label: 'Week-ends à thèmes',
     intro: 'Tous ces week-ends commencent à partir de 10h et se terminent vers 17h30.',
@@ -1512,12 +1513,12 @@ const SEJOURS_CONFIG = {
     label: 'Week-end et séjour ordinaire',
     intro: 'Arrivée le matin et départ vers 17h30. Tarif 100 euros TTC / jour.',
     prix: '100€ TTC / jour',
-    sessions: null // dates libres
+    sessions: null
   },
   sejour: {
     label: 'Fiche d\'inscription séjour',
     intro: 'Séjour Dordogne ou Mer.',
-    sessions: null // nom du séjour libre
+    sessions: null
   }
 };
 
@@ -2919,6 +2920,26 @@ async function downloadRecap(){
 }
 
 // ══ INIT ══
+async function loadSejoursFromSupabase(){
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/sejours_config?select=id,sessions,prix,label,intro`,{
+      headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'}
+    });
+    if(!res.ok) return;
+    const rows=await res.json();
+    rows.forEach(row=>{
+      if(SEJOURS_CONFIG[row.id]){
+        SEJOURS_CONFIG[row.id].sessions=Array.isArray(row.sessions)?row.sessions:JSON.parse(row.sessions||'[]');
+        SEJOURS_CONFIG[row.id].prix=row.prix||SEJOURS_CONFIG[row.id].prix;
+        SEJOURS_CONFIG[row.id].label=row.label||SEJOURS_CONFIG[row.id].label;
+        SEJOURS_CONFIG[row.id].intro=row.intro||SEJOURS_CONFIG[row.id].intro;
+      }
+    });
+  }catch(e){
+    console.warn('Impossible de charger les séjours depuis Supabase, utilisation des valeurs par défaut.',e);
+  }
+}
+
 function init(){
   initStepper();
   updateNavButtons();
@@ -2929,7 +2950,8 @@ function init(){
   document.getElementById('conf-date-signature').value=new Date().toISOString().split('T')[0];
 }
 
-init();
+// Charger les séjours depuis Supabase puis initialiser
+loadSejoursFromSupabase().then(()=>init());
 </script>
 </body>
 </html>
