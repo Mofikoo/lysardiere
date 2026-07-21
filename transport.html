@@ -1574,7 +1574,7 @@ async function loadData(){
   setPersist('Chargement...','neutral');
   try{
     var[l,p,s,a,veh,gz]=await Promise.all([dbLoadAll('lieux'),dbLoadAll('personnes'),dbLoadAll('semaines'),dbLoadAll('archives'),dbLoadAll('vehicules'),dbLoadAll('prix_gazole')]);
-    lieux=l||[];personnes=p||[];
+    lieux=(l||[]).filter(function(x){return !x.deleted_at});personnes=p||[];
     semaines=(s||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
     archives=(a||[]).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
     gazoleHistorique=(gz||[]).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
@@ -2728,17 +2728,85 @@ var id='sem'+Date.now();var data={id:id,date:date,type:document.getElementById('
 function renderLieux(){
   var scrollY=window.scrollY;
   document.getElementById('lc').textContent=lieux.length;var el=document.getElementById('ll');
-  if(!lieux.length){el.innerHTML='<div class="empty">Aucun lieu.</div>';return}
-  el.innerHTML=lieux.map(function(f){
-    var ok=hasGPS(f),d=ok?Math.round(dLys(f)):null,b=ok?Math.round(bearing(LYS,f)):null;
-    if(editingLieuId===f.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+f.nom+'</div><div class="cols2" style="margin-bottom:8px"><div><label>Nom</label><input id="el-n-'+f.id+'" value="'+esc(f.nom)+'"></div><div><label>Ville</label><input id="el-v-'+f.id+'" value="'+esc(f.ville||'')+'"></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Adresse</label><input id="el-a-'+f.id+'" value="'+esc(f.adresse)+'"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label>Lat</label><input type="number" step="0.0001" id="el-lat-'+f.id+'" value="'+(f.lat||'')+'"></div><div><label>Lng</label><input type="number" step="0.0001" id="el-lng-'+f.id+'" value="'+(f.lng||'')+'"></div></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingLieuId=null;renderLieux()">Annuler</button><button class="btn btn-primary btn-sm" onclick="saveLieu(\''+f.id+'\')">Enregistrer</button></div></div>'}
-    return '<div class="item-row"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div><div style="font-size:11px;color:var(--text-light)">'+f.adresse+(f.ville?' · '+f.ville:'')+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+(ok?'<span class="badge" style="background:var(--green-bg);color:var(--green)">'+d+'km · '+b+'°</span>':'<span class="badge" style="background:var(--red-bg);color:var(--red)">GPS manquant</span>')+'<button class="btn btn-edit btn-sm" onclick="editingLieuId=\''+f.id+'\';renderLieux()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delLieu(\''+f.id+'\')">✕</button></div></div>'}).join('');
+  if(!lieux.length){el.innerHTML='<div class="empty">Aucun lieu.</div>';}
+  else{
+    el.innerHTML=lieux.map(function(f){
+      var ok=hasGPS(f),d=ok?Math.round(dLys(f)):null,b=ok?Math.round(bearing(LYS,f)):null;
+      if(editingLieuId===f.id){return '<div class="item-row editing"><div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:8px">Modifier : '+f.nom+'</div><div class="cols2" style="margin-bottom:8px"><div><label>Nom</label><input id="el-n-'+f.id+'" value="'+esc(f.nom)+'"></div><div><label>Ville</label><input id="el-v-'+f.id+'" value="'+esc(f.ville||'')+'"></div></div><div class="cols2" style="margin-bottom:8px"><div><label>Adresse</label><input id="el-a-'+f.id+'" value="'+esc(f.adresse)+'"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label>Lat</label><input type="number" step="0.0001" id="el-lat-'+f.id+'" value="'+(f.lat||'')+'"></div><div><label>Lng</label><input type="number" step="0.0001" id="el-lng-'+f.id+'" value="'+(f.lng||'')+'"></div></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-sm" onclick="editingLieuId=null;renderLieux()">Annuler</button><button class="btn btn-primary btn-sm" onclick="saveLieu(\''+f.id+'\')">Enregistrer</button></div></div>'}
+      return '<div class="item-row"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.nom+'</div><div style="font-size:11px;color:var(--text-light)">'+f.adresse+(f.ville?' · '+f.ville:'')+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+(ok?'<span class="badge" style="background:var(--green-bg);color:var(--green)">'+d+'km · '+b+'°</span>':'<span class="badge" style="background:var(--red-bg);color:var(--red)">GPS manquant</span>')+'<button class="btn btn-edit btn-sm" onclick="editingLieuId=\''+f.id+'\';renderLieux()">Modifier</button><button class="btn btn-danger btn-sm" onclick="delLieu(\''+f.id+'\')">✕</button></div></div>'
+    }).join('');
+  }
+  // Corbeille button
+  var corbeilleBtn='<div style="text-align:right;margin-top:8px"><button class="btn btn-sm" onclick="showCorbeilleLieux()" style="font-size:11px;color:var(--text-light);background:none;border:1px solid var(--border)">🗑 Corbeille</button></div>';
+  el.innerHTML+= corbeilleBtn;
   window.scrollTo({top:scrollY,behavior:'instant'});
   if(editingLieuId){var editEl=document.querySelector('.item-row.editing');if(editEl) editEl.scrollIntoView({block:'nearest',behavior:'instant'});}
 }
+
+async function showCorbeilleLieux(){
+  var all=await supaFetch('lieux?deleted_at=not.is.null&order=deleted_at.desc','GET');
+  if(!all||!all.length){await lyAlert('La corbeille est vide.','success');return;}
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  var rows=all.map(function(l){
+    var date=l.deleted_at?new Date(l.deleted_at).toLocaleDateString('fr-FR'):'';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-light)">'
+      +'<div style="flex:1"><div style="font-weight:600;font-size:13px">'+esc(l.nom)+'</div>'
+      +'<div style="font-size:11px;color:var(--text-light)">'+esc(l.adresse||'')+(l.ville?' · '+esc(l.ville):'')+'</div>'
+      +'<div style="font-size:10px;color:var(--text-light)">Supprimé le '+date+'</div></div>'
+      +'<button class="btn btn-primary btn-sm" onclick="restaurerLieu(\''+l.id+'\')">↩ Restaurer</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="supprimerDefinitivement(\''+l.id+'\',\''+esc(l.nom)+'\')">🗑 Définitif</button>'
+      +'</div>';
+  }).join('');
+  overlay.innerHTML='<div style="background:var(--card);border-radius:var(--radius);max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'
+    +'<span style="font-family:Fraunces,serif;font-size:16px;color:var(--forest)">🗑 Corbeille — Lieux supprimés</span>'
+    +'<button onclick="this.closest(\'div[style*=inset]\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-light)">✕</button>'
+    +'</div>'+rows+'</div>';
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove();};
+  document.body.appendChild(overlay);
+}
+
+async function restaurerLieu(id){
+  await supaFetch('lieux?id=eq.'+id,'PATCH',{deleted_at:null});
+  var all=await supaFetch('lieux?deleted_at=not.is.null&order=deleted_at.desc','GET');
+  // Reload lieu into local array
+  var restored=await supaFetch('lieux?id=eq.'+id,'GET');
+  if(restored&&restored[0]) lieux.push(restored[0]);
+  renderLieux();
+  // Refresh corbeille overlay
+  var overlay=document.querySelector('div[style*="inset:0"]');
+  if(overlay) overlay.remove();
+  await showCorbeilleLieux();
+  lyAlert('Lieu restauré.','success');
+}
+
+async function supprimerDefinitivement(id,nom){
+  if(!await lyConfirm('Supprimer définitivement "'+nom+'" ?\n\nCette action est irréversible.')) return;
+  await supaFetch('lieux?id=eq.'+id,'DELETE');
+  var overlay=document.querySelector('div[style*="inset:0"]');
+  if(overlay) overlay.remove();
+  await showCorbeilleLieux();
+  lyAlert('"'+nom+'" supprimé définitivement.','success');
+}
 async function addLieu(){var nom=document.getElementById('ln').value.trim(),adresse=document.getElementById('la').value.trim();if(!nom||!adresse){await lyAlert('Nom et adresse requis.','error');return}var lat=parseFloat(document.getElementById('llat').value),lng=parseFloat(document.getElementById('llng').value);var f={id:'f'+Date.now(),nom:nom,ville:document.getElementById('lv').value.trim(),adresse:adresse,lat:isNaN(lat)?null:lat,lng:isNaN(lng)?null:lng};setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('lieux',f.id,f);lieux.push(f);['ln','lv','la','llat','llng'].forEach(function(id){document.getElementById(id).value=''});updatePersistBadge();renderLieux()}
 async function saveLieu(id){var f=getLieu(id);if(!f) return;f.nom=document.getElementById('el-n-'+id).value.trim()||f.nom;f.ville=document.getElementById('el-v-'+id).value.trim();f.adresse=document.getElementById('el-a-'+id).value.trim()||f.adresse;var lat=parseFloat(document.getElementById('el-lat-'+id).value),lng=parseFloat(document.getElementById('el-lng-'+id).value);if(!isNaN(lat)) f.lat=lat;if(!isNaN(lng)) f.lng=lng;setPersist('⏳ Sauvegarde...','neutral');await dbUpsert('lieux',id,f);editingLieuId=null;updatePersistBadge();renderLieux()}
-async function delLieu(id){if(personnes.some(function(p){return getPersonLieux(p).indexOf(id)>=0})){await lyAlert('Ce lieu est utilise par des personnes.','error');return}setPersist('⏳ Suppression...','neutral');await dbDelete('lieux',id);lieux=lieux.filter(function(f){return f.id!==id});updatePersistBadge();renderLieux()}
+async function delLieu(id){
+  if(personnes.some(function(p){return getPersonLieux(p).indexOf(id)>=0})){
+    await lyAlert('Ce lieu est utilisé par des personnes — impossible de le supprimer.','error');
+    return;
+  }
+  var lieu=lieux.find(function(l){return l.id===id});
+  var nom=lieu?lieu.nom:'ce lieu';
+  if(!await lyConfirm('Supprimer le lieu "'+nom+'" ?\n\nIl sera placé dans la corbeille et pourra être restauré.')){return;}
+  setPersist('⏳ Suppression...','neutral');
+  // Soft delete — on marque deleted_at au lieu de supprimer définitivement
+  await supaFetch('lieux?id=eq.'+id,'PATCH',{deleted_at:new Date().toISOString()});
+  lieux=lieux.filter(function(f){return f.id!==id});
+  updatePersistBadge();
+  renderLieux();
+  lyAlert('"'+nom+'" déplacé dans la corbeille.','success');
+}
 
 // ── PERSONNES ─────────────────────────────────
 function refreshLieuSelect(){
