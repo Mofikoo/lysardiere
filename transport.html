@@ -5272,13 +5272,14 @@ function deplacerPersonne(convoiIdx,stopIdx,prenom,nom,side){
       if(side==='arr'&&targetStopIdx>=0) simStops[targetStopIdx].arrPers.push({prenom:prenom,nom:nom});
       else if(side==='dep'&&targetStopIdx>=0) simStops[targetStopIdx].depPers.push({prenom:prenom,nom:nom});
 
-      // Recalculate seats — start from actual seats at departure (stop 0), not flat depart array
-      var seatCount=dest.stops[0].seats||0;
+      // A 'dep' person boards at LYS (+1 initial), exits at the stop
+      // An 'arr' person boards at the stop, exits at LYS (counted in arrPers)
+      var seatCount=(dest.stops[0].seats||0)+(side==='dep'?1:0);
       var simPeak=seatCount;
-      for(var si=0;si<simStops.length;si++){
+      for(var si=1;si<simStops.length;si++){
         var seatDep=(simStops[si].depPers||[]).filter(function(p){return !p.isTransfert}).length;
         var seatArr=(simStops[si].arrPers||[]).length;
-        if(si>0) seatCount=seatCount-seatDep+seatArr;
+        seatCount=seatCount-seatDep+seatArr;
         if(seatCount>simPeak) simPeak=seatCount;
       }
       fits=simPeak<=dest.vehicule.cap;
@@ -5365,10 +5366,10 @@ function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoi
       arrPers:side==='arr'?[{prenom:prenom,nom:nom}]:[]};
     simStops.splice(insertIdx,0,newSim);
   }
-  // Recalc simulated seats — start from actual seats at departure stop (stop 0)
-  // NOT from toC.depart.length which includes people picked up along the way
-  var simSeat=toC.stops[0].seats||0;
-  if(side==='arr'&&!destStop) simSeat+=1; // adding a new pickup before retour, doesn't affect initial seat count
+  // Recalc simulated seats
+  // A person in 'dep' boards at LYS (stop 0) and exits at the stop → +1 to initial count
+  // A person in 'arr' boards at the stop and exits at LYS (retour) → +1 at their boarding stop
+  var simSeat=(toC.stops[0].seats||0)+(side==='dep'?1:0);
   var simPeak=simSeat;
   for(var si2=1;si2<simStops.length;si2++){
     simSeat=simSeat-(simStops[si2].depPers||[]).filter(function(p){return !p.isTransfert}).length+(simStops[si2].arrPers||[]).length;
