@@ -4160,15 +4160,62 @@ function showOptimAddResults(){
     return !inConvoisIds[key]&&(p.prenom+' '+p.nom+' '+(p.foyer||'')).toLowerCase().indexOf(q)>=0;
   });
   el.innerHTML=available.slice(0,10).map(function(p){
+    var personLieux=getPersonLieux(p);
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border-light)">'
       +'<span>'+p.prenom+' '+p.nom+(p.foyer?' <span style="color:var(--forest);font-size:9px">('+p.foyer+')</span>':'')+'</span>'
       +'<span>'
       +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;margin:1px;background:var(--red);color:white;border:none" '
-      +'onclick="ajouterPassager(\''+p.id+'\',\'dep\')">+ Dép</button>'
+      +'onclick="choisirLieuEtAjouter(\''+p.id+'\',\'dep\')">+ Dép</button>'
       +'<button class="btn btn-sm" style="font-size:9px;padding:1px 6px;margin:1px;background:var(--green);color:white;border:none" '
-      +'onclick="ajouterPassager(\''+p.id+'\',\'arr\')">+ Arr</button>'
+      +'onclick="choisirLieuEtAjouter(\''+p.id+'\',\'arr\')">+ Arr</button>'
       +'</span></div>';
   }).join('')||'<div style="font-size:11px;color:var(--text-light);padding:4px">Aucun résultat.</div>';
+}
+
+function choisirLieuEtAjouter(persId, side){
+  var pers=personnes.find(function(p){return p.id===persId});
+  if(!pers) return;
+  var personLieux=getPersonLieux(pers);
+  var lieuxAvecGPS=lieux.filter(function(l){return hasGPS(l)}).sort(function(a,b){return a.nom.localeCompare(b.nom)});
+
+  var overlay=document.createElement('div');
+  overlay.className='ly-modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+
+  var defaultLieuId=personLieux[0]||'';
+  var defaultLieu=getLieu(defaultLieuId);
+
+  var opts=lieuxAvecGPS.map(function(l){
+    var isDefault=personLieux.indexOf(l.id)>=0;
+    return '<option value="'+l.id+'"'+(l.id===defaultLieuId?' selected':'')+'>'+l.nom+(isDefault?' ★':'')+'</option>';
+  }).join('');
+
+  var sideLabel=side==='dep'?'<span style="color:var(--red);font-weight:700">Départ</span>':'<span style="color:var(--green);font-weight:700">Arrivée</span>';
+
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow-lg)';
+  box.innerHTML='<div style="font-family:Fraunces,serif;font-size:15px;color:var(--forest);margin-bottom:4px">Ajouter '+pers.prenom+' '+pers.nom+'</div>'
+    +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:16px">Type : '+sideLabel+'</div>'
+    +'<div style="margin-bottom:12px">'
+    +'<label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:4px">Lieu de RDV <span style="font-size:10px;color:var(--text-light)">(★ = lieu habituel de la personne)</span></label>'
+    +'<select id="lieu-override-select" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px">'
+    +opts
+    +'</select></div>'
+    +(lieuxAvecGPS.length===0?'<div style="font-size:11px;color:var(--red);margin-bottom:12px">⚠️ Aucun lieu avec GPS disponible.</div>':'')
+    +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+    +'<button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button>'
+    +'<button class="btn btn-primary btn-sm" onclick="confirmerAjoutAvecLieu(\''+persId+'\',\''+side+'\')">Ajouter</button>'
+    +'</div>';
+
+  overlay.appendChild(box);
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove();};
+  document.body.appendChild(overlay);
+}
+
+function confirmerAjoutAvecLieu(persId, side){
+  var lieuId=document.getElementById('lieu-override-select').value;
+  document.querySelector('.ly-modal-overlay').remove();
+  ajouterPassager(persId, side, lieuId);
 }
 
 function retirerPassager(convoiIdx,prenom,nom,side){
@@ -4206,11 +4253,11 @@ function retirerPassager(convoiIdx,prenom,nom,side){
   lyAlert(prenom+' '+nom+' retiré(e) du convoi '+(convoiIdx+1)+'.','success');
 }
 
-function ajouterPassager(persId,side){
+function ajouterPassager(persId,side,lieuOverrideId){
   var pers=personnes.find(function(p){return p.id===persId});
   if(!pers) return;
   var p=getParams();
-  var lieuId=getPersonLieux(pers)[0];
+  var lieuId=lieuOverrideId||getPersonLieux(pers)[0];
   var lieu=getLieu(lieuId);
   if(!lieu||!hasGPS(lieu)){lyAlert('Cette personne n\'a pas de lieu de RDV avec GPS.','error');return}
   
