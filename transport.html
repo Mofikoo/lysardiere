@@ -5346,9 +5346,36 @@ function execDeplacerPersonne(fromConvoiIdx,fromStopIdx,prenom,nom,side,toConvoi
   document.querySelector('.ly-modal-overlay').remove();
   var fromC=convoisOptimises[fromConvoiIdx];
   var toC=convoisOptimises[toConvoiIdx];
-  // CAPACITY CHECK before adding
-  if(!capacityCheck(toC,1)) return;
   var fromStop=fromC.stops[fromStopIdx];
+
+  // REAL CAPACITY CHECK: simulate adding person at the specific stop in toC
+  // to get the true peak accounting for board/exit order
+  var destStop=toC.stops.find(function(st){return st.fid===fromStop.fid&&st.action!=='depart'&&st.action!=='retour'});
+  var simStops=toC.stops.map(function(s){
+    return {action:s.action,fid:s.fid,depPers:(s.depPers||[]).slice(),arrPers:(s.arrPers||[]).slice()};
+  });
+  if(destStop){
+    var si=toC.stops.indexOf(destStop);
+    if(side==='dep') simStops[si].depPers.push({prenom:prenom,nom:nom});
+    else simStops[si].arrPers.push({prenom:prenom,nom:nom});
+  } else {
+    var insertIdx=simStops.length-1; // before retour
+    var newSim={action:side==='dep'?'depot':'pickup',fid:fromStop.fid,
+      depPers:side==='dep'?[{prenom:prenom,nom:nom}]:[],
+      arrPers:side==='arr'?[{prenom:prenom,nom:nom}]:[]};
+    simStops.splice(insertIdx,0,newSim);
+  }
+  // Recalc simulated seats
+  var simSeat=toC.depart.length+(side==='arr'?1:0);
+  var simPeak=simSeat;
+  for(var si2=1;si2<simStops.length;si2++){
+    simSeat=simSeat-(simStops[si2].depPers||[]).filter(function(p){return !p.isTransfert}).length+(simStops[si2].arrPers||[]).length;
+    if(simSeat>simPeak) simPeak=simSeat;
+  }
+  if(simPeak>toC.vehicule.cap){
+    lyAlert('⛔ CAPACITÉ DÉPASSÉE\n\nMême en tenant compte des descentes, le pic simulé serait de '+simPeak+' passager'+(simPeak>1?'s':'')+' pour '+toC.vehicule.cap+' places.','error');
+    return;
+  }
   var list=side==='dep'?(fromStop.depPers||[]):(fromStop.arrPers||[]);
   var persIdx=list.findIndex(function(p){return p.prenom===prenom&&(p.nom||'')===nom});
   if(persIdx<0) return;
