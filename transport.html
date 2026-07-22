@@ -5253,11 +5253,44 @@ function deplacerPersonne(convoiIdx,stopIdx,prenom,nom,side){
     if(di===convoiIdx) return;
     var sameLieuStop=dest.stops.find(function(st){return st.fid===stop.fid&&st.action!=='depart'&&st.action!=='retour'});
     var targetLabel=sameLieuStop?'<span style="color:var(--green);font-size:10px"> ✓ Même lieu</span>':'';
-    var newPeak=dest.peakSeats+1;
-    var fits=newPeak<=dest.vehicule.cap;
+
+    // Simulate real peak: add person to dest convoi at the matching stop (or first/last)
+    // and recalculate seat counts to check if they fit WITHOUT causing a peak overflow
+    var fits=false;
+    var overflowInfo='';
+    try{
+      var simStops=dest.stops.map(function(s){
+        return {action:s.action,fid:s.fid,depPers:(s.depPers||[]).slice(),arrPers:(s.arrPers||[]).slice(),seats:s.seats||0};
+      });
+      // Find where this person would board/exit in dest convoi
+      var targetStopIdx=-1;
+      if(sameLieuStop) targetStopIdx=dest.stops.indexOf(sameLieuStop);
+      else if(side==='arr') targetStopIdx=1; // first real stop after depart
+      else targetStopIdx=simStops.length-2; // last real stop before retour
+
+      // Add person to appropriate side
+      if(side==='arr'&&targetStopIdx>=0) simStops[targetStopIdx].arrPers.push({prenom:prenom,nom:nom});
+      else if(side==='dep'&&targetStopIdx>=0) simStops[targetStopIdx].depPers.push({prenom:prenom,nom:nom});
+
+      // Recalculate seats
+      var seatCount=dest.depart.length+(side==='arr'?1:0);
+      var simPeak=seatCount;
+      for(var si=0;si<simStops.length;si++){
+        var seatDep=(simStops[si].depPers||[]).filter(function(p){return !p.isTransfert}).length;
+        var seatArr=(simStops[si].arrPers||[]).length;
+        if(si>0) seatCount=seatCount-seatDep+seatArr;
+        if(seatCount>simPeak) simPeak=seatCount;
+      }
+      fits=simPeak<=dest.vehicule.cap;
+      if(!fits) overflowInfo=' — pic '+simPeak+'/'+dest.vehicule.cap;
+    } catch(e){
+      // Fallback to simple check
+      fits=(dest.peakSeats+1)<=dest.vehicule.cap;
+    }
+
     html+='<button class="btn btn-sm" style="margin:3px;display:block;width:100%;text-align:left;'+(fits?'':'opacity:0.5;cursor:not-allowed;')+'" '
       +(fits?'onclick="execDeplacerPersonne('+convoiIdx+','+stopIdx+',\''+prenom.replace(/'/g,"\\'")+'\',\''+nom.replace(/'/g,"\\'")+'\',\''+side+'\','+di+')"':'')
-      +'>Convoi '+(di+1)+' — '+dest.vehicule.ico+' '+dest.vehicule.label+targetLabel+(fits?'':' — PLEIN')+'</button>';
+      +'>Convoi '+(di+1)+' — '+dest.vehicule.ico+' '+dest.vehicule.label+targetLabel+(fits?'':' — PLEIN'+overflowInfo)+'</button>';
   });
 
   html+='<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
