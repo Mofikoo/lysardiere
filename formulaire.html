@@ -169,8 +169,64 @@ textarea{resize:vertical;min-height:80px}
 
 /* ── PRINT ── */
 @media print{
-  /* Hide everything — printing is handled by printDossier() in a separate window */
-  body * { display: none !important; }
+  @page { size: A4; margin: 12mm 14mm; }
+
+  /* Hide UI chrome */
+  .nav-bar, .stepper-wrap, .header, .progress-bar-wrap,
+  #btn-test-fill, .note-important, .confirmation-box,
+  #recap-content, button { display: none !important; }
+
+  /* Show all form pages */
+  body { background: white; font-size: 10pt; color: #111; }
+  .main { padding: 0 !important; max-width: 100% !important; }
+  .step-page { display: block !important; }
+  .form-card { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+
+  /* Page breaks between form sections */
+  #step-1  { page-break-after: always; }
+  #step-2  { page-break-after: always; }
+  #step-3  { page-break-after: always; }
+  #step-4  { page-break-after: always; }
+  #step-5  { page-break-after: always; }
+  #step-6  { page-break-after: always; }
+  #step-7  { page-break-after: always; }
+  #step-8  { page-break-after: always; }
+  #step-9 .confirmation-box { display: none !important; }
+  #step-9 h3 { display: none !important; }
+  #step-9 #recap-content { display: none !important; }
+
+  /* Show only the recap-done confirmation text, not the buttons */
+  #recap-done { display: block !important; }
+
+  /* Avoid breaking inside cards and tables */
+  .form-card, table, .yn-row, .field-group { break-inside: avoid; }
+
+  /* Clean up inputs for print */
+  input, textarea, select {
+    border: none !important;
+    border-bottom: 1px solid #999 !important;
+    background: transparent !important;
+    font-size: 10pt !important;
+    padding: 0 !important;
+  }
+
+  /* Checkboxes and radios visible */
+  input[type="radio"], input[type="checkbox"] {
+    display: inline-block !important;
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  /* Section headers */
+  .section-header { color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .header-box, .note-important { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Hide conditional hidden elements */
+  .conditional.hidden { display: none !important; }
+
+  /* Tables */
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #ccc !important; font-size: 9pt !important; }
 }
 </style>
 </head>
@@ -1442,7 +1498,7 @@ textarea{resize:vertical;min-height:80px}
           <h3 style="font-family:Fraunces,serif;color:var(--forest);margin-bottom:16px">Récapitulatif</h3>
           <div id="recap-content" style="font-size:13px;line-height:1.8;color:var(--text-mid)"></div>
           <div style="text-align:center;margin-top:24px">
-            <button class="btn btn-primary" onclick="printDossier()" style="font-size:15px;padding:14px 40px">🖨️ Télécharger / Imprimer le dossier complet</button>
+            <button class="btn btn-primary" onclick="window.print()" style="font-size:15px;padding:14px 40px">🖨️ Imprimer / Enregistrer en PDF</button>
           </div>
         </div>
       </div>
