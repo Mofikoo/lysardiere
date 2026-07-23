@@ -2305,7 +2305,8 @@ function validateStep(step){
     const appar=document.querySelector('input[name="conf-appareillage"]:checked');
     if(appar&&appar.value==='oui') req('conf-appareillage-type','Type d\'appareillage');
     reqRadio('conf-dentier','Porte un dentier');
-    reqRadio('conf-dentier-seul','Gère le dentier seul');
+    const dentierVal=document.querySelector('input[name="conf-dentier"]:checked');
+    if(dentierVal&&dentierVal.value==='oui') reqRadio('conf-dentier-seul','Gère le dentier seul');
     req('conf-poids','Poids');
     req('conf-taille','Taille');
     req('conf-antecedents','Antécédents médicaux');
