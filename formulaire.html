@@ -2446,7 +2446,11 @@ async function uploadPhoto(file,personneId){
 
 // ══ SOUMISSION ══
 async function submitForm(){
-  if(!validateStep(8)) return;
+  // Validate only the last step of the current mode
+  const lastStep = ACTIVE_STEPS[ACTIVE_STEPS.length-1];
+  if(FORM_MODE!=='inscription'&&!validateStep(lastStep)) return;
+  // For inscription mode, validate only step 2
+  if(FORM_MODE==='inscription'&&!validateStep(2)) return;
 
   goToStep(9);
   document.getElementById('nav-bar').style.display='none';
