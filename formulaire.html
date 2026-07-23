@@ -2407,29 +2407,32 @@ function normalizeStr(s){return(s||'').toLowerCase().normalize('NFD').replace(/[
 
 async function matchPersonne(nom,prenom){
   try{
-    const all=await api('/rest/v1/personnes?select=id,nom,prenom&limit=1000');
+    const all=await api('/rest/v1/personnes?select=id,data&limit=1000');
     if(!all) return{id:null,status:'nouveau'};
     const nNom=normalizeStr(nom),nPre=normalizeStr(prenom);
+    // Map to flat structure — data.nom and data.prenom are inside the JSONB column
+    const flat=all.map(p=>({id:p.id,nom:p.data?.nom||'',prenom:p.data?.prenom||''}));
     // Exact match
-    const exact=all.find(p=>normalizeStr(p.nom)===nNom&&normalizeStr(p.prenom)===nPre);
+    const exact=flat.find(p=>normalizeStr(p.nom)===nNom&&normalizeStr(p.prenom)===nPre);
     if(exact) return{id:exact.id,status:'exact'};
     // Approx : même nom, prénom similaire (même 1ère lettre)
-    const approxCandidates=all.filter(p=>normalizeStr(p.nom)===nNom);
+    const approxCandidates=flat.filter(p=>normalizeStr(p.nom)===nNom);
     if(approxCandidates.length>0){
       const approx=approxCandidates.find(p=>normalizeStr(p.prenom)[0]===nPre[0]);
       if(approx) return{id:approx.id,status:'approx',match:approx};
     }
     return{id:null,status:'nouveau'};
-  }catch(e){return{id:null,status:'nouveau'};}
+  }catch(e){console.error('matchPersonne error:',e);return{id:null,status:'nouveau'};}
 }
 
 async function createPersonne(nom,prenom){
   try{
     const id='pers-'+Date.now()+'-'+Math.random().toString(36).substr(2,6);
-    const data={id,nom:nom.toUpperCase(),prenom,foyer:'',lieux:[],besoins:'',notes:''};
-    await api('/rest/v1/personnes','POST',data);
+    // personnes table stores data in JSONB column "data"
+    const payload={id,data:{nom:nom.toUpperCase(),prenom,foyer:'',lieux:[],besoins:'',notes:''}};
+    await api('/rest/v1/personnes','POST',payload);
     return id;
-  }catch(e){return null;}
+  }catch(e){console.error('createPersonne error:',e);return null;}
 }
 
 // ══ UPLOAD PHOTO ══
