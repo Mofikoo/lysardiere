@@ -716,7 +716,7 @@ const mergedBytes = await merged.save();
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${await getJWT()}`,
       'Content-Type': 'application/pdf'
     },
     body: mergedBytes
@@ -967,7 +967,7 @@ async function saveDoc() {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${await getJWT()}`,
       'Content-Type': 'application/pdf'
     },
     body: arrayBuffer
@@ -1062,11 +1062,12 @@ function toggleFiches(){
 async function relier_fiche(ficheId, personneId){
   if(!personneId) return;
   try{
+    const jwt = await getJWT();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches_inscription?id=eq.${encodeURIComponent(ficheId)}`, {
       method: 'PATCH',
       headers: {
         apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${jwt}`,
         'Content-Type': 'application/json',
         Prefer: 'return=minimal'
       },
@@ -1074,7 +1075,7 @@ async function relier_fiche(ficheId, personneId){
     });
     if(!res.ok){
       const err = await res.text();
-      alert('Erreur liaison : '+err+'\n\nVérifiez que la politique RLS UPDATE est activée pour fiches_inscription.');
+      alert('Erreur liaison : '+err);
       return;
     }
     await init();
@@ -1087,17 +1088,18 @@ async function relier_fiche(ficheId, personneId){
 async function deleteFiche(ficheId){
   if(!confirm('Supprimer cette fiche ? Cette action est irréversible.')) return;
   try{
+    const jwt = await getJWT();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches_inscription?id=eq.${encodeURIComponent(ficheId)}`, {
       method: 'DELETE',
       headers: {
         apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${jwt}`,
         Prefer: 'return=minimal'
       }
     });
     if(!res.ok){
       const err = await res.text();
-      alert('Erreur suppression : '+err+'\n\nVérifiez que la politique RLS DELETE est activée pour fiches_inscription.');
+      alert('Erreur suppression : '+err);
       return;
     }
     await init();
