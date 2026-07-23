@@ -1323,7 +1323,9 @@ function openFicheDetail(ficheId){
 // ── SÉJOURS CONFIG FORMULAIRE ──
 // ── LIEN FORMULAIRE ──────────────────────────────────────
 function openLienFormulaireModal(){
-  const base = window.location.href.replace(/documents\.html.*$/, 'formulaire.html');
+  // Build absolute URL to formulaire.html in the same folder as this page
+  const folder = window.location.href.substring(0, window.location.href.lastIndexOf('/')+1);
+  const base = folder + 'formulaire.html';
   const liens = [
     { mode:'complet',     label:'📋 Dossier complet',             desc:'Fiche d\'inscription + Fiche confidentielle (9 étapes)', color:'#18534F' },
     { mode:'inscription', label:'📝 Fiche d\'inscription seule',  desc:'Uniquement les informations d\'inscription (étapes 1-2)', color:'#2a6b66' },
