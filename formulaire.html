@@ -169,21 +169,22 @@ textarea{resize:vertical;min-height:80px}
 
 /* ── PRINT ── */
 @media print{
-  @page { size: A4; margin: 12mm 14mm; }
+  @page { size: A4; margin: 18mm 16mm; }
 
   /* Hide UI chrome */
   .nav-bar, .stepper-wrap, .header, .progress-bar-wrap,
-  #btn-test-fill, .note-important, .confirmation-box,
-  #recap-content, button { display: none !important; }
+  #btn-test-fill, #recap-content, button { display: none !important; }
 
-  /* Show all form pages */
+  /* Hide step-1 (type de séjour — choix non nécessaire à l'impression) */
+  #step-1 { display: none !important; }
+
+  /* Show all other form pages */
   body { background: white; font-size: 10pt; color: #111; }
   .main { padding: 0 !important; max-width: 100% !important; }
   .step-page { display: block !important; }
-  .form-card { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+  .form-card { box-shadow: none !important; border: none !important; padding: 4mm 0 !important; margin: 0 !important; }
 
-  /* Page breaks between form sections */
-  #step-1  { page-break-after: always; }
+  /* Page breaks between steps */
   #step-2  { page-break-after: always; }
   #step-3  { page-break-after: always; }
   #step-4  { page-break-after: always; }
@@ -191,35 +192,20 @@ textarea{resize:vertical;min-height:80px}
   #step-6  { page-break-after: always; }
   #step-7  { page-break-after: always; }
   #step-8  { page-break-after: always; }
-  #step-9 .confirmation-box { display: none !important; }
-  #step-9 h3 { display: none !important; }
-  #step-9 #recap-content { display: none !important; }
 
-  /* Show only the recap-done confirmation text, not the buttons */
+  /* Step 9 : hide confirmation UI, only show recap if needed */
+  #recap-waiting, #recap-error, .confirmation-box { display: none !important; }
   #recap-done { display: block !important; }
+  #recap-done h3, #recap-done [style*="text-align:center"], #recap-done .btn { display: none !important; }
 
-  /* Avoid breaking inside cards and tables */
-  .form-card, table, .yn-row, .field-group { break-inside: avoid; }
+  /* Avoid breaking inside elements */
+  .form-card, table, .yn-row, .field-group, .section-header { break-inside: avoid; }
 
-  /* Clean up inputs for print */
-  input, textarea, select {
-    border: none !important;
-    border-bottom: 1px solid #999 !important;
-    background: transparent !important;
-    font-size: 10pt !important;
-    padding: 0 !important;
+  /* Colors preserved */
+  .section-header, .note-important, [style*="background"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-
-  /* Checkboxes and radios visible */
-  input[type="radio"], input[type="checkbox"] {
-    display: inline-block !important;
-    width: 10px !important;
-    height: 10px !important;
-  }
-
-  /* Section headers */
-  .section-header { color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .header-box, .note-important { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* Hide conditional hidden elements */
   .conditional.hidden { display: none !important; }
