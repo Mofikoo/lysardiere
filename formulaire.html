@@ -169,48 +169,60 @@ textarea{resize:vertical;min-height:80px}
 
 /* ── PRINT ── */
 @media print{
-  @page { size: A4; margin: 18mm 16mm; }
+  @page { size: A4; margin: 20mm 16mm 16mm 16mm; }
 
   /* Hide UI chrome */
   .nav-bar, .stepper-wrap, .header, .progress-bar-wrap,
-  #btn-test-fill, #recap-content, button { display: none !important; }
+  #btn-test-fill, #recap-content, button, .no-print { display: none !important; }
 
-  /* Hide step-1 (type de séjour — choix non nécessaire à l'impression) */
+  /* Hide step-1 (choix type séjour) */
   #step-1 { display: none !important; }
 
   /* Show all other form pages */
   body { background: white; font-size: 10pt; color: #111; }
-  .main { padding: 0 8mm !important; max-width: 100% !important; }
+  .main { padding: 0 !important; max-width: 100% !important; }
   .step-page { display: block !important; }
-  .form-card { box-shadow: none !important; border: none !important; padding: 6mm 0 !important; margin: 0 !important; }
-
-  /* Page breaks between steps */
-  #step-2  { page-break-after: always; }
-  #step-3  { page-break-after: always; }
-  #step-4  { page-break-after: always; }
-  #step-5  { page-break-after: always; }
-  #step-6  { page-break-after: always; }
-  #step-7  { page-break-after: always; }
-  #step-8  { page-break-after: always; }
-
-  /* Step 9 : hide confirmation UI, only show recap if needed */
-  #recap-waiting, #recap-error, .confirmation-box { display: none !important; }
-  #recap-done { display: block !important; }
-  #recap-done h3, #recap-done [style*="text-align:center"], #recap-done .btn { display: none !important; }
-
-  /* Avoid breaking inside elements */
-  .form-card, table, .yn-row, .field-group, .section-header { break-inside: avoid; }
-
-  /* Colors preserved */
-  .section-header, .note-important, [style*="background"] {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  .form-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  /* Hide conditional hidden elements */
+  /* Marge interne sur chaque page imprimée via padding sur les step-pages */
+  .step-page > .form-card {
+    padding: 4mm 0 !important;
+  }
+
+  /* Page breaks — chaque étape sur sa propre page */
+  #step-2, #step-3, #step-4, #step-5, #step-6, #step-7, #step-8 {
+    page-break-after: always;
+    break-after: page;
+    page-break-before: auto;
+  }
+  /* Pas de break après la dernière page utile */
+  #step-8 { page-break-after: avoid; break-after: avoid; }
+
+  /* Step 9 : masquer tout sauf le contenu recap si besoin */
+  #recap-waiting, #recap-error, .confirmation-box { display: none !important; }
+  #recap-done { display: none !important; }
+  #step-9 { display: none !important; }
+
+  /* Éviter les coupures dans les éléments importants */
+  .section-header, .yn-row, .field-group, .form-card > div,
+  table, tr { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Forcer les couleurs */
+  .section-header, [class*="section-header"],
+  .note-important, [style*="background"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Masquer éléments conditionnels non remplis */
   .conditional.hidden { display: none !important; }
 
-  /* Tables */
+  /* Tables hygiène */
   table { width: 100% !important; border-collapse: collapse !important; }
   th, td { border: 1px solid #ccc !important; font-size: 9pt !important; }
 }
@@ -447,14 +459,16 @@ textarea{resize:vertical;min-height:80px}
       </div>
 
       <!-- Photo -->
-      <div class="section-header">Photo du vacancier (recommandée)</div>
-      <div class="photo-upload-area" onclick="document.getElementById('conf-photo-input').click()">
-        <div style="font-size:32px;margin-bottom:6px">📷</div>
-        <div style="font-size:13px;color:var(--text-mid)">Cliquez pour ajouter une photo</div>
-        <div style="font-size:11px;color:var(--text-light);margin-top:4px">JPG, PNG — max 5 Mo — non obligatoire</div>
-        <img id="conf-photo-preview" class="photo-preview" style="display:none">
+      <div class="no-print">
+        <div class="section-header">Photo du vacancier (recommandée)</div>
+        <div class="photo-upload-area" onclick="document.getElementById('conf-photo-input').click()">
+          <div style="font-size:32px;margin-bottom:6px">📷</div>
+          <div style="font-size:13px;color:var(--text-mid)">Cliquez pour ajouter une photo</div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:4px">JPG, PNG — max 5 Mo — non obligatoire</div>
+          <img id="conf-photo-preview" class="photo-preview" style="display:none">
+        </div>
+        <input type="file" id="conf-photo-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
       </div>
-      <input type="file" id="conf-photo-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
     </div>
   </div>
 
