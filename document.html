@@ -856,16 +856,109 @@ function checkAlerts() {
 }
 
 function checkNewDocsSinceLastVisit() {
-  const lastVisit=localStorage.getItem('lysardiere_last_visit');
-  localStorage.setItem('lysardiere_last_visit', new Date().toISOString());
-  if (!lastVisit) return;
-  const newDocs=allDocuments.filter(d=>d.created_at>lastVisit);
-  if (!newDocs.length) return;
-  const byP={};
-  newDocs.forEach(doc=>{ const k=doc.personne_nom||'— Non classé'; if(!byP[k]) byP[k]=[]; byP[k].push(doc.filename); });
-  document.getElementById('newdocs-count').textContent=newDocs.length;
-  document.getElementById('newdocs-list').innerHTML=Object.entries(byP).map(([nom,files])=>`<tr style="border-bottom:1px solid var(--border-light)"><td style="padding:7px 0;font-weight:600;width:180px;font-size:12px">${nom}</td><td style="padding:7px 0;color:var(--text-mid);font-size:12px">${files.join(', ')}</td></tr>`).join('');
-  document.getElementById('newdocsOverlay').classList.add('show');
+  const STORAGE_KEY = 'lys_last_visit_state';
+  const now = new Date().toISOString();
+
+  // Load previous state
+  let lastState = {};
+  try { lastState = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); } catch(e){}
+  const lastVisit = lastState.date || null;
+
+  // Save current state for next visit
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    date: now,
+    docIds: allDocuments.map(d=>d.id),
+    ficheIds: allFiches.map(f=>f.id),
+    personneIds: allPersonnes.map(p=>p.id)
+  }));
+
+  if(!lastVisit) return; // First visit, nothing to compare
+
+  // What's new since last visit
+  const lastDocIds = new Set(lastState.docIds||[]);
+  const lastFicheIds = new Set(lastState.ficheIds||[]);
+  const lastPersonneIds = new Set(lastState.personneIds||[]);
+
+  const newDocs = allDocuments.filter(d=>!lastDocIds.has(d.id));
+  const newFiches = allFiches.filter(f=>!lastFicheIds.has(f.id));
+  const newPersonnes = allPersonnes.filter(p=>!lastPersonneIds.has(p.id));
+  const fichesAClasser = allFiches.filter(f=>f.statut_matching!=='exact');
+
+  // Nothing new
+  if(!newDocs.length && !newFiches.length && !newPersonnes.length) return;
+
+  // Build notification modal
+  const lastDate = new Date(lastVisit).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  let sections = '';
+
+  if(newFiches.length){
+    const rows = newFiches.map(f=>{
+      const mode = f.mode_formulaire==='inscription'?'📝 Inscription':f.mode_formulaire==='confidentiel'?'🔒 Confidentielle':'📋 Complet';
+      const statut = f.statut_matching==='exact'?'<span style="color:#16a34a;font-size:10px">✅ Classée</span>':f.statut_matching==='approx'?'<span style="color:#d97706;font-size:10px">⚠️ À vérifier</span>':'<span style="color:#2563eb;font-size:10px">🆕 À classer</span>';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+        <span style="font-weight:600;flex:1">${f.prenom_saisi||''} ${(f.nom_saisi||'').toUpperCase()}</span>
+        <span style="color:#6b7280">${mode}</span>
+        ${statut}
+      </div>`;
+    }).join('');
+    sections += `<div style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13px;color:#0369a1;margin-bottom:6px">📋 ${newFiches.length} fiche${newFiches.length>1?'s':''} formulaire reçue${newFiches.length>1?'s':''}</div>
+      ${rows}
+    </div>`;
+  }
+
+  if(newDocs.length){
+    const unclassed = newDocs.filter(d=>!d.personne_id&&d.type==='nonclasse');
+    const rows = newDocs.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+      <span style="font-weight:600;flex:1">${d.filename||'Document'}</span>
+      <span style="color:#6b7280;font-size:10px">${d.personne_nom||'Non classé'}</span>
+    </div>`).join('');
+    sections += `<div style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13px;color:#18534F;margin-bottom:6px">📄 ${newDocs.length} document${newDocs.length>1?'s':''} reçu${newDocs.length>1?'s':''}${unclassed.length?` <span style="color:#d97706;font-size:11px">(${unclassed.length} non classé${unclassed.length>1?'s':''})</span>`:''}</div>
+      ${rows}
+    </div>`;
+  }
+
+  if(newPersonnes.length){
+    const rows = newPersonnes.map(p=>`<div style="padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0">
+      <span style="font-weight:600">${p.prenom} ${p.nom}</span>
+      ${p.foyer?`<span style="color:#6b7280;font-size:10px"> — ${p.foyer}</span>`:''}
+    </div>`).join('');
+    sections += `<div style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13px;color:#7c3aed;margin-bottom:6px">👤 ${newPersonnes.length} nouveau${newPersonnes.length>1?'x':''} vacancier${newPersonnes.length>1?'s':''}</div>
+      ${rows}
+    </div>`;
+  }
+
+  // Rappel fiches à classer
+  if(fichesAClasser.length){
+    sections += `<div style="background:#fff9e6;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e">
+      ⚠️ <strong>${fichesAClasser.length} fiche${fichesAClasser.length>1?'s':''} en attente</strong> de classement dans "Fiches à classer".
+      <button onclick="document.getElementById('notif-overlay').remove();document.querySelector('[onclick=\\'toggleFiches()\\']')?.click()" 
+        style="margin-left:8px;background:#f59e0b;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px">Voir →</button>
+    </div>`;
+  }
+
+  // Show modal
+  const overlay = document.createElement('div');
+  overlay.id = 'notif-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:white;border-radius:14px;max-width:520px;width:100%;max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);display:flex;flex-direction:column">
+    <div style="background:#18534F;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="color:white;font-family:'Fraunces',serif;font-size:16px;font-weight:700">🔔 Nouveautés depuis votre dernière visite</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px">Dernière ouverture : ${lastDate}</div>
+      </div>
+      <button onclick="document.getElementById('notif-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="padding:20px;overflow-y:auto;flex:1">${sections}</div>
+    <div style="padding:12px 20px;border-top:1px solid #f0f0f0;display:flex;justify-content:flex-end;flex-shrink:0">
+      <button onclick="document.getElementById('notif-overlay').remove()" style="background:#18534F;color:white;border:none;border-radius:8px;padding:8px 24px;cursor:pointer;font-size:13px;font-weight:600">Compris ✓</button>
+    </div>
+  </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
 }
 
 async function openAddPersonModal() {
