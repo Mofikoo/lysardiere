@@ -2555,327 +2555,482 @@ function buildRecap(data){
 }
 
 function buildFullPdfHtml(data){
-  const insc=data.inscription, conf=data.confidentielle;
+  const insc=data.inscription||{}, conf=data.confidentielle||{};
   const p=insc.participant||{}, resp=insc.responsable||{}, rf=insc.releve_frais||{};
   const id=conf.identite||{}, mob=conf.mobilite||{}, hyg=conf.hygiene||{};
   const alim=conf.alimentation||{}, rep=conf.repos||{}, comm=conf.communication||{};
   const rel=conf.relation||{}, dep=conf.deplacements||{}, sort=conf.sorties||{};
   const act=conf.activites||{}, trou=conf.troubles||{}, hab=conf.habitudes||{};
   const sante=conf.sante||{}, astr=conf.astreinte||{};
-  const typLabel={weekend_theme:'Week-ends à thèmes',mini_sejour:'Les Mini Séjours',weekend_ordinaire:'Week-end et séjour ordinaire',sejour:'Fiche d\'inscription séjour'}[selectedTypeSejour]||'';
+  const typLabel={weekend_theme:'Week-ends à thèmes',mini_sejour:'Les Mini Séjours',weekend_ordinaire:'Week-end et séjour ordinaire',sejour:'Fiche d\'inscription séjour'}[FORM_MODE==='inscription'||FORM_MODE==='confidentiel'?FORM_MODE:selectedTypeSejour]||selectedTypeSejour||'';
 
-  const yn=v=>v==='oui'?'<b>Oui</b>':v==='non'?'Non':v||'—';
-  const chks=obj=>Object.entries(obj||{}).filter(([k,v])=>v).map(([k])=>({matin:'Matin',midi:'Midi',soir:'Soir',non:'Aucune',jour:'Jour',nuit:'Nuit',seul:'Seul',aide:'Avec aide'})[k]||k).join(', ')||'Non';
+  const GREEN='#1a5c4e', ORANGE='#e07b39', RED='#c0392b', GREY='#4a4a4a', LIGHTGREY='#f5f5f5', BORDERGREY='#ddd';
+  const yn=v=>v==='oui'?'Oui':v==='non'?'Non':v||'—';
+  const val=v=>(v||'').toString().trim()||'—';
+  const chkFmt=obj=>{if(!obj)return'Non';if(typeof obj==='string')return obj;return Object.entries(obj).filter(([,v])=>v).map(([k])=>({matin:'Matin',midi:'Midi',soir:'Soir',non:'Aucune',jour:'Jour',nuit:'Nuit'})[k]||k).join(', ')||'Non';};
 
-  const S=(title,color='#18534F')=>`<div style="background:${color};color:white;font-size:12px;font-weight:700;padding:5px 10px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.5px">${title}</div>`;
-  const R=(label,val)=>val?`<tr><td style="padding:3px 8px;font-size:11px;color:#555;width:45%">${label}</td><td style="padding:3px 8px;font-size:11px;font-weight:600">${val}</td></tr>`:'';
-  const TEXTAREA=(label,val)=>val?`<div style="margin:6px 0"><div style="font-size:11px;color:#555;margin-bottom:2px">${label}</div><div style="background:#f5f5f5;border-left:3px solid #18534F;padding:6px 10px;font-size:11px;line-height:1.5">${val.replace(/\n/g,'<br>')}</div></div>`:'';
-  const TABLE_START=()=>`<table style="width:100%;border-collapse:collapse;margin:4px 0">`;
-  const TABLE_END=()=>`</table>`;
+  // Header with logo area
+  const header=(title,subtitle='')=>`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid ${GREEN}">
+      <div>
+        <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${GREEN};letter-spacing:-0.3px">La Lysardière</div>
+        <div style="font-size:9px;color:#666;margin-top:1px">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:Georgia,serif;font-size:14px;font-weight:700;color:${GREEN}">${title}</div>
+        ${subtitle?`<div style="font-size:10px;color:#666;margin-top:2px">${subtitle}</div>`:''}
+      </div>
+    </div>`;
 
-  // Hygiène tableau
-  const COLS=['Seul(e)','Stimulation verbale','Aide partielle','Aide totale'];
-  let hygieneHtml=`<table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0"><tr style="background:#e8f5e9"><th style="padding:3px 6px;text-align:left;border:1px solid #ccc">Activité</th>${COLS.map(c=>`<th style="padding:3px 6px;text-align:center;border:1px solid #ccc">${c}</th>`).join('')}</tr>`;
-  HYGIENE_ITEMS.forEach((item,i)=>{
-    const row=hyg.tableau?.[item.label]||{};
-    hygieneHtml+=`<tr><td style="padding:2px 6px;border:1px solid #eee;${item.sub?'padding-left:14px;color:#666':''}">${item.label}</td>${['seul','stim','aide_partielle','aide_totale'].map(k=>`<td style="text-align:center;border:1px solid #eee">${row[k]?'☑':'☐'}</td>`).join('')}</tr>`;
-  });
-  hygieneHtml+='</table>';
+  // Section title bar
+  const section=(title,color=GREEN)=>`<div style="background:${color};color:white;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding:4px 8px;margin:10px 0 6px">${title}</div>`;
 
-  let alimentHtml=`<table style="width:100%;border-collapse:collapse;font-size:10px;margin:4px 0"><tr style="background:#e8f5e9"><th style="padding:3px 6px;text-align:left;border:1px solid #ccc">Activité</th>${COLS.map(c=>`<th style="padding:3px 6px;text-align:center;border:1px solid #ccc">${c}</th>`).join('')}</tr>`;
-  ALIM_ITEMS.forEach((item,i)=>{
-    const row=alim.tableau?.[item.label]||{};
-    alimentHtml+=`<tr><td style="padding:2px 6px;border:1px solid #eee">${item.label}</td>${['seul','stim','aide_partielle','aide_totale'].map(k=>`<td style="text-align:center;border:1px solid #eee">${row[k]?'☑':'☐'}</td>`).join('')}</tr>`;
-  });
-  alimentHtml+='</table>';
+  // Field row: label + underlined value
+  const field=(label,value,w='auto')=>`
+    <div style="margin-bottom:5px;${w!=='auto'?'width:'+w+';display:inline-block;vertical-align:top':''}">
+      <div style="font-size:8.5px;color:#888;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:1px">${label}</div>
+      <div style="font-size:10.5px;color:#111;border-bottom:1px solid #bbb;padding-bottom:2px;min-height:14px">${val(value)}</div>
+    </div>`;
 
-  // Troubles
-  const troublesList=Object.entries(trou.liste||{}).map(([k,v])=>{
-    const label=TROUBLES_ITEMS.find(t=>t.key===k)?.label||k;
-    const val=v?.valeur==='oui'?`<b>Oui</b>${v.detail?' — '+v.detail:''}`:v?.valeur==='non'?'Non':'—';
-    return `<tr><td style="padding:2px 8px;font-size:11px;border:1px solid #eee">${label}</td><td style="padding:2px 8px;font-size:11px;border:1px solid #eee">${val}</td></tr>`;
-  }).join('');
+  // Two-column field layout
+  const row2=(l1,v1,l2,v2)=>`<div style="display:flex;gap:12px;margin-bottom:5px"><div style="flex:1">${field(l1,v1)}</div><div style="flex:1">${field(l2,v2)}</div></div>`;
+  const row3=(l1,v1,l2,v2,l3,v3)=>`<div style="display:flex;gap:10px;margin-bottom:5px"><div style="flex:1">${field(l1,v1)}</div><div style="flex:1">${field(l2,v2)}</div><div style="flex:1">${field(l3,v3)}</div></div>`;
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  // Checkbox Oui/Non inline
+  const oui_non=(label,value)=>{
+    const isOui=value==='oui', isNon=value==='non';
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px">
+      <span style="flex:1;color:#333">${label}</span>
+      <span style="display:inline-flex;align-items:center;gap:3px"><span style="width:11px;height:11px;border:1px solid #888;display:inline-flex;align-items:center;justify-content:center;font-size:8px">${isOui?'✓':''}</span><span style="font-size:9px">Oui</span></span>
+      <span style="display:inline-flex;align-items:center;gap:3px"><span style="width:11px;height:11px;border:1px solid #888;display:inline-flex;align-items:center;justify-content:center;font-size:8px">${isNon?'✓':''}</span><span style="font-size:9px">Non</span></span>
+    </div>`;
+  };
+
+  // Checkbox multiple (matin/midi/soir...)
+  const checkboxes=(label,options,values)=>{
+    const checks=options.map(([k,lbl])=>`<span style="display:inline-flex;align-items:center;gap:2px;margin-right:8px"><span style="width:10px;height:10px;border:1px solid #888;display:inline-flex;align-items:center;justify-content:center;font-size:7px">${values&&(values[k]||values===k)?'✓':''}</span><span style="font-size:9px">${lbl}</span></span>`).join('');
+    return `<div style="margin-bottom:4px"><div style="font-size:8.5px;color:#888;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:2px">${label}</div><div>${checks}</div></div>`;
+  };
+
+  // Textarea box
+  const textarea=(label,value)=>`
+    <div style="margin-bottom:6px">
+      <div style="font-size:8.5px;color:#888;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:2px">${label}</div>
+      <div style="border:1px solid ${BORDERGREY};padding:5px 7px;min-height:28px;font-size:10px;color:#111;line-height:1.5;background:#fafafa">${(value||'—').replace(/\n/g,'<br>')}</div>
+    </div>`;
+
+  // Grille hygiène/alim
+  const grille=(title,items,tableData)=>{
+    const COLS=['Seul(e)','Stimulation verbale','Aide partielle','Aide totale'];
+    const KEYS=['seul','stim','aide_partielle','aide_totale'];
+    const rows=items.map(item=>{
+      const rowData=(tableData||{})[item.label]||{};
+      const isSubItem=item.sub;
+      return `<tr style="border-bottom:1px solid #eee">
+        <td style="padding:3px 6px;font-size:9.5px;${isSubItem?'padding-left:14px;color:#666;font-style:italic':'font-weight:500'}">${item.label}</td>
+        ${KEYS.map(k=>`<td style="text-align:center;width:60px;font-size:11px">${rowData[k]?'☑':'☐'}</td>`).join('')}
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+        <thead><tr style="background:${GREEN}">
+          <th style="text-align:left;padding:4px 6px;color:white;font-weight:600;font-size:9px">${title}</th>
+          ${COLS.map(c=>`<th style="color:white;font-size:9px;font-weight:600;width:60px;text-align:center;padding:4px 2px">${c}</th>`).join('')}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  };
+
+  // Troubles table
+  const TROUBLES_LABELS_MAP={objet_personnel:'Objet personnel',rituels:'Rituels',potomanie:'Potomanie',peur_foule:'Peur de la foule',crise_angoisse:'Crise d\'angoisse',isole:'S\'isole',fabulations:'Fabulations, délires',trouble_memoire:'Trouble de la mémoire',autres:'Autres (précisez)',mise_danger_soi:'Mise en danger de soi',automutilation:'Automutilation',tendance_fugue:'Tendance à fuguer',tentative_suicide:'Tentative de suicide',exhibitionnisme:'Trouble exhibitionniste',troubles_sexuels:'Troubles sexuels'};
+
+  const troublesTable=()=>{
+    const entries=Object.entries(trou.liste||{});
+    const left=entries.slice(0,Math.ceil(entries.length/2));
+    const right=entries.slice(Math.ceil(entries.length/2));
+    const makeRows=arr=>arr.map(([k,v])=>{
+      const isOui=v?.valeur==='oui';
+      return `<tr style="border-bottom:1px solid #eee">
+        <td style="padding:2px 6px;font-size:9.5px">${TROUBLES_LABELS_MAP[k]||k}</td>
+        <td style="text-align:center;width:28px;font-size:10px">${isOui?'☑':'☐'}</td>
+        <td style="text-align:center;width:28px;font-size:10px">${!isOui&&v?.valeur==='non'?'☑':'☐'}</td>
+        ${isOui&&v?.detail?`<td style="font-size:9px;color:#555;padding:2px 4px">${v.detail}</td>`:`<td style="font-size:9px;color:#bbb;padding:2px 4px">—</td>`}
+      </tr>`;
+    }).join('');
+    return `<div style="display:flex;gap:10px;margin-bottom:6px">
+      <table style="flex:1;border-collapse:collapse;font-size:9.5px">
+        <thead><tr style="background:${LIGHTGREY}"><th style="text-align:left;padding:3px 6px;font-size:9px">Trouble</th><th style="width:28px;font-size:9px;text-align:center">Oui</th><th style="width:28px;font-size:9px;text-align:center">Non</th><th style="font-size:9px">Précision</th></tr></thead>
+        <tbody>${makeRows(left)}</tbody>
+      </table>
+      <table style="flex:1;border-collapse:collapse;font-size:9.5px">
+        <thead><tr style="background:${LIGHTGREY}"><th style="text-align:left;padding:3px 6px;font-size:9px">Trouble</th><th style="width:28px;font-size:9px;text-align:center">Oui</th><th style="width:28px;font-size:9px;text-align:center">Non</th><th style="font-size:9px">Précision</th></tr></thead>
+        <tbody>${makeRows(right)}</tbody>
+      </table>
+    </div>`;
+  };
+
+  // Destinataire block (like courrier)
+  const destBlock=()=>`
+    <div style="margin-bottom:10px;padding:8px;border:1px solid #ddd;font-size:10px">
+      <div style="font-weight:700;color:${GREEN};margin-bottom:4px">Destinataire : <span style="color:#111">${resp.foyer||'—'}</span></div>
+      <div>${resp.prenom||''} ${resp.nom||''} — ${resp.fonction||''}</div>
+      <div>${resp.adresse||''}, ${resp.cp||''} ${resp.ville||''}</div>
+      <div>${resp.tel||''} — ${resp.mail_secretariat||resp.mail||''}</div>
+    </div>`;
+
+  // ═══════════════════════════════════════════
+  // PAGE 1 — FICHE D'INSCRIPTION
+  // ═══════════════════════════════════════════
+  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#1a1a1a;background:white;width:190mm}
-    .header-box{background:#18534F;color:white;padding:10px 14px;margin-bottom:0}
-    .header-box h1{font-size:15px;font-weight:700;margin:0 0 2px}
-    .header-box .sub{font-size:10px;opacity:0.8}
-    .section-bar{background:#2a6b66;color:white;font-size:10px;font-weight:700;padding:4px 10px;margin:8px 0 4px;text-transform:uppercase;letter-spacing:0.4px}
-    .section-bar.red{background:#C0392B}
-    .section-bar.orange{background:#d35400}
-    .section-bar.grey{background:#555}
-    table{width:100%;border-collapse:collapse}
-    tr td:first-child{width:48%;color:#555;padding:2px 6px;font-size:10px;vertical-align:top}
-    tr td:last-child{padding:2px 6px;font-size:10px;font-weight:600;vertical-align:top}
-    tr{border-bottom:1px solid #f0f0f0}
-    .ta-box{background:#f7f3ec;border-left:3px solid #18534F;padding:4px 8px;font-size:10px;line-height:1.5;margin:2px 0 6px;white-space:pre-wrap}
-    .ta-label{font-size:10px;color:#555;margin:4px 0 2px}
-    .chk-table{width:100%;border-collapse:collapse;margin:3px 0}
-    .chk-table th{background:#e8f5e9;padding:2px 5px;font-size:9px;text-align:center;border:1px solid #ccc}
-    .chk-table th.left{text-align:left}
-    .chk-table td{padding:1px 5px;border:1px solid #eee;text-align:center;font-size:9px}
-    .chk-table td.left{text-align:left;font-size:9.5px}
-    .chk-table tr.sub td.left{padding-left:12px;color:#666}
-    .troubles-table{width:100%;border-collapse:collapse;margin:3px 0}
-    .troubles-table th{background:#f5f5f5;padding:3px 8px;font-size:9px;text-align:left;border:1px solid #ddd}
-    .troubles-table td{padding:2px 8px;font-size:10px;border:1px solid #eee}
-    .page-break{page-break-before:always;margin:0;padding:0}
-    .footer{margin-top:12px;padding-top:6px;border-top:1px solid #ddd;font-size:9px;color:#999;text-align:center}
-  </style></head><body>
+    body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#222;background:white;width:190mm;padding:12mm 14mm}
+    .page-break{page-break-before:always;padding-top:12mm}
+    @page{margin:10mm 12mm}
+  </style></head><body>`;
 
-  <div class="header-box">
-    <h1>La Lysardière — Dossier de ${p.prenom||''} ${(p.nom||'').toUpperCase()}</h1>
-    <div class="sub">${typLabel} &bull; Soumis le ${new Date().toLocaleDateString('fr-FR')}</div>
-  </div>
+  html+=`<div>`;
+  html+=header(typLabel,'Fiche d\'inscription');
+  html+=destBlock();
 
-  <div class="section-bar">Fiche d'inscription — ${typLabel}</div>
-  <table>
-  ${R('Séjour choisi',insc.sejour_choisi)}
-  ${R('Nom / Prénom',(p.nom||'')+' '+(p.prenom||''))}
-  ${R('Date de naissance',p.naissance)} ${R('Sexe',p.sexe)} ${R('Autonomie',p.autonomie)}
-  ${R('En couple',yn(p.couple)+(p.couple==='oui'?' — avec '+p.couple_detail:''))}
-  ${p.tutelle?R('Tutelle/Curatelle',yn(p.tutelle)):''}
-  ${R('Numéro d\'astreinte',p.astreinte)}
-  ${R('Convoyage',insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière')}
-  </table>
+  html+=section('Participant');
+  html+=row3('Nom',p.nom,'Prénom',p.prenom,'Date de naissance',p.naissance);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${field('Sexe',p.sexe)}</div>`;
+  html+=`<div style="flex:1">${field('Autonomie',p.autonomie)}</div>`;
+  html+=`<div style="flex:1">${checkboxes('Inscription en couple',[['oui','Oui'],['non','Non']],{oui:p.couple==='oui',non:p.couple==='non'})}</div>`;
+  html+=`</div>`;
+  html+=row2('Numéro d\'astreinte',p.astreinte,'Convoyage',insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière');
+  if(p.tutelle) html+=row2('Tutelle/Curatelle',yn(p.tutelle),'Protection',yn(p.protection));
 
-  <div class="section-bar">Responsable de l'inscription</div>
-  <table>
-  ${R('Nom',(resp.prenom||'')+' '+(resp.nom||''))} ${R('Fonction',resp.fonction)}
-  ${R('Chef de service',resp.chef_service)}
-  ${R('Foyer',resp.foyer)} ${R('Adresse',(resp.adresse||'')+', '+(resp.cp||'')+' '+(resp.ville||''))}
-  ${R('Tél',resp.tel)} ${R('Mail secrétariat',resp.mail_secretariat)} ${R('Mail éducatif',resp.mail_educatif)}
-  </table>
+  html+=section('Personne s\'occupant de l\'inscription');
+  html+=`<p style="font-size:8.5px;color:#666;margin-bottom:5px;font-style:italic">Uniquement à cette adresse seront envoyés les informations et le dossier. Merci de renseigner ces éléments de façon claire et lisible.</p>`;
+  html+=row3('Nom',resp.nom,'Prénom',resp.prenom,'Fonction',resp.fonction);
+  html+=row2('Nom du chef de service',resp.chef_service,'Nom du foyer',resp.foyer);
+  html+=field('Adresse',resp.adresse);
+  html+=row3('Code postal',resp.cp,'Ville',resp.ville,'Téléphone',resp.tel);
+  html+=row2('Mail du secrétariat',resp.mail_secretariat,'Mail à l\'éducatif',resp.mail_educatif);
 
-  <div class="section-bar">Relevé de frais</div>
-  <table>
-  ${R('Organisme',rf.organisme)} ${R('Contact',rf.contact)} ${R('Tél',rf.tel)}
-  ${R('Adresse',(rf.adresse||'')+', '+(rf.cp||'')+' '+(rf.ville||''))}
-  ${R('Mail',rf.mail)} ${R('Mail comptabilité',rf.mail_compta)}
-  </table>
+  html+=section('Relevé de frais');
+  html+=row2('Nom organisme',rf.organisme,'Nom et prénom contact',rf.contact);
+  html+=field('Adresse',rf.adresse);
+  html+=row3('Code postal',rf.cp,'Ville',rf.ville,'Téléphone',rf.tel);
+  html+=row2('Mail',rf.mail,'Mail comptabilité',rf.mail_compta);
 
-  <div class="section-bar grey">Signature</div>
-  <table>
-  ${R('Signé à',(insc.signature?.fait_a||'')+' le '+(insc.signature?.date||'')+' par '+(insc.signature?.qualite||''))}
-  </table>
+  html+=section('Séjour');
+  html+=row2('Séjour choisi',insc.sejour_choisi,'Type',typLabel);
 
-  <div class="page-break"></div>
+  // Signature inscription
+  html+=`<div style="margin-top:12px;border-top:1px solid #ddd;padding-top:8px">
+    <div style="display:flex;gap:20px;align-items:flex-end">
+      <div style="flex:1">${field('Fait à',insc.signature?.fait_a)}</div>
+      <div style="flex:1">${field('Le',insc.signature?.date)}</div>
+      <div style="flex:2">${field('Qualité du signataire',insc.signature?.qualite)}</div>
+    </div>
+    <div style="margin-top:14px;height:30px;border-bottom:1px solid #bbb;font-size:8.5px;color:#888">Signature :</div>
+  </div>`;
+  html+=`</div>`;
 
-  <div class="header-box">
-    <h1>Fiche Confidentielle — ${p.prenom||id.prenom||''} ${((p.nom||id.nom||'')).toUpperCase()}</h1>
-    <div class="sub">Page 1/6 — Identité, mobilité, astreinte, personnalité</div>
-  </div>
+  if(FORM_MODE==='inscription'){
+    html+=`<div class="footer" style="margin-top:16px;padding-top:8px;border-top:1px solid #ddd;font-size:8px;color:#999;text-align:center">La Lysardière — 84 Route de Sainte Mondane, 24370 Saint Julien de Lampon — 05 53 30 57 15 / 06 03 88 15 13</div>`;
+    html+=`</body></html>`;
+    return html;
+  }
 
-  <div class="section-bar">Identité & mobilité</div>
-  <table>
-  ${R('Nom / Prénom',(id.nom||'')+' '+(id.prenom||''))} ${R('Âge',id.age)}
-  ${R('Séjour',id.sejour)} ${R('Autonomie',id.autonomie)}
-  ${R('Besoin infirmière',yn(mob.infirmiere))}
-  ${mob.infirmiere==='oui'?R('Moments',chks(mob.infirmiere_moments)+' — '+(mob.infirmiere_detail||'')):''}
-  ${R('En couple',yn(mob.couple)+(mob.couple==='oui'?' — même chambre : '+yn(mob.meme_chambre):''))}
-  ${R('Fauteuil roulant',yn(mob.fauteuil)+(mob.fauteuil_sortie?' (sorties uniquement)':''))}
-  ${R('Déambulateur',yn(mob.deambulateur))} ${R('Monte escaliers',yn(mob.escaliers))}
-  </table>
+  // ═══════════════════════════════════════════
+  // PAGE 2 — FICHE CONFIDENTIELLE P1 : Identité, mobilité, astreinte
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 1 — Identité, mobilité, astreinte, personnalité');
 
-  <div class="section-bar red">Personne d'astreinte</div>
-  <table>
-  ${R('Type',astr.type==='responsable_inscription'?'Responsable inscription':astr.type==='responsable_legal'?'Responsable légal':'Autre personne')}
-  ${astr.type==='autre'?R('Nom',(astr.prenom||'')+' '+(astr.nom||'')):''} 
-  ${astr.type==='autre'?R('Tél / Mail',(astr.tel||'')+' — '+(astr.mail||'')):''}
-  </table>
+  html+=section('Identité & mobilité');
+  html+=row3('Nom',id.nom,'Prénom',id.prenom,'Âge',id.age);
+  html+=row2('Séjour',id.sejour,'Autonomie',id.autonomie);
+  html+=oui_non('Besoin d\'une infirmière',mob.infirmiere);
+  if(mob.infirmiere==='oui'){
+    html+=checkboxes('Moments',[['matin','Matin'],['midi','Midi'],['soir','Soir']],mob.infirmiere_moments);
+    html+=field('Qui s\'agit-il ?',mob.infirmiere_detail);
+  }
+  html+=oui_non('Inscription en couple',mob.couple);
+  if(mob.couple==='oui') html+=oui_non('Partage la même chambre',mob.meme_chambre);
+  html+=oui_non('Fauteuil roulant',mob.fauteuil);
+  html+=oui_non('Déambulateur',mob.deambulateur);
+  html+=oui_non('Monte les escaliers',mob.escaliers);
 
-  <div class="ta-label">Description de la personnalité</div>
-  <div class="ta-box">${(conf.personnalite||'—').replace(/\n/g,'<br>')}</div>
-  <div class="ta-label">Vie quotidienne (recommandations médicales, toilettes, habitudes…)</div>
-  <div class="ta-box">${(conf.vie_quotidienne||'—').replace(/\n/g,'<br>')}</div>
-  <div class="ta-label">Comportement (relation avec inconnus, encadrants, autres vacanciers…)</div>
-  <div class="ta-box">${(conf.comportement||'—').replace(/\n/g,'<br>')}</div>
+  html+=section('Personne d\'astreinte à contacter');
+  const astrType=astr.type==='responsable_inscription'?'Responsable inscription':astr.type==='responsable_legal'?'Responsable légal':'Autre personne';
+  html+=field('Type',astrType);
+  if(astr.type==='autre') html+=row2('Nom complet',(astr.prenom||'')+' '+(astr.nom||''),'Téléphone',astr.tel);
 
-  <div class="page-break"></div>
-  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 2/6 — Hygiène & alimentation</div></div>
+  html+=textarea('Description de la personnalité',conf.personnalite);
+  html+=textarea('Vie quotidienne (recommandations médicales, toilettes, habitudes…)',conf.vie_quotidienne);
+  html+=textarea('Comportement (relation avec inconnus, encadrants, autres vacanciers…)',conf.comportement);
+  html+=`</div>`;
 
-  <div class="section-bar">Hygiène</div>
-  ${hygieneHtml}
-  <table>
-  ${R('Présence physique douche',yn(hyg.presence_douche))} ${R('Timer douche',yn(hyg.timer_douche))}
-  ${R('Gestion linge',yn(hyg.linge))}
-  ${R('Stomie',yn(hyg.stomie))} ${hyg.stomie==='oui'?R('Aide stomie',hyg.stomie_aide):''}
-  ${R('Pistolet',yn(hyg.pistolet))} ${hyg.pistolet==='oui'?R('Aide pistolet',hyg.pistolet_aide):''}
-  </table>
-  ${hyg.protocoles_toilette?'<div class="ta-label">Protocoles et habitudes de toilette</div><div class="ta-box">'+hyg.protocoles_toilette.replace(/\n/g,'<br>')+'</div>':''}
+  // ═══════════════════════════════════════════
+  // PAGE 3 — FICHE CONFIDENTIELLE P2 : Hygiène & Alimentation
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 2 — Hygiène & alimentation');
 
-  <div class="section-bar orange">Énurésies & Encoprésie</div>
-  <table>
-  ${R('Énurésies',chks(hyg.enurese))}
-  ${(hyg.enurese?.jour||hyg.enurese?.nuit)?R('→ Fréquence / aide / type',(hyg.enurese?.freq||'—')+' | Aide : '+yn(hyg.enurese?.aide)+' | Type : '+(hyg.enurese?.type||'—')):''}
-  ${R('Encoprésie',chks(hyg.encopresie))}
-  ${(hyg.encopresie?.jour||hyg.encopresie?.nuit)?R('→ Fréquence / aide / type',(hyg.encopresie?.freq||'—')+' | Aide : '+yn(hyg.encopresie?.aide)+' | Type : '+(hyg.encopresie?.type||'—')):''}
-  </table>
+  html+=section('Hygiène');
+  html+=grille('Activité / toilette',HYGIENE_ITEMS,hyg.tableau);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Présence physique lors de la douche',hyg.presence_douche)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Timer lors de la douche',hyg.timer_douche)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Gestion du linge',hyg.linge)}</div>`;
+  html+=`</div>`;
+  html+=textarea('Informations complémentaires (toilette)',hyg.protocoles_toilette);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Poche de stomie',hyg.stomie)}</div>`;
+  if(hyg.stomie==='oui') html+=`<div style="flex:2">${field('Aide stomie',hyg.stomie_aide)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Pistolet',hyg.pistolet)}</div>`;
+  if(hyg.pistolet==='oui') html+=`<div style="flex:2">${field('Aide pistolet',hyg.pistolet_aide)}</div>`;
+  html+=`</div>`;
 
-  <div class="section-bar orange">Alimentation</div>
-  ${alimentHtml}
-  <table>
-  ${R('Présentation',alim.presentation)} ${R('Couverts adaptés',yn(alim.couverts)+(alim.couverts==='oui'?' — '+alim.couverts_detail:''))}
-  ${R('Gélifiant',yn(alim.gelifiant)+(alim.gelifiant==='oui'?' — '+alim.gelifiant_detail:''))}
-  ${R('Fausses routes',yn(alim.fausses_routes)+(alim.fausses_routes==='oui'?' — '+alim.fausses_routes_detail:''))}
-  ${R('Régime',alim.regime)} ${R('Addictions',alim.addictions)}
-  ${R('Troubles alim.',alim.troubles)} ${R('Allergies',alim.allergies)}
-  </table>
-  ${alim.info_comp?'<div class="ta-label">Informations complémentaires (alimentation)</div><div class="ta-box">'+alim.info_comp.replace(/\n/g,'<br>')+'</div>':''}
+  // Énurésies
+  html+=section('Énurésies & Encoprésie',ORANGE);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:6px">`;
+  html+=`<div style="flex:1">`;
+  html+=checkboxes('Énurésies',[['jour','Jour'],['nuit','Nuit'],['non','Non']],hyg.enurese);
+  if(hyg.enurese?.jour||hyg.enurese?.nuit){
+    html+=field('Fréquence des changes',hyg.enurese?.freq);
+    html+=field('Type de change',hyg.enurese?.type);
+    html+=oui_non('Aide pour se changer',hyg.enurese?.aide);
+  }
+  html+=`</div>`;
+  html+=`<div style="flex:1">`;
+  html+=checkboxes('Encoprésie',[['jour','Jour'],['nuit','Nuit'],['non','Non']],hyg.encopresie);
+  if(hyg.encopresie?.jour||hyg.encopresie?.nuit){
+    html+=field('Fréquence des changes',hyg.encopresie?.freq);
+    html+=field('Type de change',hyg.encopresie?.type);
+    html+=oui_non('Aide pour se changer',hyg.encopresie?.aide);
+  }
+  html+=`</div>`;
+  html+=`</div>`;
 
-  <div class="page-break"></div>
-  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 3/6 — Rythme, repos, communication, relation</div></div>
+  html+=section('Alimentation',ORANGE);
+  html+=grille('Activité / repas',ALIM_ITEMS,alim.tableau);
+  html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:5px">`;
+  html+=`<div style="flex:1;min-width:120px">${field('Présentation aliments',alim.presentation)}</div>`;
+  html+=`<div style="flex:1;min-width:80px">${oui_non('Couverts adaptés',alim.couverts)}</div>`;
+  if(alim.couverts==='oui') html+=`<div style="flex:1;min-width:100px">${field('Lesquels',alim.couverts_detail)}</div>`;
+  html+=`</div>`;
+  html+=`<div style="display:flex;gap:10px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Gélifiant',alim.gelifiant)}</div>`;
+  if(alim.gelifiant==='oui') html+=`<div style="flex:2">${field('Avec quels aliments',alim.gelifiant_detail)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Risque de fausses routes',alim.fausses_routes)}</div>`;
+  if(alim.fausses_routes==='oui') html+=`<div style="flex:2">${field('Précision',alim.fausses_routes_detail)}</div>`;
+  html+=`</div>`;
+  html+=row2('Régime alimentaire',alim.regime,'Allergies',alim.allergies);
+  html+=row2('Addictions alimentaires',alim.addictions,'Troubles alimentaires',alim.troubles);
+  html+=textarea('Informations complémentaires (alimentation)',alim.info_comp);
+  html+=`</div>`;
 
-  <div class="section-bar">Rythme et Repos</div>
-  <table>
-  ${R('Peurs nocturnes',yn(rep.peurs_nuit)+(rep.peurs_nuit==='oui'?' — '+rep.peurs_nuit_detail:''))}
-  ${R('Se lève la nuit',yn(rep.leve_nuit)+(rep.leve_nuit==='oui'?' — '+rep.leve_nuit_detail:''))}
-  ${R('Surveillance nocturne',yn(rep.surveillance_nuit)+(rep.surveillance_nuit==='oui'?' — '+rep.surveillance_nuit_detail:''))}
-  ${R('Heure coucher',rep.heure_coucher)} ${R('Heure lever',rep.heure_lever)}
-  </table>
-  ${rep.info_comp?'<div class="ta-label">Informations complémentaires (repos)</div><div class="ta-box">'+rep.info_comp.replace(/\n/g,'<br>')+'</div>':''}
+  // ═══════════════════════════════════════════
+  // PAGE 4 — FICHE CONFIDENTIELLE P3 : Rythme, communication, relation
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 3 — Rythme, repos, communication, relation');
 
-  <div class="section-bar orange">Communication</div>
-  <table>
-  ${R('Compréhension',comm.comprehension)} ${R('Mode',comm.mode)}
-  ${R('Exprime ses besoins',yn(comm.exprime_besoins))} ${R('Conversation fluide',yn(comm.conversation))}
-  ${R('Écrit',comm.ecrit)} ${R('Lit',comm.lit)}
-  ${R('Téléphone',yn(comm.telephone)+(comm.telephone==='oui'?' — '+comm.telephone_protocole:''))}
-  </table>
-  ${comm.info_comp?'<div class="ta-label">Informations complémentaires (communication)</div><div class="ta-box">'+comm.info_comp.replace(/\n/g,'<br>')+'</div>':''}
+  html+=section('Rythme et Repos');
+  html+=oui_non('Peurs / angoisses nocturnes',rep.peurs_nuit);
+  if(rep.peurs_nuit==='oui') html+=field('Précision',rep.peurs_nuit_detail);
+  html+=oui_non('Se lève la nuit',rep.leve_nuit);
+  if(rep.leve_nuit==='oui') html+=field('Raisons',rep.leve_nuit_detail);
+  html+=oui_non('Surveillance nocturne nécessaire',rep.surveillance_nuit);
+  if(rep.surveillance_nuit==='oui') html+=field('Raisons',rep.surveillance_nuit_detail);
+  html+=row2('Heure habituelle du coucher',rep.heure_coucher,'Heure habituelle du lever',rep.heure_lever);
+  html+=textarea('Informations complémentaires (repos)',rep.info_comp);
 
-  <div class="section-bar orange">Relation</div>
-  <table>
-  ${R('Sociable',yn(rel.sociable))} ${R('S\'isole',yn(rel.isole))}
-  ${R('Agressivité verbale',yn(rel.agressivite_verbale))}
-  ${R('Agressivité physique',yn(rel.agressivite_physique)+(rel.agressivite_physique==='oui'?' — '+rel.agressivite_detail:''))}
-  ${rel.agressivite_physique==='oui'?R('Préconisations',rel.agressivite_preconisation):''}
-  ${rel.couple_avec?R('En couple avec',rel.couple_avec):''}
-  ${R('Même chambre',yn(rel.meme_chambre))} ${R('Même lit',yn(rel.meme_lit))}
-  </table>
+  html+=section('Communication',ORANGE);
+  html+=row2('Compréhension',comm.comprehension,'Mode de communication',comm.mode);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Peut exprimer ses besoins',comm.exprime_besoins)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Tient une conversation fluide',comm.conversation)}</div>`;
+  html+=`</div>`;
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${field('Écrit',comm.ecrit)}</div>`;
+  html+=`<div style="flex:1">${field('Lit',comm.lit)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Téléphone portable',comm.telephone)}</div>`;
+  html+=`</div>`;
+  if(comm.telephone==='oui') html+=field('Protocole téléphone',comm.telephone_protocole);
+  html+=textarea('Informations complémentaires (communication)',comm.info_comp);
 
-  <div class="page-break"></div>
-  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 4/6 — Déplacements, fauteuil, sorties, activités</div></div>
+  html+=section('Relation',ORANGE);
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+  [['Sociable',rel.sociable],['S\'isole',rel.isole],['Agressivité verbale',rel.agressivite_verbale],['Agressivité physique',rel.agressivite_physique]].forEach(([l,v])=>{
+    html+=`<div style="flex:1;min-width:120px">${oui_non(l,v)}</div>`;
+  });
+  html+=`</div>`;
+  if(rel.agressivite_physique==='oui'){
+    html+=row2('Envers qui',rel.agressivite_detail,'Préconisations',rel.agressivite_preconisation);
+  }
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Partage la même chambre',rel.meme_chambre)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Partage le même lit',rel.meme_lit)}</div>`;
+  html+=`</div>`;
+  html+=`</div>`;
 
-  <div class="section-bar">Déplacements</div>
-  <table>
-  ${R('Se repère espace',yn(dep.repere_espace))} ${R('Se repère temps',yn(dep.repere_temps))}
-  ${R('Fatigable',yn(dep.fatigable))} ${R('Marche',yn(dep.marche))}
-  ${R('Modalités',[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Matériel',dep.marche_modalites?.moins_30&&'<30min',dep.marche_modalites?.trente_a_soixante&&'30–60min',dep.marche_modalites?.plus_1h&&'>1h'].filter(Boolean).join(', '))}
-  ${R('Vitesse / rythme',dep.marche_vitesse)} ${R('Monte un escalier',dep.escalier)}
-  ${R('Intérieur',dep.deplacement_int)} ${R('Extérieur',dep.deplacement_ext)}
-  ${R('Tient le bras',yn(dep.tenir_bras))}
-  </table>
-  ${dep.info_comp?'<div class="ta-label">Informations complémentaires (déplacements)</div><div class="ta-box">'+dep.info_comp.replace(/\n/g,'<br>')+'</div>':''}
+  // ═══════════════════════════════════════════
+  // PAGE 5 — FICHE CONFIDENTIELLE P4 : Déplacements, sorties, activités
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 4 — Déplacements, fauteuil, sorties, activités');
 
-  ${(dep.fauteuil?.appui_plantaire||dep.fauteuil?.occasionnel)?`
-  <div class="section-bar orange">Pour les personnes en fauteuil</div>
-  <table>
-  ${R('Occasionnellement',yn(dep.fauteuil?.occasionnel))} ${R('En permanence',yn(dep.fauteuil?.permanent))}
-  ${R('Se tient debout',yn(dep.fauteuil?.debout))}
-  ${R('Appui plantaire',yn(dep.fauteuil?.appui_plantaire))}
-  ${R('Transfert avec aide (trafic)',yn(dep.fauteuil?.transfert_vehicule))}
-  ${R('Manœuvre seul int.',yn(dep.fauteuil?.manoeuvre_int))} ${R('Manœuvre seul ext.',yn(dep.fauteuil?.manoeuvre_ext))}
-  </table>`:''}
+  html+=section('Déplacements');
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+  [['Se repère dans l\'espace',dep.repere_espace],['Se repère dans le temps',dep.repere_temps],['Fatigable',dep.fatigable],['Marche',dep.marche]].forEach(([l,v])=>{
+    html+=`<div style="flex:1;min-width:130px">${oui_non(l,v)}</div>`;
+  });
+  html+=`</div>`;
+  const marcheModal=[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Matériel',dep.marche_modalites?.moins_30&&'<30min',dep.marche_modalites?.trente_a_soixante&&'30-60min',dep.marche_modalites?.plus_1h&&'>1h'].filter(Boolean).join(', ');
+  html+=row2('Modalités de marche',marcheModal,'Vitesse / rythme',dep.marche_vitesse);
+  html+=row3('Monte un escalier',dep.escalier,'Déplacement intérieur',dep.deplacement_int,'Déplacement extérieur',dep.deplacement_ext);
+  html+=oui_non('Tient le bras de l\'accompagnateur',dep.tenir_bras);
+  html+=textarea('Informations complémentaires (déplacements)',dep.info_comp);
 
-  <div class="section-bar orange">Sorties</div>
-  <table>
-  ${R('Sort seul',yn(sort.seul))} ${R('Sort en groupe',yn(sort.groupe))}
-  ${R('Demande son chemin',yn(sort.chemin))} ${R('Heure fixe',yn(sort.heure_fixe))}
-  ${R('Garde argent sur lui',yn(sort.argent_garde))}
-  ${R('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':'Non')}
-  ${R('Peut se mettre en danger',yn(sort.danger)+(sort.danger==='oui'?' — '+sort.danger_detail:''))}
-  </table>
+  if(dep.fauteuil?.appui_plantaire||dep.fauteuil?.occasionnel||dep.fauteuil?.permanent){
+    html+=section('Pour les personnes en fauteuil',ORANGE);
+    html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+    [['Occasionnellement (longues sorties)',dep.fauteuil?.occasionnel],['En permanence',dep.fauteuil?.permanent],['Peut se tenir debout',dep.fauteuil?.debout]].forEach(([l,v])=>{
+      html+=`<div style="flex:1;min-width:150px">${oui_non(l,v)}</div>`;
+    });
+    html+=`</div>`;
+    html+=`<div style="background:#fff8e6;border:1px solid #f0c040;padding:6px 8px;font-size:9px;color:#7a5800;margin-bottom:5px">⚠️ La Lysardière ne dispose pas de lève-personne ni de véhicules PMR. L'appui plantaire est indispensable pour les transferts.</div>`;
+    html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+    [['Appui plantaire (obligatoire)',dep.fauteuil?.appui_plantaire],['Transfert avec aide (trafic)',dep.fauteuil?.transfert_vehicule],['Manœuvre seul intérieur',dep.fauteuil?.manoeuvre_int],['Manœuvre seul extérieur',dep.fauteuil?.manoeuvre_ext]].forEach(([l,v])=>{
+      html+=`<div style="flex:1;min-width:150px">${oui_non(l,v)}</div>`;
+    });
+    html+=`</div>`;
+  }
 
-  <div class="section-bar orange">Activités</div>
-  <table>
-  ${R('Sait nager',yn(act.nage))} ${R('Choisit ses activités',yn(act.choix))}
-  </table>
-  ${act.interets?'<div class="ta-label">Centres d\'intérêt</div><div class="ta-box">'+act.interets+'</div>':''}
-  ${act.interdites?'<div class="ta-label">Activités interdites</div><div class="ta-box">'+act.interdites+'</div>':''}
+  html+=section('Sorties',ORANGE);
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+  [['Sort seul sans accompagnement',sort.seul],['Sort seul en groupe',sort.groupe],['Sait demander son chemin',sort.chemin],['Rentre à une heure fixe',sort.heure_fixe]].forEach(([l,v])=>{
+    html+=`<div style="flex:1;min-width:150px">${oui_non(l,v)}</div>`;
+  });
+  html+=`</div>`;
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Garde son argent sur lui/elle',sort.argent_garde)}</div>`;
+  html+=`<div style="flex:1">${field('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':'Non')}</div>`;
+  html+=`<div style="flex:1">${oui_non('Peut se mettre en danger',sort.danger)}</div>`;
+  html+=`</div>`;
+  if(sort.danger==='oui') html+=field('Précision danger',sort.danger_detail);
 
-  <div class="page-break"></div>
-  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 5/6 — Troubles, habitudes de vie</div></div>
+  html+=section('Activités',ORANGE);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Sait nager',act.nage)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Sait choisir parmi des activités',act.choix)}</div>`;
+  html+=`</div>`;
+  html+=textarea('Centres d\'intérêt',act.interets);
+  html+=textarea('Activités interdites',act.interdites);
+  html+=`</div>`;
 
-  <div class="section-bar">Troubles</div>
-  <table class="troubles-table">
-    <tr><th>Trouble</th><th>Réponse</th></tr>
-    ${troublesList}
-  </table>
-  ${trou.solutions?'<div class="ta-label">Solutions pour gérer les troubles du comportement</div><div class="ta-box">'+trou.solutions.replace(/\n/g,'<br>')+'</div>':''}
+  // ═══════════════════════════════════════════
+  // PAGE 6 — FICHE CONFIDENTIELLE P5 : Troubles & habitudes
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 5 — Troubles & habitudes de vie');
 
-  <div class="section-bar orange">Habitudes de vie — Tabac</div>
-  <table>
-  ${R('Fumeur',yn(hab.fumeur))}
-  ${hab.fumeur==='oui'?R('Fréquence',hab.fumeur_freq):''}
-  ${hab.fumeur==='oui'?R('Gère seul / frustration',yn(hab.fumeur_seul)+' / '+yn(hab.fumeur_frustre)):''}
-  ${hab.fumeur==='oui'&&hab.fumeur_frustre==='oui'?R('Comportement si frustré',hab.fumeur_comportement):''}
-  ${hab.fumeur==='oui'?R('Protocole cigarette',hab.fumeur_protocole):''}
-  </table>
+  html+=section('Troubles du comportement');
+  html+=troublesTable();
+  html+=textarea('Solutions pour gérer les troubles du comportement',trou.solutions);
 
-  <div class="section-bar orange">Habitudes de vie — Alcool</div>
-  <table>
-  ${R('Peut consommer alcool',yn(hab.alcool))}
-  ${hab.alcool==='oui'?R('Fréquence / gère seul',hab.alcool_freq):''}
-  ${R('Type d\'achat à éviter',hab.alcool_eviter||'—')}
-  ${R('Préférences d\'achat',hab.alcool_preferences||'—')}
-  </table>
+  html+=section('Habitudes de vie — Tabac',ORANGE);
+  html+=oui_non('Fumeur',hab.fumeur);
+  if(hab.fumeur==='oui'){
+    html+=`<div style="background:#fff0f0;border:1px solid #f8baba;padding:6px 8px;font-size:9px;color:#9b2020;margin:4px 0">🚨 Les éducateurs doivent informer les vacanciers que <strong>les briquets sont récupérés la nuit</strong>, quelque soit leur niveau d'autonomie, pour raison de sécurité.</div>`;
+    html+=row2('Fréquence',hab.fumeur_freq,'Gère seul la cigarette',yn(hab.fumeur_seul));
+    html+=oui_non('Frustration par la limite de cigarettes',hab.fumeur_frustre);
+    if(hab.fumeur_frustre==='oui') html+=field('Comportement si frustré',hab.fumeur_comportement);
+    html+=field('Protocole cigarette',hab.fumeur_protocole);
+  }
 
-  <div class="page-break"></div>
-  <div class="header-box"><h1>Fiche Confidentielle</h1><div class="sub">Page 6/6 — Santé, médicaments, déficiences</div></div>
+  html+=section('Habitudes de vie — Alcool',ORANGE);
+  html+=oui_non('Peut consommer de l\'alcool',hab.alcool);
+  if(hab.alcool==='oui') html+=field('Fréquence / gère seul(e)',hab.alcool_freq);
+  html+=row2('Type d\'achat à éviter',hab.alcool_eviter||'—','Préférences d\'achat',hab.alcool_preferences||'—');
+  html+=`</div>`;
 
-  <div class="section-bar red">Traitement médical & soins</div>
-  <table>
-  ${R('Traitement médical',yn(sante.traitement))}
-  ${sante.traitement==='oui'?R('Prend seul(e)',yn(sante.traitement_seul)):''}
-  ${sante.traitement==='oui'?R('Soins corporels',yn(sante.soins_corporels)):''}
-  ${sante.traitement==='oui'?R('Bas de contention',yn(sante.bas_contention)+(sante.bas_contention==='oui'?' — '+sante.contention_protocole:'')):''}
-  </table>
-  ${sante.traitement==='oui'&&sante.soins_detail?'<div class="ta-label">Précision soins et fréquence</div><div class="ta-box">'+sante.soins_detail+'</div>':''}
+  // ═══════════════════════════════════════════
+  // PAGE 7 — FICHE CONFIDENTIELLE P6 : Santé, médicaments, déficiences
+  // ═══════════════════════════════════════════
+  html+=`<div class="page-break">`;
+  html+=header('Fiche Confidentielle','Page 6 — Santé, médicaments, déficiences');
 
-  <div class="section-bar red">Soins infirmiers</div>
-  <table>
-  ${R('Soins infirmiers',yn(sante.soins_infirmiers))}
-  ${sante.soins_infirmiers==='oui'?R('Injections',chks(sante.injections)):''}
-  </table>
-  ${sante.soins_infirmiers==='oui'&&sante.soins_infirm_detail?'<div class="ta-label">Détail soins infirmiers</div><div class="ta-box">'+sante.soins_infirm_detail+'</div>':''}
+  html+=`<div style="background:#fff8e6;border:1px solid #f0c040;padding:6px 8px;font-size:9px;color:#7a5800;margin-bottom:8px">📋 Chaque médicament doit être accompagné de son ordonnance <strong>DANS LA VALISE</strong> au moment du séjour.</div>`;
 
-  <div class="section-bar red">Pathologies</div>
-  <table>
-  ${R('Diabétique',yn(sante.diabete)+(sante.diabete==='oui'?' — injections : '+chks(sante.diabete_injections):''))}
-  ${R('Asthmatique',yn(sante.asthme))}
-  ${R('Épilepsie',yn(sante.epilepsie))}
-  ${sante.epilepsie==='oui'?R('Stabilisée / dernière crise',yn(sante.epilepsie_stabilisee)+' / '+(sante.epilepsie_date||'—')):''}
-  </table>
-  ${sante.epilepsie==='oui'&&sante.epilepsie_protocole?'<div class="ta-label">Protocole crise épilepsie</div><div class="ta-box">'+sante.epilepsie_protocole+'</div>':''}
+  html+=section('Traitement médical & soins',RED);
+  html+=oui_non('Traitement médical',sante.traitement);
+  if(sante.traitement==='oui'){
+    html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+    html+=`<div style="flex:1">${oui_non('Prend son traitement seul(e)',sante.traitement_seul)}</div>`;
+    html+=`<div style="flex:1">${oui_non('Soins corporels',sante.soins_corporels)}</div>`;
+    html+=`</div>`;
+    if(sante.soins_corporels==='oui') html+=textarea('Précision soins et fréquence',sante.soins_detail);
+    html+=oui_non('Bas de contention',sante.bas_contention);
+    if(sante.bas_contention==='oui') html+=field('Protocole bas de contention',sante.contention_protocole);
+  }
 
-  <div class="section-bar">Déficiences</div>
-  <table>
-  ${R('Non voyant',yn(sante.non_voyant))} ${R('Mal voyant',yn(sante.mal_voyant))}
-  ${R('Sourd',yn(sante.sourd))} ${R('Malentendant',yn(sante.malentendant))}
-  ${R('Appareillage',yn(sante.appareillage)+(sante.appareillage==='oui'?' — '+sante.appareillage_type:''))}
-  ${R('Dentier',yn(sante.dentier)+(sante.dentier==='oui'?' — gère seul : '+yn(sante.dentier_seul):''))}
-  ${R('Lunettes',yn(sante.lunettes))}
-  </table>
+  html+=section('Soins infirmiers',RED);
+  html+=oui_non('Soins infirmiers nécessaires',sante.soins_infirmiers);
+  if(sante.soins_infirmiers==='oui'){
+    html+=textarea('Détail soins et fréquence',sante.soins_infirm_detail);
+    html+=checkboxes('Injections pendant le séjour',[['matin','Matin'],['midi','Midi'],['soir','Soir'],['non','Aucune']],sante.injections);
+    html+=`<div style="background:#fff0f0;border:1px solid #f8baba;padding:5px 7px;font-size:8.5px;color:#9b2020;margin:4px 0">⚠️ Toutes injections nécessite le passage d'une IDE. Une ordonnance sera à envoyer obligatoirement ainsi que la carte vitale (PAS DE PHOTOCOPIE) ou l'attestation de droit.</div>`;
+  }
 
-  <div class="section-bar">Données médicales</div>
-  <table>
-  ${R('Poids',sante.poids?sante.poids+' kg':'—')} ${R('Taille',sante.taille?sante.taille+' cm':'—')}
-  </table>
-  ${sante.antecedents?'<div class="ta-label">Antécédents médicaux</div><div class="ta-box">'+sante.antecedents.replace(/\n/g,'<br>')+'</div>':''}
+  html+=section('Pathologies',RED);
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+  html+=`<div style="flex:1;min-width:100px">${oui_non('Diabétique',sante.diabete)}</div>`;
+  html+=`<div style="flex:1;min-width:100px">${oui_non('Asthmatique',sante.asthme)}</div>`;
+  html+=`<div style="flex:1;min-width:100px">${oui_non('Épilepsie',sante.epilepsie)}</div>`;
+  html+=`</div>`;
+  if(sante.diabete==='oui') html+=checkboxes('Injections diabète',[['matin','Matin'],['midi','Midi'],['soir','Soir'],['non','Aucune']],sante.diabete_injections);
+  if(sante.epilepsie==='oui'){
+    html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+    html+=`<div style="flex:1">${oui_non('Stabilisée',sante.epilepsie_stabilisee)}</div>`;
+    html+=`<div style="flex:2">${field('Date dernière crise',sante.epilepsie_date)}</div>`;
+    html+=`</div>`;
+    html+=textarea('Protocole en cas de crise',sante.epilepsie_protocole);
+  }
 
-  <div class="section-bar grey">Autorisation & signature</div>
-  <table>
-  ${R('Autorisation image',yn(conf.autorisation_image?.autorisation)+' — '+(conf.autorisation_image?.nom||''))}
-  ${R('Signature','À '+(conf.signature?.fait_a||'')+' le '+(conf.signature?.date||'')+' — '+(conf.signature?.qualite||''))}
-  </table>
+  html+=section('Déficiences & appareillage');
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+  [['Non voyant',sante.non_voyant],['Mal voyant',sante.mal_voyant],['Sourd',sante.sourd],['Malentendant',sante.malentendant]].forEach(([l,v])=>{
+    html+=`<div style="flex:1;min-width:100px">${oui_non(l,v)}</div>`;
+  });
+  html+=`</div>`;
+  html+=oui_non('Port d\'appareillage',sante.appareillage);
+  if(sante.appareillage==='oui') html+=field('Type d\'appareillage',sante.appareillage_type);
+  html+=`<div style="display:flex;gap:12px;margin-bottom:5px">`;
+  html+=`<div style="flex:1">${oui_non('Porte un dentier',sante.dentier)}</div>`;
+  if(sante.dentier==='oui') html+=`<div style="flex:1">${oui_non('Gère le dentier seul(e)',sante.dentier_seul)}</div>`;
+  html+=`<div style="flex:1">${oui_non('Porte des lunettes',sante.lunettes)}</div>`;
+  html+=`</div>`;
 
-  <div class="footer">La Lysardière — LE BOURG, 24370 ST JULIEN DE LAMPON — Tél : 06 03 88 15 13 / 05 53 30 57 15</div>
+  html+=section('Données médicales & antécédents');
+  html+=row2('Poids',sante.poids?sante.poids+' kg':'—','Taille',sante.taille?sante.taille+' cm':'—');
+  html+=textarea('Antécédents médicaux',sante.antecedents);
 
-  </body></html>`;
+  html+=section('Autorisation image & signature',GREY);
+  html+=row2('Autorisation utilisation image de',conf.autorisation_image?.nom,'Autorisation',yn(conf.autorisation_image?.autorisation));
+  html+=`<div style="margin-top:10px;border-top:1px solid #ddd;padding-top:8px">
+    <div style="display:flex;gap:20px;align-items:flex-end">
+      <div style="flex:1">${field('Fait à',conf.signature?.fait_a)}</div>
+      <div style="flex:1">${field('Le',conf.signature?.date)}</div>
+      <div style="flex:2">${field('Qualité du signataire',conf.signature?.qualite)}</div>
+    </div>
+    <div style="margin-top:14px;height:28px;border-bottom:1px solid #bbb;font-size:8.5px;color:#888">Signature :</div>
+  </div>`;
+
+  html+=`<div style="margin-top:14px;padding-top:8px;border-top:1px solid #ddd;font-size:8px;color:#999;text-align:center">La Lysardière — 84 Route de Sainte Mondane, 24370 Saint Julien de Lampon — 05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012</div>`;
+  html+=`</div>`;
+
+  html+=`</body></html>`;
+  return html;
 }
 
 async function downloadRecap(){
