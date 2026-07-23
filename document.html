@@ -541,7 +541,7 @@ async function deleteDoc(docId, storagePath) {
   if (!confirm('Supprimer ce document définitivement ?')) return;
   await api(`/rest/v1/documents?id=eq.${docId}`, 'DELETE');
   await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, { method:'DELETE', headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${await getJWT()}` } });
-  await init();
+  await softRefresh(['documents']);
 }
 
 function detectTypeFromFilename(filename) {
@@ -584,7 +584,7 @@ async function confirmLink(docId) {
 async function validerDossier(personneId) {
   if (!confirm('Confirmer que le dossier est complet ?')) return;
   await api(`/rest/v1/documents?personne_id=eq.${personneId}`, 'PATCH', { verified:true });
-  await init();
+  await softRefresh(['documents']);
 }
 
 function openModal()  { document.getElementById('modalOverlay').classList.add('show'); }
@@ -594,11 +594,11 @@ async function saveSejour() {
   const nom=document.getElementById('sejourNom').value.trim(), debut=document.getElementById('sejourDebut').value, fin=document.getElementById('sejourFin').value, categorie=document.getElementById('sejourCategorie').value;
   if (!nom||!debut||!fin) return alert('Remplis tous les champs.');
   await api('/rest/v1/sejours','POST',{nom,date_debut:debut,date_fin:fin,categorie});
-  closeModal(); await init();
+  closeModal(); await softRefresh(['sejours','sejours_personnes']);
 }
 
-async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await init(); }
-async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await init(); }
+async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await softRefresh(['sejours_personnes']); }
+async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await softRefresh(['sejours_personnes']); }
 async function addPersonToSejour(sid) { const sel=document.getElementById(`add-sel-${sid}`); if(!sel.value) return; await addToSejour(sid,sel.value); }
 
 async function archiverSejour(sejourId) {
@@ -607,11 +607,11 @@ async function archiverSejour(sejourId) {
   await api(`/rest/v1/sejours?id=eq.${sejourId}`,'PATCH',{archived:true});
   const pids = allSejoursPersonnes.filter(sp=>sp.sejour_id===sejourId).map(sp=>sp.personne_id);
   for (const pid of pids) await api(`/rest/v1/documents?personne_id=eq.${pid}&type=neq.confidentiel&type=neq.dossier_complet`,'PATCH',{archived:true});
-  await init();
+  await softRefresh(['documents','personnes']);
 }
 
-async function confirmSejour(spId) { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'PATCH',{confirmed:true}); await init(); }
-async function rejectSejour(spId)  { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'DELETE'); await init(); }
+async function confirmSejour(spId) { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'PATCH',{confirmed:true}); await softRefresh(['sejours_personnes']); }
+async function rejectSejour(spId)  { await api(`/rest/v1/sejours_personnes?id=eq.${spId}`,'DELETE'); await softRefresh(['sejours_personnes']); }
 
 function filterSearchSelect(docId, query) {
   const list = document.getElementById(`ss-list-${docId}`);
@@ -753,7 +753,7 @@ const mergedBytes = await merged.save();
     annee:         new Date().getFullYear()
   });
 
-  await init();
+  await softRefresh(['fiches']);
   if (erreurs > 0) alert(`✅ Dossier compilé ! (${erreurs} document(s) ignoré(s))`);
   else alert(`✅ Dossier compilé et ajouté au dossier de ${nom} !`);
 }
@@ -892,7 +892,7 @@ async function savePerson() {
   if (!prenom||!nom||!foyer) return alert('Prénom, nom et foyer sont obligatoires.');
   const id=`p${Date.now()}_${Math.floor(Math.random()*1000)}`;
   await api('/rest/v1/personnes','POST',{id,data:{id,prenom,nom,foyer,lieu:lieu||'',lieux:lieu?[lieu]:[],besoins,notes}});
-  closeAddPersonModal(); await init();
+  closeAddPersonModal(); await softRefresh(['personnes']);
   alert(`✅ ${prenom} ${nom} ajouté(e) avec succès !`);
 }
 
@@ -920,7 +920,7 @@ async function archiverAnnee(annee) {
   // Archiver les documents de l'année passée SAUF les confidentielles
   await api(`/rest/v1/documents?annee=eq.${annee}&type=neq.confidentiel`, 'PATCH', { archived: true });
   
-  await init();
+  await softRefresh(['documents','personnes']);
 }
 
 function getFilteredPersonnes() {
@@ -1025,7 +1025,7 @@ async function saveDoc() {
   });
 
   closeAddDocModal();
-  await init();
+  await softRefresh(['fiches']);
   alert('✅ Document ajouté avec succès !');
 }
 
@@ -1106,7 +1106,7 @@ async function unclasserFiche(ficheId){
       body:JSON.stringify({personne_id:null,statut_matching:'nouveau'})
     });
     if(!res.ok){alert('Erreur : '+(await res.text()));return;}
-    await init();
+    await softRefresh(['fiches']);
   }catch(e){alert('Erreur : '+e.message);}
 }
 
@@ -1134,7 +1134,7 @@ async function relier_fiche(ficheId, personneId){
       alert('Erreur liaison : '+err);
       return;
     }
-    await init();
+    await softRefresh(['fiches']);
     alert('✅ Fiche liée à '+p.prenom+' '+p.nom+'.');
   }catch(e){
     alert('Erreur : '+e.message);
@@ -1158,7 +1158,7 @@ async function deleteFiche(ficheId){
       alert('Erreur suppression : '+err);
       return;
     }
-    await init();
+    await softRefresh(['fiches']);
   }catch(e){
     alert('Erreur : '+e.message);
   }
@@ -1523,6 +1523,7 @@ async function saveSejoursConfig(){
 
 
 function renderAll() {
+  const state=saveOpenState();
   const personnes=getFilteredPersonnes(), fSejour=document.getElementById('filterSejour').value;
   let html=buildUnlinked();
   html+=buildFichesSection();
@@ -1531,6 +1532,32 @@ function renderAll() {
   html+=`<div id="vacanciers-container" style="display:none">${personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>'}</div>`;
   html += buildArchivesSection();
   document.getElementById('mainContent').innerHTML=html;
+  restoreOpenState(state);
+}
+
+// Fast render — only updates the vacanciers list, leaves everything else intact
+// Used by search input to avoid rebuilding the whole page on each keystroke
+function renderVacanciers(){
+  const personnes=getFilteredPersonnes();
+  // Update count in section title
+  const titleEl=document.querySelector('.section-title[onclick="toggleVacanciers()"] .count');
+  if(titleEl) titleEl.textContent=personnes.length;
+  // Update vacanciers container content only
+  const container=document.getElementById('vacanciers-container');
+  if(container){
+    const wasOpen=container.style.display!=='none';
+    container.innerHTML=personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
+    // If searching and there are results, auto-open the container
+    const q=document.getElementById('searchInput').value.trim();
+    if(q&&personnes.length>0&&!wasOpen){
+      container.style.display='block';
+      const chev=document.getElementById('vacanciers-chevron');
+      if(chev) chev.classList.add('open');
+    }
+  } else {
+    // Container doesn't exist yet (first render), fall back to full renderAll
+    renderAll();
+  }
 }
 
 function toggleVacanciers() {
@@ -1541,11 +1568,81 @@ function toggleVacanciers() {
 }
 
 let listenersAdded=false;
+// ── STATE PRESERVATION ──────────────────────────────────
+function saveOpenState(){
+  const state={cards:{},sections:{}};
+  // Person cards
+  document.querySelectorAll('[id^="docs-"]').forEach(el=>{
+    state.cards[el.id]=el.style.display!=='none';
+  });
+  // Sections (séjours, vacanciers, fiches, archives)
+  ['fiches-container','vacanciers-container','archives-container'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) state.sections[id]=el.style.display!=='none';
+  });
+  document.querySelectorAll('[id^="sejour-body-"]').forEach(el=>{
+    state.sections[el.id]=el.style.display!=='none';
+  });
+  state.scrollY=window.scrollY;
+  return state;
+}
+
+function restoreOpenState(state){
+  if(!state) return;
+  // Person cards
+  Object.entries(state.cards||{}).forEach(([id,open])=>{
+    const el=document.getElementById(id);
+    const chev=document.getElementById(id.replace('docs-','chev-'));
+    if(el){el.style.display=open?'block':'none';}
+    if(chev){chev.classList.toggle('open',open);}
+  });
+  // Sections
+  Object.entries(state.sections||{}).forEach(([id,open])=>{
+    const el=document.getElementById(id);
+    if(el){el.style.display=open?'block':'none';}
+    // Update chevron for known sections
+    const chevId=id.replace('-container','-chevron').replace('-body-','-chevron-');
+    const chev=document.getElementById(chevId)||document.getElementById(id.replace('container','chevron').replace('body','chevron'));
+    if(chev) chev.classList.toggle('open',open);
+  });
+  if(state.scrollY!==undefined) window.scrollTo({top:state.scrollY,behavior:'instant'});
+}
+
+// Soft refresh: reload only changed data table, then re-render preserving state
+async function softRefresh(tables){
+  const state=saveOpenState();
+  // Reload specific tables or all
+  if(!tables||tables.includes('fiches')){
+    const f=await api('/rest/v1/fiches_inscription?select=*&order=soumis_le.desc');
+    if(f) allFiches=f;
+  }
+  if(!tables||tables.includes('sejours_personnes')){
+    const sp=await api('/rest/v1/sejours_personnes?select=*');
+    if(sp) allSejoursPersonnes=sp;
+  }
+  if(!tables||tables.includes('personnes')){
+    const pRaw=await api('/rest/v1/personnes?select=id,data&order=id.asc');
+    if(pRaw) allPersonnes=pRaw.map(p=>({id:p.id,prenom:p.data?.prenom||'',nom:p.data?.nom||'',foyer:p.data?.foyer||''}));
+  }
+  if(!tables||tables.includes('documents')){
+    const docs=await api('/rest/v1/documents?select=*&order=email_date.desc');
+    if(docs) allDocuments=docs;
+  }
+  buildStats(); checkAlerts();
+  renderAll();
+  restoreOpenState(state);
+}
+
 async function init() {
   await fetchData();
   buildFilters(); buildStats(); checkAlerts(); renderAll(); checkNewDocsSinceLastVisit(); checkNouvelAn();
   if (!listenersAdded) {
-    document.getElementById('searchInput').addEventListener('input',renderAll);
+    // Debounce search — wait 200ms after last keystroke before re-rendering
+    let _searchTimer=null;
+    document.getElementById('searchInput').addEventListener('input',function(){
+      clearTimeout(_searchTimer);
+      _searchTimer=setTimeout(renderVacanciers,200);
+    });
     document.getElementById('filterStatus').addEventListener('change',renderAll);
     document.getElementById('filterFoyer').addEventListener('change',renderAll);
     document.getElementById('filterSejour').addEventListener('change',renderAll);
