@@ -169,9 +169,8 @@ textarea{resize:vertical;min-height:80px}
 
 /* ── PRINT ── */
 @media print{
-  .nav-bar,.stepper-wrap,.header{display:none}
-  .step-page{display:block!important}
-  .form-card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}
+  /* Hide everything — printing is handled by printDossier() in a separate window */
+  body * { display: none !important; }
 }
 </style>
 </head>
@@ -1443,8 +1442,7 @@ textarea{resize:vertical;min-height:80px}
           <h3 style="font-family:Fraunces,serif;color:var(--forest);margin-bottom:16px">Récapitulatif</h3>
           <div id="recap-content" style="font-size:13px;line-height:1.8;color:var(--text-mid)"></div>
           <div style="text-align:center;margin-top:24px">
-            <button class="btn btn-primary" onclick="downloadRecap()" style="margin-right:10px">⬇ Télécharger le récapitulatif PDF</button>
-            <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimer</button>
+            <button class="btn btn-primary" onclick="printDossier()" style="font-size:15px;padding:14px 40px">🖨️ Télécharger / Imprimer le dossier complet</button>
           </div>
         </div>
       </div>
@@ -3036,47 +3034,385 @@ function buildFullPdfHtml(data){
   return html;
 }
 
-async function downloadRecap(){
+async function printDossier(){
   const data=collectAllData();
   const nom=data.inscription.participant.nom||data.confidentielle.identite.nom||'';
   const prenom=data.inscription.participant.prenom||data.confidentielle.identite.prenom||'';
-  const fullHtml=buildFullPdfHtml(data);
 
-  const styleMatch=fullHtml.match(/<style>([\s\S]*?)<\/style>/);
-  const bodyMatch=fullHtml.match(/<body>([\s\S]*?)<\/body>/);
-  const cssText=styleMatch?styleMatch[1]:'';
-  const bodyContent=bodyMatch?bodyMatch[1]:fullHtml;
+  const insc=data.inscription||{}, conf=data.confidentielle||{};
+  const p=insc.participant||{}, resp=insc.responsable||{}, rf=insc.releve_frais||{};
+  const id=conf.identite||{}, mob=conf.mobilite||{}, hyg=conf.hygiene||{};
+  const alim=conf.alimentation||{}, rep=conf.repos||{}, comm=conf.communication||{};
+  const rel=conf.relation||{}, dep=conf.deplacements||{}, sort=conf.sorties||{};
+  const act=conf.activites||{}, trou=conf.troubles||{}, hab=conf.habitudes||{};
+  const sante=conf.sante||{}, astr=conf.astreinte||{};
 
-  const styleEl=document.createElement('style');
-  styleEl.id='pdf-tmp-style';
-  styleEl.textContent=cssText;
-  document.head.appendChild(styleEl);
+  const GREEN='#1a5c4e';
+  const yn=v=>v==='oui'?'Oui':v==='non'?'Non':v||'—';
+  const val=v=>(v||'').toString().trim()||'—';
+  const chkFmt=obj=>{if(!obj)return'Non';if(typeof obj==='string')return obj;return Object.entries(obj).filter(([,v])=>v).map(([k])=>({matin:'Matin',midi:'Midi',soir:'Soir',non:'Aucune',jour:'Jour',nuit:'Nuit'})[k]||k).join(', ')||'Non';};
 
-  // Must be in the DOM and visible (not display:none, not off-screen) for html2canvas to work
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:white;overflow:auto;pointer-events:none';
-  const container=document.createElement('div');
-  container.style.cssText='width:190mm;margin:0 auto;background:white;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#1a1a1a';
-  container.innerHTML=bodyContent;
-  overlay.appendChild(container);
-  document.body.appendChild(overlay);
+  // Helpers
+  const hdr=()=>`<div class="page-header">
+    <div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div>
+    <div class="page-title" id="ptitle"></div>
+  </div>`;
 
-  try{
-    await html2pdf().set({
-      margin:[8,8,10,8],
-      filename:'dossier-'+nom+'-'+prenom+'.pdf',
-      image:{type:'jpeg',quality:0.95},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:'css',before:'.page-break'}
-    }).from(container).save();
-  } catch(e){
-    alert('Erreur PDF : '+(e.message||e));
-  } finally{
-    document.body.removeChild(overlay);
-    document.head.removeChild(styleEl);
+  const sec=(t,color=GREEN)=>`<div class="section-bar" style="background:${color}">${t}</div>`;
+
+  const fld=(label,value)=>`<div class="field"><div class="field-label">${label}</div><div class="field-value">${val(value)}</div></div>`;
+  const row2=(l1,v1,l2,v2)=>`<div class="row2"><div class="field"><div class="field-label">${l1}</div><div class="field-value">${val(v1)}</div></div><div class="field"><div class="field-label">${l2}</div><div class="field-value">${val(v2)}</div></div></div>`;
+  const row3=(l1,v1,l2,v2,l3,v3)=>`<div class="row3"><div class="field"><div class="field-label">${l1}</div><div class="field-value">${val(v1)}</div></div><div class="field"><div class="field-label">${l2}</div><div class="field-value">${val(v2)}</div></div><div class="field"><div class="field-label">${l3}</div><div class="field-value">${val(v3)}</div></div></div>`;
+
+  const ouinon=(label,v,inline=false)=>`<div class="${inline?'oui-non-inline':'oui-non'}"><span class="on-label">${label}</span><span class="on-box ${v==='oui'?'checked':''}">${v==='oui'?'☑':'☐'} Oui</span><span class="on-box ${v==='non'?'checked':''}">${v==='non'?'☑':'☐'} Non</span></div>`;
+
+  const checkboxRow=(label,options,values)=>{
+    const boxes=options.map(([k,lbl])=>`<span class="chk-box">${values&&(values[k]||values===k)?'☑':'☐'} ${lbl}</span>`).join('');
+    return `<div class="checkbox-row"><span class="on-label">${label}</span>${boxes}</div>`;
+  };
+
+  const ta=(label,value)=>`<div class="textarea-field"><div class="field-label">${label}</div><div class="textarea-value">${(value||'—').replace(/\n/g,'<br>')}</div></div>`;
+
+  const grille=(title,items,tableData)=>{
+    const COLS=['Seul(e)','Stimulation verbale','Aide partielle','Aide totale'];
+    const KEYS=['seul','stim','aide_partielle','aide_totale'];
+    const rows=items.map(item=>{
+      const r=(tableData||{})[item.label]||{};
+      return `<tr class="${item.sub?'sub':''}"><td class="act-label">${item.label}</td>${KEYS.map(k=>`<td class="chk-cell">${r[k]?'☑':'☐'}</td>`).join('')}</tr>`;
+    }).join('');
+    return `<table class="grille"><thead><tr><th class="act-label" style="background:${GREEN};color:white">${title}</th>${COLS.map(c=>`<th style="background:${GREEN};color:white">${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  };
+
+  const TROUBLES_MAP={objet_personnel:'Objet personnel',rituels:'Rituels',potomanie:'Potomanie',peur_foule:'Peur de la foule',crise_angoisse:'Crise d\'angoisse',isole:'S\'isole',fabulations:'Fabulations, délires',trouble_memoire:'Trouble de la mémoire',autres:'Autres (précisez)',mise_danger_soi:'Mise en danger de soi',automutilation:'Automutilation',tendance_fugue:'Tendance à fuguer',tentative_suicide:'Tentative de suicide',exhibitionnisme:'Trouble exhibitionniste',troubles_sexuels:'Troubles sexuels'};
+
+  const troublesSection=()=>{
+    const entries=Object.entries(trou.liste||{});
+    const half=Math.ceil(entries.length/2);
+    const makeCol=arr=>`<table class="troubles-table"><thead><tr><th>Trouble</th><th>Oui</th><th>Non</th><th>Précision</th></tr></thead><tbody>${arr.map(([k,v])=>`<tr><td>${TROUBLES_MAP[k]||k}</td><td class="chk-cell">${v?.valeur==='oui'?'☑':'☐'}</td><td class="chk-cell">${v?.valeur==='non'?'☑':'☐'}</td><td class="prec">${v?.valeur==='oui'&&v?.detail?v.detail:'—'}</td></tr>`).join('')}</tbody></table>`;
+    return `<div class="troubles-wrap">${makeCol(entries.slice(0,half))}${makeCol(entries.slice(half))}</div>`;
+  };
+
+  // ── BUILD PAGES ──
+  let body='';
+
+  // ── PAGE 1 : FICHE INSCRIPTION ──
+  const typLabel={weekend_theme:'Week-ends à thèmes',mini_sejour:'Les Mini Séjours',weekend_ordinaire:'Week-end et séjour ordinaire',sejour:'Fiche d\'inscription séjour'}[selectedTypeSejour]||selectedTypeSejour||'';
+  body+=`<div class="page">
+    <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>${typLabel}</strong><br>Fiche d'inscription</div></div>
+    <div class="dest-block"><strong>Destinataire : ${val(resp.foyer)}</strong><br>${val(resp.prenom)} ${val(resp.nom)} — ${val(resp.fonction)}<br>${val(resp.adresse)}, ${val(resp.cp)} ${val(resp.ville)}<br>${val(resp.tel)} — ${val(resp.mail_secretariat)}</div>
+    ${sec('Participant')}
+    ${row3('Nom',p.nom,'Prénom',p.prenom,'Date de naissance',p.naissance)}
+    <div class="row3">
+      ${fld('Sexe',p.sexe)}
+      ${fld('Autonomie',p.autonomie)}
+      <div class="field"><div class="field-label">Inscription en couple</div><div class="oui-non-row"><span class="on-box ${p.couple==='oui'?'checked':''}">${p.couple==='oui'?'☑':'☐'} Oui</span><span class="on-box ${p.couple==='non'?'checked':''}">${p.couple==='non'?'☑':'☐'} Non</span></div></div>
+    </div>
+    ${row2('Numéro d\'astreinte',p.astreinte,'Convoyage',insc.convoyage==='gare_souillac_sarlat'?'Gare de Souillac ou Sarlat':insc.convoyage==='accompagne_structure'?'Accompagné par sa structure':'Pris en charge par La Lysardière')}
+    ${sec('Personne s\'occupant de l\'inscription')}
+    <p class="italic-note">Uniquement à cette adresse seront envoyés les informations et le dossier. Merci de renseigner ces éléments de façon claire et lisible.</p>
+    ${row3('Nom',resp.nom,'Prénom',resp.prenom,'Fonction',resp.fonction)}
+    ${row2('Nom du chef de service',resp.chef_service,'Nom du foyer',resp.foyer)}
+    ${fld('Adresse',resp.adresse)}
+    ${row3('Code postal',resp.cp,'Ville',resp.ville,'Téléphone',resp.tel)}
+    ${row2('Mail du secrétariat',resp.mail_secretariat,'Mail à l\'éducatif',resp.mail_educatif)}
+    ${sec('Relevé de frais')}
+    ${row2('Nom organisme',rf.organisme,'Nom et prénom contact',rf.contact)}
+    ${fld('Adresse',rf.adresse)}
+    ${row3('Code postal',rf.cp,'Ville',rf.ville,'Téléphone',rf.tel)}
+    ${row2('Mail',rf.mail,'Mail comptabilité',rf.mail_compta)}
+    ${sec('Séjour choisi')}
+    ${row2('Séjour',insc.sejour_choisi,'Type',typLabel)}
+    <div class="signature-block">
+      ${row3('Fait à',insc.signature?.fait_a,'Le',insc.signature?.date,'Qualité du signataire',insc.signature?.qualite)}
+      <div class="sig-line">Signature :</div>
+    </div>
+  </div>`;
+
+  if(FORM_MODE==='inscription'){
+    // Only inscription page
+  } else {
+    // ── PAGE 2 : CONF P1 ──
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 1 — Identité, mobilité, astreinte, personnalité</div></div>
+      ${sec('Identité & mobilité')}
+      ${row3('Nom',id.nom,'Prénom',id.prenom,'Âge',id.age)}
+      ${row2('Séjour',id.sejour,'Autonomie',id.autonomie)}
+      <div class="oui-non-grid">
+        ${ouinon('Besoin d\'une infirmière',mob.infirmiere)}
+        ${mob.infirmiere==='oui'?checkboxRow('Moments',[['matin','Matin'],['midi','Midi'],['soir','Soir']],mob.infirmiere_moments):''}
+        ${ouinon('Inscription en couple',mob.couple)}
+        ${mob.couple==='oui'?ouinon('Partage la même chambre',mob.meme_chambre):''}
+        ${ouinon('Fauteuil roulant',mob.fauteuil)}
+        ${ouinon('Déambulateur',mob.deambulateur)}
+        ${ouinon('Monte les escaliers',mob.escaliers)}
+      </div>
+      ${sec('Personne d\'astreinte à contacter')}
+      ${fld('Type',astr.type==='responsable_inscription'?'Responsable inscription':astr.type==='responsable_legal'?'Responsable légal':'Autre personne')}
+      ${astr.type==='autre'?row2('Nom complet',(astr.prenom||'')+' '+(astr.nom||''),'Téléphone',astr.tel):''}
+      ${ta('Description de la personnalité',conf.personnalite)}
+      ${ta('Vie quotidienne (recommandations médicales, toilettes, habitudes…)',conf.vie_quotidienne)}
+      ${ta('Comportement (relation avec inconnus, encadrants, autres vacanciers…)',conf.comportement)}
+    </div>`;
+
+    // ── PAGE 3 : CONF P2 Hygiène ──
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 2 — Hygiène & alimentation</div></div>
+      ${sec('Hygiène')}
+      ${grille('Activité / toilette',HYGIENE_ITEMS,hyg.tableau)}
+      <div class="oui-non-grid">
+        ${ouinon('Présence physique lors de la douche',hyg.presence_douche)}
+        ${ouinon('Timer lors de la douche',hyg.timer_douche)}
+        ${ouinon('Gestion du linge',hyg.linge)}
+        ${ouinon('Poche de stomie',hyg.stomie)}
+        ${hyg.stomie==='oui'?fld('Aide stomie',hyg.stomie_aide):''}
+        ${ouinon('Pistolet',hyg.pistolet)}
+        ${hyg.pistolet==='oui'?fld('Aide pistolet',hyg.pistolet_aide):''}
+      </div>
+      ${ta('Informations complémentaires (toilette)',hyg.protocoles_toilette)}
+      ${sec('Énurésies & Encoprésie','#d35400')}
+      <div class="row2">
+        <div>${checkboxRow('Énurésies',[['jour','Jour'],['nuit','Nuit'],['non','Non']],hyg.enurese)}
+        ${hyg.enurese?.jour||hyg.enurese?.nuit?fld('Fréquence / aide / type',(hyg.enurese?.freq||'—')+' | '+(hyg.enurese?.aide==='oui'?'Avec aide':'Sans aide')+' | '+(hyg.enurese?.type||'—')):''}</div>
+        <div>${checkboxRow('Encoprésie',[['jour','Jour'],['nuit','Nuit'],['non','Non']],hyg.encopresie)}
+        ${hyg.encopresie?.jour||hyg.encopresie?.nuit?fld('Fréquence / aide / type',(hyg.encopresie?.freq||'—')+' | '+(hyg.encopresie?.aide==='oui'?'Avec aide':'Sans aide')+' | '+(hyg.encopresie?.type||'—')):''}</div>
+      </div>
+      ${sec('Alimentation','#d35400')}
+      ${grille('Activité / repas',ALIM_ITEMS,alim.tableau)}
+      <div class="oui-non-grid">
+        ${fld('Présentation aliments',alim.presentation)}
+        ${ouinon('Couverts adaptés',alim.couverts)}
+        ${alim.couverts==='oui'?fld('Lesquels',alim.couverts_detail):''}
+        ${ouinon('Gélifiant',alim.gelifiant)}
+        ${ouinon('Risque de fausses routes',alim.fausses_routes)}
+      </div>
+      ${row2('Régime alimentaire',alim.regime,'Allergies',alim.allergies)}
+      ${row2('Addictions alimentaires',alim.addictions,'Troubles alimentaires',alim.troubles)}
+      ${ta('Informations complémentaires (alimentation)',alim.info_comp)}
+    </div>`;
+
+    // ── PAGE 4 : CONF P3 Rythme, communication, relation ──
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 3 — Rythme, repos, communication, relation</div></div>
+      ${sec('Rythme et Repos')}
+      <div class="oui-non-grid">
+        ${ouinon('Peurs / angoisses nocturnes',rep.peurs_nuit)}
+        ${rep.peurs_nuit==='oui'?fld('Précision',rep.peurs_nuit_detail):''}
+        ${ouinon('Se lève la nuit',rep.leve_nuit)}
+        ${rep.leve_nuit==='oui'?fld('Raisons',rep.leve_nuit_detail):''}
+        ${ouinon('Surveillance nocturne nécessaire',rep.surveillance_nuit)}
+        ${rep.surveillance_nuit==='oui'?fld('Raisons',rep.surveillance_nuit_detail):''}
+      </div>
+      ${row2('Heure habituelle du coucher',rep.heure_coucher,'Heure habituelle du lever',rep.heure_lever)}
+      ${ta('Informations complémentaires (repos)',rep.info_comp)}
+      ${sec('Communication','#d35400')}
+      ${row2('Compréhension',comm.comprehension,'Mode de communication',comm.mode)}
+      <div class="oui-non-grid">
+        ${ouinon('Peut exprimer ses besoins',comm.exprime_besoins)}
+        ${ouinon('Tient une conversation fluide',comm.conversation)}
+        ${fld('Écrit',comm.ecrit)} ${fld('Lit',comm.lit)}
+        ${ouinon('Téléphone portable',comm.telephone)}
+        ${comm.telephone==='oui'?fld('Protocole téléphone',comm.telephone_protocole):''}
+      </div>
+      ${ta('Informations complémentaires (communication)',comm.info_comp)}
+      ${sec('Relation','#d35400')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Sociable',rel.sociable,true)}
+        ${ouinon('S\'isole',rel.isole,true)}
+        ${ouinon('Agressivité verbale',rel.agressivite_verbale,true)}
+        ${ouinon('Agressivité physique',rel.agressivite_physique,true)}
+      </div>
+      ${rel.agressivite_physique==='oui'?row2('Envers qui',rel.agressivite_detail,'Préconisations',rel.agressivite_preconisation):''}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Partage la même chambre',rel.meme_chambre,true)}
+        ${ouinon('Partage le même lit',rel.meme_lit,true)}
+      </div>
+    </div>`;
+
+    // ── PAGE 5 : CONF P4 Déplacements, sorties, activités ──
+    const marcheModal=[dep.marche_modalites?.seul&&'Seul(e)',dep.marche_modalites?.aide&&'Avec aide',dep.marche_modalites?.materiel&&'Matériel',dep.marche_modalites?.moins_30&&'<30min',dep.marche_modalites?.trente_a_soixante&&'30-60min',dep.marche_modalites?.plus_1h&&'>1h'].filter(Boolean).join(', ');
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 4 — Déplacements, fauteuil, sorties, activités</div></div>
+      ${sec('Déplacements')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Se repère dans l\'espace',dep.repere_espace,true)}
+        ${ouinon('Se repère dans le temps',dep.repere_temps,true)}
+        ${ouinon('Fatigable',dep.fatigable,true)}
+        ${ouinon('Marche',dep.marche,true)}
+      </div>
+      ${row2('Modalités de marche',marcheModal,'Vitesse / Rythme',dep.marche_vitesse)}
+      ${row3('Monte un escalier',dep.escalier,'Déplacement intérieur',dep.deplacement_int,'Déplacement extérieur',dep.deplacement_ext)}
+      ${ouinon('Tient le bras de l\'accompagnateur',dep.tenir_bras)}
+      ${ta('Informations complémentaires (déplacements)',dep.info_comp)}
+      ${dep.fauteuil?.appui_plantaire||dep.fauteuil?.occasionnel?`
+        ${sec('Pour les personnes en fauteuil','#d35400')}
+        <div class="oui-non-inline-grid">
+          ${ouinon('Occasionnellement (longues sorties)',dep.fauteuil?.occasionnel,true)}
+          ${ouinon('En permanence',dep.fauteuil?.permanent,true)}
+          ${ouinon('Peut se tenir debout',dep.fauteuil?.debout,true)}
+          ${ouinon('Appui plantaire (obligatoire)',dep.fauteuil?.appui_plantaire,true)}
+          ${ouinon('Transfert avec aide (trafic)',dep.fauteuil?.transfert_vehicule,true)}
+          ${ouinon('Manœuvre seul intérieur',dep.fauteuil?.manoeuvre_int,true)}
+          ${ouinon('Manœuvre seul extérieur',dep.fauteuil?.manoeuvre_ext,true)}
+        </div>`:''}
+      ${sec('Sorties','#d35400')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Sort seul sans accompagnement',sort.seul,true)}
+        ${ouinon('Sort seul en groupe',sort.groupe,true)}
+        ${ouinon('Sait demander son chemin',sort.chemin,true)}
+        ${ouinon('Rentre à une heure fixe',sort.heure_fixe,true)}
+        ${ouinon('Garde son argent sur lui/elle',sort.argent_garde,true)}
+        ${ouinon('Peut se mettre en danger',sort.danger,true)}
+      </div>
+      ${fld('Gère son argent',sort.argent==='seul'?'Oui (seul)':sort.argent==='avec_aide'?'Avec aide':'Non')}
+      ${sort.danger==='oui'?fld('Précision danger',sort.danger_detail):''}
+      ${sec('Activités','#d35400')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Sait nager',act.nage,true)}
+        ${ouinon('Sait choisir parmi des activités',act.choix,true)}
+      </div>
+      ${ta('Centres d\'intérêt',act.interets)}
+      ${ta('Activités interdites',act.interdites)}
+    </div>`;
+
+    // ── PAGE 6 : CONF P5 Troubles & habitudes ──
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 5 — Troubles & habitudes de vie</div></div>
+      ${sec('Troubles du comportement')}
+      ${troublesSection()}
+      ${ta('Solutions pour gérer les troubles du comportement',trou.solutions)}
+      ${sec('Habitudes de vie — Tabac','#d35400')}
+      ${ouinon('Fumeur',hab.fumeur)}
+      ${hab.fumeur==='oui'?`${row2('Fréquence',hab.fumeur_freq,'Gère seul(e)',yn(hab.fumeur_seul))}${ouinon('Frustration par la limite de cigarettes',hab.fumeur_frustre)}${fld('Protocole cigarette',hab.fumeur_protocole)}`:''}
+      ${sec('Habitudes de vie — Alcool','#d35400')}
+      ${ouinon('Peut consommer de l\'alcool',hab.alcool)}
+      ${hab.alcool==='oui'?fld('Fréquence',hab.alcool_freq):''}
+      ${row2('Type d\'achat à éviter',hab.alcool_eviter||'—','Préférences d\'achat',hab.alcool_preferences||'—')}
+    </div>`;
+
+    // ── PAGE 7 : CONF P6 Santé ──
+    body+=`<div class="page">
+      <div class="page-header"><div class="logo">La Lysardière<div class="logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div></div><div class="page-title"><strong>Fiche Confidentielle</strong><br>Page 6 — Santé, médicaments, déficiences</div></div>
+      <div class="alert-box">📋 Chaque médicament doit être accompagné de son ordonnance <strong>DANS LA VALISE</strong> au moment du séjour.</div>
+      ${sec('Traitement médical & soins','#c0392b')}
+      ${ouinon('Traitement médical',sante.traitement)}
+      ${sante.traitement==='oui'?`<div class="oui-non-inline-grid">${ouinon('Prend seul(e)',sante.traitement_seul,true)}${ouinon('Soins corporels',sante.soins_corporels,true)}${ouinon('Bas de contention',sante.bas_contention,true)}</div>${sante.soins_detail?ta('Précision soins',sante.soins_detail):''}${sante.bas_contention==='oui'?fld('Protocole contention',sante.contention_protocole):''}` :''}
+      ${sec('Soins infirmiers','#c0392b')}
+      ${ouinon('Soins infirmiers',sante.soins_infirmiers)}
+      ${sante.soins_infirmiers==='oui'?`${ta('Détail soins et fréquence',sante.soins_infirm_detail)}${checkboxRow('Injections',[['matin','Matin'],['midi','Midi'],['soir','Soir'],['non','Aucune']],sante.injections)}`:''}
+      ${sec('Pathologies','#c0392b')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Diabétique',sante.diabete,true)}
+        ${ouinon('Asthmatique',sante.asthme,true)}
+        ${ouinon('Épilepsie',sante.epilepsie,true)}
+      </div>
+      ${sante.diabete==='oui'?checkboxRow('Injections diabète',[['matin','Matin'],['midi','Midi'],['soir','Soir'],['non','Aucune']],sante.diabete_injections):''}
+      ${sante.epilepsie==='oui'?`${row2('Stabilisée',yn(sante.epilepsie_stabilisee),'Dernière crise',sante.epilepsie_date)}${ta('Protocole crise épilepsie',sante.epilepsie_protocole)}`:''}
+      ${sec('Déficiences & appareillage')}
+      <div class="oui-non-inline-grid">
+        ${ouinon('Non voyant',sante.non_voyant,true)}
+        ${ouinon('Mal voyant',sante.mal_voyant,true)}
+        ${ouinon('Sourd',sante.sourd,true)}
+        ${ouinon('Malentendant',sante.malentendant,true)}
+        ${ouinon('Port d\'appareillage',sante.appareillage,true)}
+        ${ouinon('Porte un dentier',sante.dentier,true)}
+        ${sante.dentier==='oui'?ouinon('Gère le dentier seul(e)',sante.dentier_seul,true):''}
+        ${ouinon('Porte des lunettes',sante.lunettes,true)}
+      </div>
+      ${sante.appareillage==='oui'?fld('Type d\'appareillage',sante.appareillage_type):''}
+      ${sec('Données médicales')}
+      ${row2('Poids',sante.poids?sante.poids+' kg':'—','Taille',sante.taille?sante.taille+' cm':'—')}
+      ${ta('Antécédents médicaux',sante.antecedents)}
+      ${sec('Autorisation image & signature','#4a4a4a')}
+      ${row2('Autorisation utilisation image de',conf.autorisation_image?.nom,'Autorisation',yn(conf.autorisation_image?.autorisation))}
+      <div class="signature-block">
+        ${row3('Fait à',conf.signature?.fait_a,'Le',conf.signature?.date,'Qualité du signataire',conf.signature?.qualite)}
+        <div class="sig-line">Signature :</div>
+      </div>
+    </div>`;
   }
+
+  // ── OPEN PRINT WINDOW ──
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Dossier ${prenom} ${nom}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;background:white}
+    @page{size:A4;margin:12mm 14mm 12mm 14mm}
+    @media print{.page{page-break-after:always;break-after:page}.no-print{display:none}}
+
+    .page{padding:0;min-height:267mm;position:relative}
+    .page:last-child{min-height:auto}
+
+    /* Header */
+    .page-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:2px solid ${GREEN};margin-bottom:8px}
+    .logo{font-family:Georgia,serif;font-size:18pt;font-weight:700;color:${GREEN}}
+    .logo-sub{font-family:Arial,sans-serif;font-size:7pt;color:#666;font-weight:normal;margin-top:2px}
+    .page-title{text-align:right;font-family:Georgia,serif;font-size:12pt;color:${GREEN}}
+
+    /* Dest block */
+    .dest-block{border:1px solid #ddd;padding:7px 10px;margin-bottom:8px;font-size:9pt;line-height:1.5}
+    .dest-block strong{color:${GREEN}}
+
+    /* Section bar */
+    .section-bar{color:white;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding:3px 8px;margin:8px 0 5px}
+
+    /* Fields */
+    .field{margin-bottom:4px}
+    .field-label{font-size:7pt;color:#888;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:1px}
+    .field-value{font-size:9.5pt;color:#111;border-bottom:1px solid #ccc;padding-bottom:2px;min-height:14px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px}
+
+    /* Oui/Non */
+    .oui-non{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:9pt}
+    .oui-non-inline{display:inline-flex;align-items:center;gap:5px;margin-right:16px;font-size:9pt}
+    .on-label{flex:1}
+    .on-box{display:inline-flex;align-items:center;gap:2px;font-size:9pt}
+    .on-box.checked{font-weight:700;color:${GREEN}}
+    .oui-non-row{display:flex;gap:10px}
+    .oui-non-grid{margin-bottom:4px}
+    .oui-non-inline-grid{display:flex;flex-wrap:wrap;gap:2px 0;margin-bottom:5px}
+    .checkbox-row{display:flex;align-items:center;gap:8px;font-size:9pt;margin-bottom:3px}
+    .chk-box{font-size:9pt}
+
+    /* Textarea */
+    .textarea-field{margin-bottom:5px}
+    .textarea-value{border:1px solid #ddd;padding:4px 7px;min-height:24px;font-size:9pt;color:#111;line-height:1.5;background:#fafafa}
+
+    /* Grille hygiène */
+    .grille{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:8.5pt}
+    .grille th,.grille td{border:1px solid #ddd;padding:2px 4px;text-align:center}
+    .act-label{text-align:left!important;font-size:9pt}
+    .grille tbody tr.sub .act-label{padding-left:12px;color:#666;font-style:italic}
+    .chk-cell{font-size:10pt;width:55px}
+
+    /* Troubles */
+    .troubles-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:5px}
+    .troubles-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+    .troubles-table th{background:#f5f5f5;padding:2px 5px;text-align:left;border:1px solid #ddd}
+    .troubles-table td{padding:2px 5px;border:1px solid #eee}
+    .troubles-table .chk-cell{text-align:center;width:24px}
+    .prec{color:#555;font-size:8pt}
+
+    /* Signature */
+    .signature-block{margin-top:10px;border-top:1px solid #ddd;padding-top:8px}
+    .sig-line{margin-top:16px;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:7pt;color:#888}
+
+    /* Alert */
+    .alert-box{border:1px solid #f0c040;background:#fffbea;padding:5px 8px;font-size:8.5pt;color:#7a5800;margin-bottom:7px}
+
+    /* Notes */
+    .italic-note{font-size:8pt;color:#666;font-style:italic;margin-bottom:5px}
+  </style></head><body>
+  ${body}
+  <div class="no-print" style="text-align:center;padding:20px">
+    <button onclick="window.print()" style="background:${GREEN};color:white;border:none;padding:12px 32px;font-size:14px;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif">🖨️ Imprimer / Enregistrer en PDF</button>
+  </div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  win.document.close();
 }
+
 
 // ══ INIT ══
 async function loadSejoursFromSupabase(){
