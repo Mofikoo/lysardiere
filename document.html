@@ -269,6 +269,7 @@ body {
     <div class="header-actions">
       <a href="index.html" class="back-link">← Accueil</a>
       <button class="btn btn-sm" onclick="openSejoursConfig()" title="Configurer les séjours du formulaire public">⚙️ Séjours formulaire</button>
+      <button class="btn btn-sm" onclick="openLienFormulaireModal()" title="Générer un lien à envoyer aux structures" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">🔗 Lien formulaire</button>
       <button class="btn btn-accent btn-sm" onclick="openModal()">+ Séjour</button>
       <button class="btn btn-accent btn-sm" onclick="openAddDocModal()">+ Document</button>
       <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Vacancier</button>
@@ -653,9 +654,10 @@ function buildPersonCard(p, sejourId=null) {
   const ficheRows = personFiches.map(f => {
     const typLabel = {weekend_theme:'Week-end thème',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
     const sejNom = f.reponses_inscription?.sejour_choisi||'—';
+    const modeLabel = f.mode_formulaire==='inscription'?'📝 Inscription seule':f.mode_formulaire==='confidentiel'?'🔒 Confidentielle seule':'📋 Complet';
     return `<div class="doc-row" style="background:#f0f9ff;border-left:3px solid #0ea5e9">
       <span class="doc-type-pill" style="background:#e0f2fe;color:#0369a1">📋 Fiche</span>
-      <span class="doc-filename">${typLabel} — ${sejNom}</span>
+      <span class="doc-filename">${typLabel} — ${sejNom} <span style="font-size:10px;color:#0369a1">[${modeLabel}]</span></span>
       <span class="doc-date">${fmtDate(f.soumis_le)}</span>
       <div class="doc-actions">
         <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
@@ -1010,6 +1012,11 @@ function buildFichesSection() {
   const rows = aClasser.map(f => {
     const p = allPersonnes.find(x => x.id === f.personne_id);
     const typLabel = {weekend_theme:'🎭 Week-end thème',mini_sejour:'🌿 Mini séjour',weekend_ordinaire:'🏡 Week-end ordinaire',sejour:'📋 Séjour long'}[f.type_sejour]||f.type_sejour;
+    const modeBadge = f.mode_formulaire==='inscription'
+      ? `<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700">📝 Inscription</span>`
+      : f.mode_formulaire==='confidentiel'
+      ? `<span style="background:#fff7ed;color:#c2410c;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700">🔒 Confidentiel</span>`
+      : `<span style="background:#e0f2fe;color:#0369a1;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700">📋 Complet</span>`;
     const matchBadge = f.statut_matching==='exact'
       ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Exact</span>`
       : f.statut_matching==='approx'
@@ -1026,6 +1033,7 @@ function buildFichesSection() {
         <div style="font-size:11px;color:var(--text-light)">${typLabel} — ${fmtDate(f.soumis_le)}</div>
       </div>
       ${matchBadge}
+      ${modeBadge}
       ${linkSelect}
       <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
       <button class="btn btn-danger btn-sm" onclick="deleteFiche('${f.id}')">🗑</button>
@@ -1313,7 +1321,56 @@ function openFicheDetail(ficheId){
 }
 
 // ── SÉJOURS CONFIG FORMULAIRE ──
-// ── SÉJOURS CONFIG FORMULAIRE (Supabase) ──
+// ── LIEN FORMULAIRE ──────────────────────────────────────
+function openLienFormulaireModal(){
+  const base = window.location.href.replace('documents.html','formulaire.html').split('?')[0];
+  const liens = [
+    { mode:'complet',     label:'📋 Dossier complet',             desc:'Fiche d\'inscription + Fiche confidentielle (9 étapes)', color:'#18534F' },
+    { mode:'inscription', label:'📝 Fiche d\'inscription seule',  desc:'Uniquement les informations d\'inscription (étapes 1-2)', color:'#2a6b66' },
+    { mode:'confidentiel',label:'🔒 Fiche confidentielle seule',  desc:'Uniquement la fiche confidentielle (étapes 1 + 3 à 8)',  color:'#d35400' }
+  ];
+
+  let overlay = document.getElementById('lien-formulaire-overlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='lien-formulaire-overlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(overlay); }
+
+  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:540px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">
+    <div style="background:#18534F;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">🔗 Lien formulaire à envoyer aux structures</span>
+      <button onclick="document.getElementById('lien-formulaire-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:12px;color:#5C6B6A;margin-bottom:16px">Choisissez le type de formulaire à envoyer, copiez le lien et transmettez-le à la structure.</p>
+      ${liens.map(l => {
+        const url = base + '?mode=' + l.mode;
+        return `<div style="border:1px solid #E5E0D6;border-radius:10px;padding:14px 16px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:13px;color:${l.color};margin-bottom:2px">${l.label}</div>
+          <div style="font-size:11px;color:#8A9695;margin-bottom:10px">${l.desc}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" value="${url}" readonly id="lien-${l.mode}" style="flex:1;font-size:11px;padding:6px 10px;border:1px solid #E5E0D6;border-radius:6px;color:#5C6B6A;background:#f9f9f9">
+            <button onclick="copierLien('${l.mode}')" style="background:${l.color};color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap" id="copybtn-${l.mode}">📋 Copier</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.style.display='flex';
+}
+
+function copierLien(mode){
+  const input = document.getElementById('lien-'+mode);
+  const btn = document.getElementById('copybtn-'+mode);
+  if(!input) return;
+  navigator.clipboard.writeText(input.value).then(()=>{
+    btn.textContent = '✅ Copié !';
+    setTimeout(()=>{ btn.textContent = '📋 Copier'; }, 2000);
+  }).catch(()=>{
+    input.select();
+    document.execCommand('copy');
+    btn.textContent = '✅ Copié !';
+    setTimeout(()=>{ btn.textContent = '📋 Copier'; }, 2000);
+  });
+}
 const SEJOURS_DEFAULT = {
   weekend_theme:{ sessions:["COUPLES du 27 au 29 Mars : 3 jours","PÂQUES du 4 au 6 Avril : 3 jours","PLAISIRS EN PERIGORD du 25 au 27 Avril : 3 jours","ENTRE COPINES du 25 au 27 avril : 3 jours","AUTOUR DES ANIMAUX du 1 au 3 Mai : 3 jours","Z'ANIMAUX du 27 au 29 Novembre : 3 jours","MUSIC AND CO du 27 au 29 Novembre : 3 jours"], prix:'390€ TTC' },
   mini_sejour:{ sessions:["TRESOR PERDU DU PERIGORD du 7 au 11 Mai","C'EST LA FETE ! du 7 au 11 Mai","GRAND MIXTE du 14 au 18 Mai","MELI MELO du 14 au 18 Mai","PECHE ET PETANQUE PARTY","ENTRE COPINES du 4 au 8 Novembre","GOURMANDISES D'AUTOMNE du 4 au 8 Novembre","DOUCEUR D'AUTOMNE du 11 au 15 Novembre"], prix:'590€ TTC' }

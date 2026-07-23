@@ -1538,21 +1538,6 @@ function initStepper(){
   </div>`).join('');
 }
 
-function updateStepper(){
-  for(let i=1;i<=TOTAL_STEPS;i++){
-    const el=document.getElementById('stepper-'+i);
-    if(!el) continue;
-    el.className='step-item '+(i===currentStep?'active':i<currentStep?'done':'todo');
-    el.querySelector('.step-num').textContent=i<currentStep?'✓':String(i);
-  }
-  if(currentStep<=TOTAL_STEPS){
-    document.getElementById('step-indicator').textContent=`Étape ${currentStep} sur ${TOTAL_STEPS}`;
-    document.getElementById('progress-fill').style.width=(currentStep/TOTAL_STEPS*100)+'%';
-  } else {
-    document.getElementById('step-indicator').textContent='';
-    document.getElementById('progress-fill').style.width='100%';
-  }
-}
 
 function tryGoToStep(n){if(n<currentStep) goToStep(n);}
 
@@ -1567,28 +1552,6 @@ function goToStep(n){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function updateNavButtons(){
-  const prev=document.getElementById('btn-prev');
-  const next=document.getElementById('btn-next');
-  const submit=document.getElementById('btn-submit');
-  const nav=document.getElementById('nav-bar');
-  // Step 9 = confirmation page, hide entire nav bar
-  if(currentStep===9){nav.style.display='none';return;}
-  nav.style.display='flex';
-  prev.style.display=currentStep>1?'block':'none';
-  if(currentStep===8){next.style.display='none';submit.style.display='block';}
-  else{next.style.display='block';submit.style.display='none';}
-}
-
-function prevStep(){if(currentStep>1) goToStep(currentStep-1);}
-
-function nextStep(){
-  // Validation désactivée pendant le développement
-  // if(!validateStep(currentStep)) return;
-  if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
-  if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
-  if(currentStep<9) goToStep(currentStep+1);
-}
 
 // ══ TYPE SÉJOUR ══
 function selectTypeSejour(type){
@@ -2500,8 +2463,9 @@ async function submitForm(){
       prenom_saisi:prenom,
       nom_saisi:nom,
       type_sejour:selectedTypeSejour,
-      reponses_inscription:data.inscription,
-      reponses_confidentielle:data.confidentielle,
+      mode_formulaire:FORM_MODE,
+      reponses_inscription:FORM_MODE==='confidentiel'?null:data.inscription,
+      reponses_confidentielle:FORM_MODE==='inscription'?null:data.confidentielle,
       photo_url:photoUrl,
       soumis_le:new Date().toISOString(),
       statut_matching:statut
@@ -2949,14 +2913,117 @@ async function loadSejoursFromSupabase(){
   }
 }
 
+// ── MODE FORMULAIRE (paramètre URL ?mode=) ──
+const FORM_MODE = new URLSearchParams(window.location.search).get('mode') || 'complet';
+// complet: étapes 1-8 | inscription: étapes 1-2 | confidentiel: étapes 1 + 3-8
+
+const MODE_CONFIG = {
+  complet:      { steps:[1,2,3,4,5,6,7,8], label:'Dossier complet',            totalSteps:8 },
+  inscription:  { steps:[1,2],             label:'Fiche d\'inscription',         totalSteps:2 },
+  confidentiel: { steps:[1,3,4,5,6,7,8],  label:'Fiche confidentielle',         totalSteps:7 }
+};
+const modeConf = MODE_CONFIG[FORM_MODE] || MODE_CONFIG.complet;
+// Remap: position in modeConf.steps → DOM step number
+// e.g. confidentiel: step 1→1, step 2→3, step 3→4 ...
+const ACTIVE_STEPS = modeConf.steps; // DOM step numbers to show
+
 function init(){
+  // Apply mode: hide steps not in this mode, remap stepper
+  applyFormMode();
   initStepper();
   updateNavButtons();
   buildHygieneTable(HYGIENE_ITEMS,'hygiene-body','hyg');
   buildHygieneTable(ALIM_ITEMS,'alim-body','alim');
   buildTroublesList();
-  // Default date for conf signature
   document.getElementById('conf-date-signature').value=new Date().toISOString().split('T')[0];
+}
+
+function applyFormMode(){
+  // Show mode banner if not complet
+  if(FORM_MODE!=='complet'){
+    const banner=document.createElement('div');
+    banner.style.cssText='background:#e0f2fe;border-bottom:1px solid #7dd3fc;padding:8px 24px;font-size:12px;color:#0369a1;text-align:center;font-weight:600';
+    banner.textContent='📋 '+modeConf.label+' — Remplissez uniquement les sections demandées par La Lysardière.';
+    document.body.prepend(banner);
+  }
+}
+
+// Override goToStep to skip steps not in this mode
+const _origGoToStep = goToStep;
+function goToStep(n){
+  // Find next valid step in ACTIVE_STEPS
+  _origGoToStep(n);
+}
+
+function nextStep(){
+  if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
+  // Find next step in ACTIVE_STEPS after currentStep
+  const currentIdx = ACTIVE_STEPS.indexOf(currentStep);
+  if(currentIdx === -1){
+    // Not in list, go to first
+    const firstDOM = ACTIVE_STEPS[0];
+    document.getElementById('step-'+currentStep).classList.remove('active');
+    currentStep = firstDOM;
+    document.getElementById('step-'+currentStep).classList.add('active');
+    updateStepper(); updateNavButtons(); window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+  if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
+  const nextDOMStep = ACTIVE_STEPS[currentIdx+1];
+  if(nextDOMStep){
+    document.getElementById('step-'+currentStep).classList.remove('active');
+    currentStep=nextDOMStep;
+    document.getElementById('step-'+currentStep).classList.add('active');
+    if(currentStep===6) updateFauteuilSection();
+    updateStepper(); updateNavButtons(); window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    // Last step — submit
+    submitForm();
+  }
+}
+
+function prevStep(){
+  const currentIdx = ACTIVE_STEPS.indexOf(currentStep);
+  const prevDOMStep = currentIdx>0 ? ACTIVE_STEPS[currentIdx-1] : null;
+  if(prevDOMStep){
+    document.getElementById('step-'+currentStep).classList.remove('active');
+    currentStep=prevDOMStep;
+    document.getElementById('step-'+currentStep).classList.add('active');
+    updateStepper(); updateNavButtons(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+
+function updateStepper(){
+  for(let i=1;i<=TOTAL_STEPS;i++){
+    const el=document.getElementById('stepper-'+i);
+    if(!el) continue;
+    el.className='step-item '+(i===currentStep?'active':i<currentStep?'done':'todo');
+    el.querySelector('.step-num').textContent=i<currentStep?'✓':String(i);
+  }
+  const posInMode = ACTIVE_STEPS.indexOf(currentStep)+1;
+  const totalInMode = ACTIVE_STEPS.length;
+  if(posInMode>0){
+    document.getElementById('step-indicator').textContent=`Étape ${posInMode} sur ${totalInMode}`;
+    document.getElementById('progress-fill').style.width=(posInMode/totalInMode*100)+'%';
+  } else {
+    document.getElementById('step-indicator').textContent='';
+    document.getElementById('progress-fill').style.width='100%';
+  }
+}
+
+function updateNavButtons(){
+  const nav=document.getElementById('nav-bar');
+  if(!nav) return;
+  if(currentStep===9){nav.style.display='none';return;}
+  nav.style.display='flex';
+  const currentIdx=ACTIVE_STEPS.indexOf(currentStep);
+  const prevBtn=document.getElementById('btn-prev');
+  const nextBtn=document.getElementById('btn-next');
+  const submitBtn=document.getElementById('btn-submit');
+  const isLast=currentIdx===ACTIVE_STEPS.length-1;
+  if(prevBtn) prevBtn.style.display=currentIdx>0?'block':'none';
+  if(nextBtn) nextBtn.style.display=isLast?'none':'block';
+  if(submitBtn) submitBtn.style.display=isLast?'block':'none';
 }
 
 // Charger les séjours depuis Supabase puis initialiser
