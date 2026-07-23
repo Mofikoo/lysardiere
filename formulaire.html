@@ -1467,6 +1467,8 @@ textarea{resize:vertical;min-height:80px}
   <div style="font-size:12px;color:var(--text-light)" id="step-indicator">Étape 1 sur 8</div>
   <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Suivant &nbsp;→</button>
   <button class="btn btn-submit" id="btn-submit" onclick="submitForm()" style="display:none">✅ Envoyer la fiche</button>
+  <!-- Bouton test visible uniquement en localhost / dev -->
+  <button id="btn-test-fill" onclick="fillTestData()" style="display:none;position:fixed;bottom:80px;right:16px;background:#7c3aed;color:white;border:none;border-radius:8px;padding:8px 14px;font-size:11px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 12px rgba(124,58,237,0.4)">🧪 Remplir test</button>
 </div>
 
 <script>
@@ -3110,6 +3112,132 @@ const modeConf = MODE_CONFIG[FORM_MODE] || MODE_CONFIG.complet;
 // e.g. confidentiel: step 1→1, step 2→3, step 3→4 ...
 const ACTIVE_STEPS = modeConf.steps; // DOM step numbers to show
 
+// ══ TEST DATA ══
+function fillTestData(){
+  // Type séjour
+  if(!selectedTypeSejour) selectTypeSejour('weekend_theme');
+  if(ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el){el.value=v;el.dispatchEvent(new Event('change'));}};
+  const radio=(name,v)=>{const el=document.querySelector(`input[name="${name}"][value="${v}"]`);if(el){el.checked=true;el.dispatchEvent(new Event('change'));}};
+  const check=(id,v=true)=>{const el=document.getElementById(id);if(el){el.checked=v;el.dispatchEvent(new Event('change'));}};
+
+  // === ÉTAPE 2 : Inscription ===
+  // Séjour
+  const firstSejour=document.querySelector('input[name="sejour-choix"]');
+  if(firstSejour){firstSejour.checked=true;}
+  // Participant
+  set('insc-nom','DUPONT');set('insc-prenom','Marie');set('insc-naissance','1985-06-15');
+  radio('insc-sexe','F');radio('insc-autonomie','BA');radio('insc-couple','non');
+  radio('insc-tutelle','non');radio('insc-protection','non');
+  set('insc-astreinte','06 12 34 56 78');radio('insc-convoyage','lysardiere');
+  // Responsable
+  set('insc-resp-nom','MARTIN');set('insc-resp-prenom','Sophie');set('insc-resp-fonction','Éducatrice spécialisée');
+  set('insc-chef-service','M. LEBLANC');set('insc-foyer-nom','Foyer Les Châtaigniers');
+  set('insc-adresse','12 rue des Lilas');set('insc-cp','31000');set('insc-ville','Toulouse');
+  set('insc-tel','05 61 23 45 67');set('insc-mail-secretariat','secretariat@foyer-chataigniers.fr');
+  set('insc-mail-educatif','educatif@foyer-chataigniers.fr');
+  // Relevé de frais
+  set('insc-org-nom','ADAPEI 31');set('insc-org-contact','DURAND Paul');set('insc-org-tel','05 61 00 11 22');
+  set('insc-org-adresse','45 avenue Victor Hugo');set('insc-org-cp','31000');set('insc-org-ville','Toulouse');
+  set('insc-org-mail','contact@adapei31.fr');set('insc-org-mail-compta','compta@adapei31.fr');
+  // Signature
+  set('insc-fait-a','Toulouse');set('insc-date-signature',new Date().toISOString().split('T')[0]);
+  set('insc-qualite','Directeur(trice) du foyer');
+  const acc=document.getElementById('insc-acceptation');if(acc)acc.checked=true;
+
+  // === ÉTAPE 3 : Identité & mobilité ===
+  set('conf-nom','DUPONT');set('conf-prenom','Marie');set('conf-age','39');
+  set('conf-sejour-nom','COUPLES du 27 au 29 Mars : 3 jours');
+  radio('conf-autonomie','bonne');radio('conf-infirmiere','non');radio('conf-couple','non');
+  radio('conf-fauteuil','non');radio('conf-deambulateur','non');radio('conf-escaliers','oui');
+  radio('conf-astreinte-type','responsable_inscription');
+  set('conf-personnalite','Marie est une personne douce et sociable. Elle apprécie la compagnie des autres et participe volontiers aux activités de groupe. Elle peut parfois être anxieuse dans les situations nouvelles mais se rassure rapidement.');
+  set('conf-vie-quotidienne','Marie est autonome pour la toilette et l\'habillage. Elle nécessite une stimulation verbale pour certaines tâches comme la gestion de son linge. Elle se lève vers 7h30 et se couche vers 22h.');
+  set('conf-comportement','Comportement calme et agréable. Marie s\'intègre bien au groupe. Elle peut avoir des moments d\'anxiété qu\'il faut accompagner avec bienveillance.');
+
+  // === ÉTAPE 4 : Hygiène ===
+  // Grilles hygiène — cocher "Seul(e)" pour tout
+  HYGIENE_ITEMS.forEach((_,i)=>{
+    const el=document.querySelector(`input[name="hyg-${i}"][value="seul"]`);
+    if(el){el.checked=true;el.dispatchEvent(new Event('change'));}
+  });
+  radio('conf-presence-douche','non');radio('conf-timer-douche','non');radio('conf-linge','oui');
+  set('conf-toilette-info','Autonome pour la toilette. Rappel verbal utile pour le linge.');
+  radio('conf-stomie','non');radio('conf-pistolet','non');
+  check('conf-enurese-non',true);check('conf-encop-non',true);
+  // Alimentation
+  ALIM_ITEMS.forEach((_,i)=>{
+    const el=document.querySelector(`input[name="alim-${i}"][value="seul"]`);
+    if(el){el.checked=true;el.dispatchEvent(new Event('change'));}
+  });
+  radio('conf-alim-pres','normaux');radio('conf-couverts','non');radio('conf-gelifiant','non');
+  radio('conf-fausses-routes','non');
+  set('conf-regime','Sans restriction particulière');set('conf-addictions-alim','Aucune');
+  set('conf-troubles-alim','Aucun');set('conf-allergies','Aucune allergie connue');
+  set('conf-alim-info','Bon appétit, mange de tout.');
+
+  // === ÉTAPE 5 : Communication & relation ===
+  radio('conf-peurs-nuit','non');radio('conf-leve-nuit','non');radio('conf-surveillance-nuit','non');
+  set('conf-heure-coucher','22h00');set('conf-heure-lever','7h30');
+  set('conf-repos-info','Pas de trouble du sommeil particulier.');
+  radio('conf-comprehension','moyenne');radio('conf-mode-comm','langage_verbal');
+  radio('conf-exprimer-besoins','oui');radio('conf-conversation','oui');
+  radio('conf-ecrit','oui');radio('conf-lit','oui');
+  radio('conf-telephone','oui');set('conf-telephone-protocole','Peut appeler seule, surveiller les achats en ligne.');
+  set('conf-comm-info','Bonne communication verbale.');
+  radio('conf-sociable','oui');radio('conf-isole','non');
+  radio('conf-agressivite-verbale','non');radio('conf-agressivite-physique','non');
+  radio('conf-meme-chambre-rel','non');radio('conf-meme-lit','non');
+
+  // === ÉTAPE 6 : Déplacements ===
+  radio('conf-repere-espace','oui');radio('conf-repere-temps','oui');
+  radio('conf-fatigable','non');radio('conf-marche','oui');
+  check('conf-marche-seul',true);check('conf-marche-30a60',true);
+  set('conf-marche-vitesse','Rythme normal, peut marcher 45 min sans pause.');
+  set('conf-deplacement-info','Marche bien, pas de difficultés particulières.');
+  radio('conf-escalier-monte','oui');radio('conf-deplacement-int','aucun');
+  radio('conf-deplacement-ext','aucun');radio('conf-tenir-bras','non');
+  radio('conf-sortie-seul','non');radio('conf-sortie-groupe','oui');
+  radio('conf-demander-chemin','oui');radio('conf-heure-fixe','oui');
+  radio('conf-argent-garde','oui');radio('conf-argent','avec_aide');
+  radio('conf-danger','non');radio('conf-nage','non');radio('conf-choix-activite','oui');
+  set('conf-interets','Musique, jardinage, activités manuelles, balade en nature.');
+  set('conf-activites-interdites','Aucune contre-indication médicale.');
+
+  // === ÉTAPE 7 : Troubles ===
+  TROUBLES_ITEMS.forEach(t=>{
+    const el=document.querySelector(`input[name="trouble-${t.key}"][value="non"]`);
+    if(el){el.checked=true;el.dispatchEvent(new Event('change'));}
+  });
+  set('conf-troubles-solutions','Pas de trouble comportemental signalé.');
+  radio('conf-fumeur','non');radio('conf-alcool','non');
+  set('conf-alcool-eviter','Aucun');set('conf-alcool-preferences','Aucune');
+
+  // === ÉTAPE 8 : Santé ===
+  radio('conf-traitement','non');radio('conf-soins-infirm','non');
+  radio('conf-diabete','non');radio('conf-asthme','non');radio('conf-epilepsie','non');
+  radio('conf-non-voyant','non');radio('conf-mal-voyant','non');
+  radio('conf-sourd','non');radio('conf-malentendant','non');
+  radio('conf-appareillage','non');radio('conf-dentier','non');radio('conf-lunettes','oui');
+  set('conf-poids','62');set('conf-taille','165');
+  set('conf-antecedents','Aucun antécédent médical notable.');
+  set('conf-image-nom','Marie DUPONT');radio('conf-autorisation-image','oui');
+  set('conf-fait-a','Toulouse');set('conf-date-signature',new Date().toISOString().split('T')[0]);
+  set('conf-qualite','Directeur(trice) du foyer');
+  const accConf=document.getElementById('conf-acceptation');if(accConf)accConf.checked=true;
+
+  // Update fauteuil section visibility
+  updateFauteuilSection();
+
+  // Show success notification
+  const notif=document.createElement('div');
+  notif.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#7c3aed;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+  notif.textContent='🧪 Données de test remplies ! Naviguez entre les étapes pour vérifier.';
+  document.body.appendChild(notif);
+  setTimeout(()=>notif.remove(),3000);
+}
+
 function init(){
   // Apply mode: hide steps not in this mode, remap stepper
   applyFormMode();
@@ -3213,7 +3341,15 @@ function updateNavButtons(){
 }
 
 // Charger les séjours depuis Supabase puis initialiser
-loadSejoursFromSupabase().then(()=>init());
+loadSejoursFromSupabase().then(()=>{
+  init();
+  // Show test button only on localhost or when ?test=1 in URL
+  const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.search.includes('test=1');
+  if(isLocal){
+    const btn=document.getElementById('btn-test-fill');
+    if(btn) btn.style.display='block';
+  }
+});
 </script>
 </body>
 </html>
