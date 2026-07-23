@@ -296,6 +296,18 @@ body {
   <select id="filterFoyer">
     <option value="">Tous les foyers</option>
   </select>
+  <select id="filterFiche" onchange="renderAll()">
+    <option value="">Toutes les fiches</option>
+    <option value="avec_fiche">Avec fiche reçue 📋</option>
+    <option value="sans_fiche">Sans fiche reçue</option>
+    <option value="inscription">Fiche inscription 📝</option>
+    <option value="confidentiel">Fiche confidentielle 🔒</option>
+    <option value="complet">Dossier complet 📋</option>
+  </select>
+  <select id="sortPersonnes" onchange="renderAll()">
+    <option value="alpha">A → Z</option>
+    <option value="foyer">Par foyer</option>
+  </select>
 </div>
 
 <div class="stats-bar" id="statsBar"></div>
@@ -661,6 +673,7 @@ function buildPersonCard(p, sejourId=null) {
       <span class="doc-date">${fmtDate(f.soumis_le)}</span>
       <div class="doc-actions">
         <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
+        <button class="btn btn-sm" onclick="unclasserFiche('${f.id}')" title="Remettre dans À classer" style="background:#fff9e6;color:#856404;border:1px solid #fcd34d">↩ Déclasser</button>
         <button class="btn btn-danger btn-icon btn-sm" onclick="deleteFiche('${f.id}')" title="Supprimer">🗑</button>
       </div>
     </div>`;
@@ -911,16 +924,37 @@ async function archiverAnnee(annee) {
 }
 
 function getFilteredPersonnes() {
-  const search=document.getElementById('searchInput').value.toLowerCase(), fStatus=document.getElementById('filterStatus').value, fFoyer=document.getElementById('filterFoyer').value, fSejour=document.getElementById('filterSejour').value;
-  return allPersonnes.filter(p=>{
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  const fStatus=document.getElementById('filterStatus').value;
+  const fFoyer=document.getElementById('filterFoyer').value;
+  const fSejour=document.getElementById('filterSejour').value;
+  const fFiche=(document.getElementById('filterFiche')||{}).value||'';
+  const sortBy=(document.getElementById('sortPersonnes')||{}).value||'alpha';
+
+  let result = allPersonnes.filter(p=>{
     const name=`${p.prenom} ${p.nom}`.toLowerCase();
     if (search&&!name.includes(search)&&!(p.foyer||'').toLowerCase().includes(search)) return false;
     if (fStatus&&getStatus(p.id)!==fStatus) return false;
     if (fFoyer&&p.foyer!==fFoyer) return false;
     if (fSejour==='none'&&allSejoursPersonnes.some(sp=>sp.personne_id===p.id)) return false;
     if (fSejour&&fSejour!=='none'&&!allSejoursPersonnes.some(sp=>sp.sejour_id===fSejour&&sp.personne_id===p.id)) return false;
+    // Filtre fiche reçue
+    const personFiches = allFiches.filter(f=>f.personne_id===p.id);
+    if (fFiche==='avec_fiche'&&personFiches.length===0) return false;
+    if (fFiche==='sans_fiche'&&personFiches.length>0) return false;
+    if (fFiche==='inscription'&&!personFiches.some(f=>f.mode_formulaire==='inscription')) return false;
+    if (fFiche==='confidentiel'&&!personFiches.some(f=>f.mode_formulaire==='confidentiel')) return false;
+    if (fFiche==='complet'&&!personFiches.some(f=>f.mode_formulaire==='complet'||!f.mode_formulaire)) return false;
     return true;
   });
+
+  // Sort
+  if (sortBy==='foyer'){
+    result.sort((a,b)=>(a.foyer||'').localeCompare(b.foyer||'')||(a.nom||'').localeCompare(b.nom||''));
+  } else {
+    result.sort((a,b)=>(a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||''));
+  }
+  return result;
 }
 
 async function openAddDocModal() {
@@ -1059,8 +1093,30 @@ function toggleFiches(){
   v?.classList.toggle('open');
 }
 
+async function unclasserFiche(ficheId){
+  const f = allFiches.find(x=>x.id===ficheId);
+  if(!f) return;
+  const nom = `${f.prenom_saisi||''} ${f.nom_saisi||''}`.trim();
+  if(!confirm(`Déclasser la fiche de ${nom} ?\n\nElle sera remise dans "Fiches à classer" et dissociée du vacancier.`)) return;
+  try{
+    const jwt = await getJWT();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches_inscription?id=eq.${encodeURIComponent(ficheId)}`,{
+      method:'PATCH',
+      headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({personne_id:null,statut_matching:'nouveau'})
+    });
+    if(!res.ok){alert('Erreur : '+(await res.text()));return;}
+    await init();
+  }catch(e){alert('Erreur : '+e.message);}
+}
+
 async function relier_fiche(ficheId, personneId){
   if(!personneId) return;
+  const f = allFiches.find(x=>x.id===ficheId);
+  const p = allPersonnes.find(x=>x.id===personneId);
+  if(!p) return;
+  const nomFiche = `${f?.prenom_saisi||''} ${f?.nom_saisi||''}`.trim();
+  if(!confirm(`Relier la fiche de "${nomFiche}" à ${p.prenom} ${p.nom} — ${p.foyer||''} ?\n\nCette action peut être annulée via le bouton "↩ Déclasser".`)) return;
   try{
     const jwt = await getJWT();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches_inscription?id=eq.${encodeURIComponent(ficheId)}`, {
@@ -1079,7 +1135,7 @@ async function relier_fiche(ficheId, personneId){
       return;
     }
     await init();
-    alert('✅ Fiche liée au vacancier.');
+    alert('✅ Fiche liée à '+p.prenom+' '+p.nom+'.');
   }catch(e){
     alert('Erreur : '+e.message);
   }
