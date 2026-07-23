@@ -223,6 +223,17 @@ textarea{resize:vertical;min-height:80px}
       </div>
 
       <div id="error-type" class="alert alert-error" style="display:none;margin-top:14px">Veuillez choisir un type de séjour.</div>
+
+      <!-- Mini-champs identité pour mode confidentiel uniquement -->
+      <div id="conf-mini-identity" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="section-header" style="font-size:13px;margin-bottom:10px">Identité du vacancier</div>
+        <div class="field-row cols3">
+          <div class="field-group"><label class="field-label">Nom <span class="req">*</span></label><input type="text" id="mini-nom" placeholder="NOM"></div>
+          <div class="field-group"><label class="field-label">Prénom <span class="req">*</span></label><input type="text" id="mini-prenom" placeholder="Prénom"></div>
+          <div class="field-group"><label class="field-label">Âge <span class="req">*</span></label><input type="number" id="mini-age" placeholder="ex: 35" min="1" max="99"></div>
+        </div>
+        <div class="field-group"><label class="field-label">Nom et date du séjour <span class="req">*</span></label><input type="text" id="mini-sejour" placeholder="ex: Séjour mer du 1 au 15 juillet 2026"></div>
+      </div>
     </div>
   </div>
 
@@ -1532,10 +1543,15 @@ const STEP_LABELS = [
 
 function initStepper(){
   const s=document.getElementById('stepper');
-  s.innerHTML=STEP_LABELS.map((l,i)=>`<div class="step-item ${i+1===currentStep?'active':i+1<currentStep?'done':'todo'}" id="stepper-${i+1}" onclick="tryGoToStep(${i+1})">
-    <div class="step-num">${i+1<currentStep?'✓':i+1}</div>
-    <div class="step-label">${l}</div>
-  </div>`).join('');
+  // Only show stepper items for steps in ACTIVE_STEPS
+  const labels={1:'Type de séjour',2:'Inscription',3:'Identité & mobilité',4:'Hygiène & alimentation',5:'Communication & relation',6:'Déplacements & activités',7:'Troubles & habitudes',8:'Santé'};
+  s.innerHTML=ACTIVE_STEPS.map((domStep,i)=>{
+    const pos=i+1;
+    return `<div class="step-item ${domStep===currentStep?'active':domStep<currentStep?'done':'todo'}" id="stepper-${domStep}" onclick="tryGoToStep(${domStep})">
+      <div class="step-num">${domStep<currentStep?'✓':pos}</div>
+      <div class="step-label">${labels[domStep]||''}</div>
+    </div>`;
+  }).join('');
 }
 
 
@@ -2437,8 +2453,13 @@ async function submitForm(){
   document.getElementById('recap-waiting').style.display='block';
 
   const data=collectAllData();
-  const nom=data.inscription.participant.nom;
-  const prenom=data.inscription.participant.prenom;
+  // In confidentiel mode, nom/prenom come from mini identity fields in step-1
+  const nom = FORM_MODE==='confidentiel'
+    ? (document.getElementById('mini-nom')?.value||data.confidentielle.identite.nom||'')
+    : (data.inscription.participant.nom||'');
+  const prenom = FORM_MODE==='confidentiel'
+    ? (document.getElementById('mini-prenom')?.value||data.confidentielle.identite.prenom||'')
+    : (data.inscription.participant.prenom||'');
 
   // Matching personne
   const match=await matchPersonne(nom,prenom);
@@ -2939,37 +2960,40 @@ function init(){
 }
 
 function applyFormMode(){
-  // Show mode banner if not complet
   if(FORM_MODE!=='complet'){
     const banner=document.createElement('div');
     banner.style.cssText='background:#e0f2fe;border-bottom:1px solid #7dd3fc;padding:8px 24px;font-size:12px;color:#0369a1;text-align:center;font-weight:600';
     banner.textContent='📋 '+modeConf.label+' — Remplissez uniquement les sections demandées par La Lysardière.';
     document.body.prepend(banner);
   }
+  // Show mini identity fields for confidentiel mode (step-1 only)
+  if(FORM_MODE==='confidentiel'){
+    const el=document.getElementById('conf-mini-identity');
+    if(el) el.style.display='block';
+  }
 }
 
-// Override goToStep to skip steps not in this mode
-const _origGoToStep = goToStep;
-function goToStep(n){
-  // Find next valid step in ACTIVE_STEPS
-  _origGoToStep(n);
+function prefillConfIdentityFromMini(){
+  if(FORM_MODE!=='confidentiel') return;
+  const nom=document.getElementById('mini-nom')?.value||'';
+  const prenom=document.getElementById('mini-prenom')?.value||'';
+  const age=document.getElementById('mini-age')?.value||'';
+  const sejour=document.getElementById('mini-sejour')?.value||'';
+  if(document.getElementById('conf-nom')) document.getElementById('conf-nom').value=nom;
+  if(document.getElementById('conf-prenom')) document.getElementById('conf-prenom').value=prenom;
+  if(document.getElementById('conf-age')) document.getElementById('conf-age').value=age;
+  if(document.getElementById('conf-sejour-nom')) document.getElementById('conf-sejour-nom').value=sejour;
 }
+
+// Remove the broken _origGoToStep override
 
 function nextStep(){
-  if(currentStep===1&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
+  if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
+  if(currentStep===1&&FORM_MODE!=='confidentiel'&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
+  if(currentStep===1&&FORM_MODE==='confidentiel') prefillConfIdentityFromMini();
   // Find next step in ACTIVE_STEPS after currentStep
   const currentIdx = ACTIVE_STEPS.indexOf(currentStep);
-  if(currentIdx === -1){
-    // Not in list, go to first
-    const firstDOM = ACTIVE_STEPS[0];
-    document.getElementById('step-'+currentStep).classList.remove('active');
-    currentStep = firstDOM;
-    document.getElementById('step-'+currentStep).classList.add('active');
-    updateStepper(); updateNavButtons(); window.scrollTo({top:0,behavior:'smooth'});
-    return;
-  }
-  if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
-  const nextDOMStep = ACTIVE_STEPS[currentIdx+1];
+  const nextDOMStep = currentIdx>=0 ? ACTIVE_STEPS[currentIdx+1] : null;
   if(nextDOMStep){
     document.getElementById('step-'+currentStep).classList.remove('active');
     currentStep=nextDOMStep;
