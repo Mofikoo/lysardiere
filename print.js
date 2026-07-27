@@ -883,11 +883,12 @@ function openPrintWindow(html, options) {
   options = options || {};
   const title = options.title || 'La Lysardière — Impression';
 
-  // Remove any existing print iframe
-  const existing = document.getElementById('lys-print-iframe');
-  if(existing) existing.remove();
+  // Remove existing print iframe/bar if any
+  const oldIframe = document.getElementById('lys-print-iframe');
+  const oldBar = document.getElementById('lys-print-bar');
+  if(oldIframe) oldIframe.remove();
+  if(oldBar) oldBar.remove();
 
-  // Build full document HTML
   const fullHtml = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -897,45 +898,33 @@ function openPrintWindow(html, options) {
     ${LYS_PRINT_CSS}
     @page { size: A4 portrait; margin: 18mm 16mm 16mm 16mm; }
     body {
-      padding: 0;
-      margin: 0;
+      margin: 16mm 18mm;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+    }
+    @media print {
+      body { margin: 0; }
     }
   </style>
 </head>
 <body>${html}</body>
 </html>`;
 
-  // Create hidden iframe
-  const iframe = document.createElement('iframe');
-  iframe.id = 'lys-print-iframe';
-  iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:white;';
-  document.body.appendChild(iframe);
+  // Open new window
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if(!w) { alert('Autorisez les popups pour cette page.'); return; }
 
-  // Write content into iframe
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(fullHtml);
-  iframe.contentDocument.close();
+  w.document.write(fullHtml);
+  w.document.close();
 
-  // Add close button overlay on top of iframe
-  const closeBtn = document.createElement('div');
-  closeBtn.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100000;background:#1a5c4e;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,sans-serif;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
-  closeBtn.innerHTML = `
-    <strong>🖨️ ${title}</strong>
-    <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('lys-print-iframe').contentWindow.print()" style="background:white;color:#1a5c4e;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Imprimer / Enregistrer en PDF</button>
-      <button onclick="document.getElementById('lys-print-iframe').remove();this.parentElement.parentElement.remove();" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer">✕ Fermer</button>
-    </div>`;
-  closeBtn.id = 'lys-print-bar';
-  document.body.appendChild(closeBtn);
-
-  // Auto-print after iframe loads
-  iframe.onload = function() {
-    // Small delay to ensure fonts/layout are ready
-    setTimeout(function() {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    }, 400);
-  };
+  // Print from parent after new window is loaded — avoids Chrome popup print block
+  const printWhenReady = setInterval(function() {
+    if(w.document.readyState === 'complete') {
+      clearInterval(printWhenReady);
+      setTimeout(function() {
+        w.focus();
+        w.print();
+      }, 300);
+    }
+  }, 50);
 }
