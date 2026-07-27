@@ -2534,7 +2534,7 @@ async function submitForm(){
       prenom_saisi:prenom,
       nom_saisi:nom,
       type_sejour:selectedTypeSejour,
-      mode_formulaire:FORM_MODE,
+      mode_formulaire:(['complet','inscription','confidentiel'].includes(FORM_MODE)?FORM_MODE:'complet'),
       reponses_inscription:FORM_MODE==='confidentiel'?null:data.inscription,
       reponses_confidentielle:FORM_MODE==='inscription'?null:data.confidentielle,
       photo_url:photoUrl,
