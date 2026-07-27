@@ -882,106 +882,60 @@ LysPrint.buildDossier = function(data, mode) {
 function openPrintWindow(html, options) {
   options = options || {};
   const title = options.title || 'La Lysardière — Impression';
-  const autoPrint = options.autoPrint !== false; // défaut: true
 
-  const w = window.open('', '_blank');
-  if(!w) {
-    alert('Autorisez les popups pour cette page afin d\'imprimer ou exporter en PDF.');
-    return;
-  }
+  // Remove any existing print iframe
+  const existing = document.getElementById('lys-print-iframe');
+  if(existing) existing.remove();
 
-  w.document.write(`<!DOCTYPE html>
+  // Build full document HTML
+  const fullHtml = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
     ${LYS_PRINT_CSS}
-    /* ── Interface de la fenêtre d'impression (masquée à l'impression) ── */
-    .lp-print-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: #1a5c4e;
-      color: white;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 9999;
-      font-family: Arial, sans-serif;
-      font-size: 13px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    .lp-print-bar strong { font-size: 14px; }
-    .lp-print-bar .lp-btns { display: flex; gap: 10px; }
-    .lp-print-btn {
-      background: white;
-      color: #1a5c4e;
-      border: none;
-      padding: 8px 20px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: Arial, sans-serif;
-    }
-    .lp-print-btn:hover { background: #e8f5e9; }
-    .lp-close-btn {
-      background: rgba(255,255,255,0.2);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .lp-content {
-      margin-top: 52px;
-      padding: 16mm 18mm;
-    }
-    @media print {
-      /* @page marges — certains navigateurs les respectent mieux avec padding en backup */
-      @page { size: A4 portrait; margin: 18mm 16mm 16mm 16mm; }
-      .lp-print-bar { display: none !important; }
-      /* On garde un padding minimal en backup si @page est ignoré */
-      .lp-content {
-        margin-top: 0 !important;
-        padding: 0 !important;
-      }
-      body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
+    @page { size: A4 portrait; margin: 18mm 16mm 16mm 16mm; }
+    body {
+      padding: 0;
+      margin: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
   </style>
 </head>
-<body>
-  <div class="lp-print-bar no-print">
+<body>${html}</body>
+</html>`;
+
+  // Create hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.id = 'lys-print-iframe';
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:white;';
+  document.body.appendChild(iframe);
+
+  // Write content into iframe
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(fullHtml);
+  iframe.contentDocument.close();
+
+  // Add close button overlay on top of iframe
+  const closeBtn = document.createElement('div');
+  closeBtn.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100000;background:#1a5c4e;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,sans-serif;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
+  closeBtn.innerHTML = `
     <strong>🖨️ ${title}</strong>
-    <div class="lp-btns">
-      <button class="lp-print-btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
-      <button class="lp-close-btn" onclick="window.close()">✕ Fermer</button>
-    </div>
-  </div>
-  <div class="lp-content">
-    ${html}
-  </div>
-  ${autoPrint ? `<script>
-    (function(){
-      function doPrint(){
-        window.focus();
-        window.print();
-      }
-      if(document.readyState === 'complete'){
-        setTimeout(doPrint, 500);
-      } else {
-        window.addEventListener('load', function(){ setTimeout(doPrint, 500); });
-      }
-    })();
-  <\\/script>` : ''}
-</body>
-</html>`);
-  w.document.close();
-  w.focus();
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('lys-print-iframe').contentWindow.print()" style="background:white;color:#1a5c4e;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Imprimer / Enregistrer en PDF</button>
+      <button onclick="document.getElementById('lys-print-iframe').remove();this.parentElement.parentElement.remove();" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer">✕ Fermer</button>
+    </div>`;
+  closeBtn.id = 'lys-print-bar';
+  document.body.appendChild(closeBtn);
+
+  // Auto-print after iframe loads
+  iframe.onload = function() {
+    // Small delay to ensure fonts/layout are ready
+    setTimeout(function() {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }, 400);
+  };
 }
