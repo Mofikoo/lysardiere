@@ -6105,44 +6105,39 @@ function buildCourrierPages(singleKey){
 }
 
 async function genCourrierPdf(singleKey){
-  // Unified: ouvre une fenêtre propre pour imprimer/enregistrer en PDF
-  await imprimerCourriers(singleKey);
+  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return;}
+  var map=window._courrierData;
+  var keys=singleKey?[singleKey]:Object.keys(map).sort();
+  if(!keys.length){await lyAlert('Aucun courrier à générer.','error');return;}
+
+  // Charger LysPrint depuis print.html si pas encore chargé
+  if(typeof LysPrint==='undefined'||typeof openPrintWindow==='undefined'){
+    await new Promise(function(resolve,reject){
+      var s=document.createElement('script');
+      // Extraire uniquement le contenu <script> de print.html
+      fetch('print.html').then(function(r){return r.text();}).then(function(html){
+        var match=html.match(/<script>([\s\S]*?)<\/script>/);
+        if(match){
+          var blob=new Blob([match[1]],{type:'text/javascript'});
+          s.src=URL.createObjectURL(blob);
+          s.onload=resolve; s.onerror=reject;
+          document.head.appendChild(s);
+        } else reject(new Error('print.html script not found'));
+      }).catch(reject);
+    });
+  }
+
+  var html=keys.map(function(k){return LysPrint.buildCourrierPage(map[k],k);}).join('');
+  var label=singleKey?map[singleKey].foyer:'Tous les courriers';
+  openPrintWindow(html,{title:'Courriers La Lysardière — '+label});
 }
 
 async function imprimerCourriers(singleKey){
-  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
-  var pages=buildCourrierPages(singleKey);
-  if(!pages){await lyAlert('Aucun courrier à imprimer.','error');return}
-  var d=new Date();
-  var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  var label=singleKey?window._courrierData[singleKey].foyer.replace(/[\s\/\\:*?"<>|]+/g,'_'):'tous';
-  var w=window.open('','_blank');
-  if(!w){await lyAlert('Autorisez les popups pour cette page.','error');return}
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Courriers La Lysardière — ${ts}</title>
-  <style>
-    @page { size: A4; margin: 18mm 16mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #222; background: white; }
-    .page-break { page-break-before: always; break-before: page; padding-top: 0; }
-    @media print {
-      @page { size: A4; margin: 18mm 16mm; }
-      .no-print { display: none !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    }
-  </style></head><body>
-  ${pages}
-  <div class="no-print" style="text-align:center;padding:20px;margin-top:20px;border-top:1px solid #ddd">
-    <button onclick="window.print()" style="background:#18534F;color:white;border:none;padding:12px 32px;font-size:14px;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif;margin-right:10px">🖨️ Imprimer / Enregistrer en PDF</button>
-    <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:12px 20px;font-size:14px;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif">Fermer</button>
-  </div>
-  <script>window.onload=function(){window.print();}<\/script>
-  </body></html>`);
-  w.document.close();
-  w.focus();
+  return genCourrierPdf(singleKey);
 }
 
 async function toutImprimer(){
-  await imprimerCourriers();
+  return genCourrierPdf();
 }
 
 function genPdfStructures(){
