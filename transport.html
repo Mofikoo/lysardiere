@@ -3031,7 +3031,10 @@ async function genCourrierIndividuel(mode){
       // Find stop lieu
       var stopLieu=null;
       c.stops.forEach(function(st){
-        var all=(st.depPers||[]).concat(st.arrPers||[]);
+        // Exclude transfer stops — not a real RDV point
+        var all=(st.arrPers||[]).concat(
+          (st.depPers||[]).filter(function(x){return !x.isTransfert})
+        );
         if(all.some(function(pp){return pp.id===persId||(pp.prenom===p.prenom&&(pp.nom||'')===(p.nom||''))})){
           if(st.fid){var l=getLieu(st.fid);if(l) stopLieu={nom:l.nom,adresse:l.adresse||''};}
           else if(st.pt&&st.pt.nom) stopLieu={nom:st.pt.nom,adresse:st.pt.adresse||''};
@@ -3044,7 +3047,10 @@ async function genCourrierIndividuel(mode){
       var hData=computeHeures(c);
       var heure='';
       c.stops.forEach(function(st,si){
-        var all=(st.depPers||[]).concat(st.arrPers||[]);
+        // Exclude transfer stops for heure
+        var all=(st.arrPers||[]).concat(
+          (st.depPers||[]).filter(function(x){return !x.isTransfert})
+        );
         if(all.some(function(pp){return pp.id===persId||(pp.prenom===p.prenom&&(pp.nom||'')===(p.nom||''))})&&hData.heures[si]!==undefined) heure=fmtH(hData.heures[si]);
       });
 
@@ -5894,7 +5900,11 @@ async function renderCourrier(){
         var persId=(currentPers||p).id;
         c.stops.forEach(function(st){
           if(st.action==='depart'||st.action==='retour') return;
-          var stopPers=(st.depPers||[]).concat(st.arrPers||[]);
+          // Exclude transfer stops — a person in depPers with isTransfert=true is an intermediate
+          // vehicle change stop, not a real RDV point for the courrier
+          var stopPers=(st.arrPers||[]).concat(
+            (st.depPers||[]).filter(function(x){return !x.isTransfert})
+          );
           // Match by id first (most reliable), then by name
           var matched=stopPers.some(function(x){
             return (persId&&x.id&&x.id===persId)||
@@ -5961,7 +5971,10 @@ async function renderCourrier(){
         var heure='';
         if(hData.heures.length){
           c.stops.forEach(function(st,si){
-            var stopPers=(st.depPers||[]).concat(st.arrPers||[]);
+            // Exclude transfer stops for heure computation too
+            var stopPers=(st.arrPers||[]).concat(
+              (st.depPers||[]).filter(function(x){return !x.isTransfert})
+            );
             var matched=stopPers.some(function(x){
               return (persId&&x.id&&x.id===persId)||
                 (x.prenom+' '+(x.nom||''))===frozenName||
