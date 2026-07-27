@@ -3081,22 +3081,9 @@ async function printDossier(){
   const nom = (data.inscription?.participant?.nom || data.confidentielle?.identite?.nom || '').toUpperCase();
   const prenom = data.inscription?.participant?.prenom || data.confidentielle?.identite?.prenom || '';
 
-  // Charger LysPrint depuis print.html
   if(typeof LysPrint === 'undefined' || typeof openPrintWindow === 'undefined'){
-    await new Promise((resolve, reject) => {
-      fetch('print.html')
-        .then(r => r.text())
-        .then(html => {
-          const match = html.match(/<script>([\s\S]*?)<\/script>/);
-          if(match){
-            const blob = new Blob([match[1]], {type:'text/javascript'});
-            const s = document.createElement('script');
-            s.src = URL.createObjectURL(blob);
-            s.onload = resolve; s.onerror = reject;
-            document.head.appendChild(s);
-          } else reject(new Error('print.html script not found'));
-        }).catch(reject);
-    });
+    alert('Erreur : print.js non chargé. Vérifiez que print.js est bien dans le repo.');
+    return;
   }
 
   const html = LysPrint.buildDossier(data, FORM_MODE);

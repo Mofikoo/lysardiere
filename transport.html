@@ -1214,6 +1214,7 @@ input:focus, select:focus {
   </div>
   <div id="guide-sections"></div>
 </div>
+<script src="print.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var guideSections=[
@@ -6106,27 +6107,12 @@ function buildCourrierPages(singleKey){
 
 async function genCourrierPdf(singleKey){
   if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return;}
+  if(typeof LysPrint==='undefined'||typeof openPrintWindow==='undefined'){
+    await lyAlert('Erreur : print.js non chargé. Vérifiez que print.js est bien dans le repo.','error');return;
+  }
   var map=window._courrierData;
   var keys=singleKey?[singleKey]:Object.keys(map).sort();
   if(!keys.length){await lyAlert('Aucun courrier à générer.','error');return;}
-
-  // Charger LysPrint depuis print.html si pas encore chargé
-  if(typeof LysPrint==='undefined'||typeof openPrintWindow==='undefined'){
-    await new Promise(function(resolve,reject){
-      var s=document.createElement('script');
-      // Extraire uniquement le contenu <script> de print.html
-      fetch('print.html').then(function(r){return r.text();}).then(function(html){
-        var match=html.match(/<script>([\s\S]*?)<\/script>/);
-        if(match){
-          var blob=new Blob([match[1]],{type:'text/javascript'});
-          s.src=URL.createObjectURL(blob);
-          s.onload=resolve; s.onerror=reject;
-          document.head.appendChild(s);
-        } else reject(new Error('print.html script not found'));
-      }).catch(reject);
-    });
-  }
-
   var html=keys.map(function(k){return LysPrint.buildCourrierPage(map[k],k);}).join('');
   var label=singleKey?map[singleKey].foyer:'Tous les courriers';
   openPrintWindow(html,{title:'Courriers La Lysardière — '+label});
