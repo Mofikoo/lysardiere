@@ -946,3 +946,7 @@ function openPrintWindow(html, options) {
     }
   }, 50);
 }
+
+// Expose globals explicitement pour être sûr
+window.LysPrint = LysPrint;
+window.openPrintWindow = openPrintWindow;
