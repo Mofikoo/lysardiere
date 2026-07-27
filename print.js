@@ -15,11 +15,7 @@ const LYS_PRINT_CSS = `
   /* Reset */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Page A4 */
-  @page {
-    size: A4 portrait;
-    margin: 18mm 16mm 16mm 16mm;
-  }
+  /* Page A4 — marges gérées par le body padding dans openPrintWindow */
 
   body {
     font-family: Arial, Helvetica, sans-serif;
@@ -896,14 +892,36 @@ function openPrintWindow(html, options) {
   <title>${title}</title>
   <style>
     ${LYS_PRINT_CSS}
-    @page { size: A4 portrait; margin: 18mm 16mm 16mm 16mm; }
-    body {
-      margin: 16mm 18mm;
+    /* Force @page margin to 0 — on gère tout via padding body */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: white;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
+    /* Aperçu écran : padding visible */
+    body {
+      padding: 18mm 16mm;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    /* Impression : même padding — c'est lui qui fait les marges */
     @media print {
-      body { margin: 0; }
+      body {
+        padding: 18mm 16mm !important;
+      }
+    }
+    /* Page breaks */
+    .lp-page {
+      margin: 0;
+      padding: 0;
+    }
+    .lp-page + .lp-page {
+      padding-top: 18mm;
     }
   </style>
 </head>
