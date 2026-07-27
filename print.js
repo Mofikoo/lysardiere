@@ -938,11 +938,21 @@ function openPrintWindow(html, options) {
     }
     .lp-content {
       margin-top: 52px;
-      padding: 12mm 16mm;
+      padding: 16mm 18mm;
     }
     @media print {
+      /* @page marges — certains navigateurs les respectent mieux avec padding en backup */
+      @page { size: A4 portrait; margin: 18mm 16mm 16mm 16mm; }
       .lp-print-bar { display: none !important; }
-      .lp-content { margin-top: 0; padding: 0; }
+      /* On garde un padding minimal en backup si @page est ignoré */
+      .lp-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
   </style>
 </head>
@@ -957,7 +967,19 @@ function openPrintWindow(html, options) {
   <div class="lp-content">
     ${html}
   </div>
-  ${autoPrint ? '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},300);});<\\/script>' : ''}
+  ${autoPrint ? `<script>
+    (function(){
+      function doPrint(){
+        window.focus();
+        window.print();
+      }
+      if(document.readyState === 'complete'){
+        setTimeout(doPrint, 500);
+      } else {
+        window.addEventListener('load', function(){ setTimeout(doPrint, 500); });
+      }
+    })();
+  <\\/script>` : ''}
 </body>
 </html>`);
   w.document.close();
