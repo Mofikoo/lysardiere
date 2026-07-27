@@ -6015,8 +6015,8 @@ async function renderCourrier(){
       html+='</div>';
     });
     html+='<div style="text-align:right;margin-top:8px;display:flex;gap:6px;justify-content:flex-end">'
-      +'<button class="btn btn-accent btn-sm" onclick="genCourrierPdf(\''+k.replace(/'/g,"\\'")+'\')">⬇ PDF - '+c.foyer+'</button>'
-      +'<button class="btn btn-sm" onclick="imprimerCourriers(\''+k.replace(/'/g,"\\'")+'\')">🖨️ Imprimer</button>'
+      +'<button class="btn btn-accent btn-sm" onclick="genCourrierPdf(\''+k.replace(/\'/g,"\\\'")+'\')">🖨️ PDF / Imprimer - '+c.foyer+'</button>'
+      // (imprimer unified into genCourrierPdf)
       +'</div>';
     html+='</div>';
   });
@@ -6105,53 +6105,40 @@ function buildCourrierPages(singleKey){
 }
 
 async function genCourrierPdf(singleKey){
-  if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
-  var pages=buildCourrierPages(singleKey);
-  if(!pages){await lyAlert('Aucun courrier à générer.','error');return}
-  var d=new Date();
-  var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  var label=singleKey?window._courrierData[singleKey].foyer.replace(/[\s\/\\:*?"<>|]+/g,'_'):'tous';
-  var filename='courriers-'+label+'-'+ts+'.pdf';
-  setPersist('⏳ Génération PDF...','neutral');
-
-  // Must be visible in viewport for html2canvas to work
-  var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:white;overflow:auto;pointer-events:none';
-  var container=document.createElement('div');
-  container.style.cssText='width:186mm;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;background:white';
-  container.innerHTML=pages;
-  overlay.appendChild(container);
-  document.body.appendChild(overlay);
-
-  try{
-    await html2pdf().set({
-      margin:[10,12,12,12],
-      filename:filename,
-      image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,letterRendering:true,backgroundColor:'#ffffff'},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:'css',before:'.page-break'}
-    }).from(container).save();
-    setPersist('✅ PDF généré','ok');
-  } catch(e){
-    console.error('html2pdf error:',e);
-    setPersist('Erreur PDF','err');
-    lyAlert('Erreur lors de la génération du PDF : '+(e.message||e)+'\n\nEssayez le bouton Imprimer à la place.','error');
-  } finally{
-    document.body.removeChild(overlay);
-  }
+  // Unified: ouvre une fenêtre propre pour imprimer/enregistrer en PDF
+  await imprimerCourriers(singleKey);
 }
 
 async function imprimerCourriers(singleKey){
   if(!window._courrierData){await lyAlert('Lancez d\'abord l\'aperçu.','error');return}
   var pages=buildCourrierPages(singleKey);
   if(!pages){await lyAlert('Aucun courrier à imprimer.','error');return}
+  var d=new Date();
+  var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var label=singleKey?window._courrierData[singleKey].foyer.replace(/[\s\/\\:*?"<>|]+/g,'_'):'tous';
   var w=window.open('','_blank');
   if(!w){await lyAlert('Autorisez les popups pour cette page.','error');return}
-  w.document.write('<!DOCTYPE html><html><head><title>Courriers La Lysardière</title><style>@page{margin:10mm 12mm 12mm 12mm}body{margin:0;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}</style></head><body>'+pages+'</body></html>');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Courriers La Lysardière — ${ts}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #222; background: white; }
+    .page-break { page-break-before: always; break-before: page; padding-top: 0; }
+    @media print {
+      @page { size: A4; margin: 18mm 16mm; }
+      .no-print { display: none !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style></head><body>
+  ${pages}
+  <div class="no-print" style="text-align:center;padding:20px;margin-top:20px;border-top:1px solid #ddd">
+    <button onclick="window.print()" style="background:#18534F;color:white;border:none;padding:12px 32px;font-size:14px;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif;margin-right:10px">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:12px 20px;font-size:14px;border-radius:8px;cursor:pointer;font-family:Arial,sans-serif">Fermer</button>
+  </div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
   w.document.close();
   w.focus();
-  w.print();
 }
 
 async function toutImprimer(){
