@@ -2526,6 +2526,12 @@ async function submitForm(){
   let photoUrl=null;
   if(photoFile&&personneId) photoUrl=await uploadPhoto(photoFile,personneId);
 
+  // Generate HTML snapshot for storage (same as what's shown in print window)
+  let htmlRendu = null;
+  if(typeof LysPrint !== 'undefined'){
+    try{ htmlRendu = LysPrint.buildDossier(data, FORM_MODE); } catch(e){ console.warn('html_rendu generation failed:', e); }
+  }
+
   // Save to Supabase
   try{
     const ficheId='fiche-'+Date.now()+'-'+Math.random().toString(36).substr(2,8);
@@ -2540,7 +2546,8 @@ async function submitForm(){
       reponses_confidentielle:FORM_MODE==='inscription'?null:data.confidentielle,
       photo_url:photoUrl,
       soumis_le:new Date().toISOString(),
-      statut_matching:statut
+      statut_matching:statut,
+      html_rendu:htmlRendu
     });
 
     // Show success

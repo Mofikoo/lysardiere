@@ -341,6 +341,7 @@ body {
   </div>
 </div>
 
+<script src="print.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = 'https://lkqzifqeniblltniabai.supabase.co';
@@ -667,11 +668,15 @@ function buildPersonCard(p, sejourId=null) {
     const typLabel = {weekend_theme:'Week-end thème',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
     const sejNom = f.reponses_inscription?.sejour_choisi||'—';
     const modeLabel = f.mode_formulaire==='inscription'?'📝 Inscription seule':f.mode_formulaire==='confidentiel'?'🔒 Confidentielle seule':'📋 Complet';
+    const printBtn = f.html_rendu
+      ? `<button class="btn btn-sm" onclick="imprimerFiche('${f.id}')" title="Imprimer / Enregistrer en PDF" style="background:#ecf8f6;color:#18534F;border:1px solid #b8e4df">🖨️ PDF</button>`
+      : '';
     return `<div class="doc-row" style="background:#f0f9ff;border-left:3px solid #0ea5e9">
       <span class="doc-type-pill" style="background:#e0f2fe;color:#0369a1">📋 Fiche</span>
       <span class="doc-filename">${typLabel} — ${sejNom} <span style="font-size:10px;color:#0369a1">[${modeLabel}]</span></span>
       <span class="doc-date">${fmtDate(f.soumis_le)}</span>
       <div class="doc-actions">
+        ${printBtn}
         <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
         <button class="btn btn-sm" onclick="unclasserFiche('${f.id}')" title="Remettre dans À classer" style="background:#fff9e6;color:#856404;border:1px solid #fcd34d">↩ Déclasser</button>
         <button class="btn btn-danger btn-icon btn-sm" onclick="deleteFiche('${f.id}')" title="Supprimer">🗑</button>
@@ -1162,6 +1167,7 @@ function buildFichesSection() {
       ${matchBadge}
       ${modeBadge}
       ${linkSelect}
+      ${f.html_rendu ? `<button class="btn btn-sm" onclick="imprimerFiche('${f.id}')" style="background:#ecf8f6;color:#18534F;border:1px solid #b8e4df">🖨️ PDF</button>` : ''}
       <button class="btn btn-info btn-sm" onclick="openFicheDetail('${f.id}')">Voir</button>
       <button class="btn btn-danger btn-sm" onclick="deleteFiche('${f.id}')">🗑</button>
     </div>`;
@@ -1472,6 +1478,17 @@ function openFicheDetail(ficheId){
 }
 
 // ── SÉJOURS CONFIG FORMULAIRE ──
+// ── IMPRESSION FICHE ─────────────────────────────────────────────
+function imprimerFiche(ficheId){
+  const f = allFiches.find(x => x.id === ficheId);
+  if(!f || !f.html_rendu){
+    alert('Aucun rendu disponible pour cette fiche.\n\nSeules les fiches soumises après la mise à jour disposent de cette fonctionnalité.');
+    return;
+  }
+  const nom = `${f.prenom_saisi||''} ${(f.nom_saisi||'').toUpperCase()}`.trim();
+  openPrintWindow(f.html_rendu, { title: `Dossier ${nom} — La Lysardière` });
+}
+
 // ── LIEN FORMULAIRE ──────────────────────────────────────
 function openLienFormulaireModal(){
   // Build absolute URL to formulaire.html in the same folder as this page
