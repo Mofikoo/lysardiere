@@ -4936,7 +4936,7 @@ function insertStopInConvoi(convoiIdx,insertAtIdx){
     +'</select></div>';
   // Person search for dep
   html+='<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:600;color:var(--red)">Passagers en départ (descendent ici)</label>'
-    +'<div style="font-size:10px;color:var(--text-light);margin-bottom:3px">💡 Pour un <strong>transfert de véhicule</strong> (personne montée ailleurs dans ce convoi), ajoutez-la ici puis cliquez 🔁 pour la marquer comme transfert — elle ne sera pas retirée de son arrêt de montée.</div>'
+    +'<div style="font-size:10px;color:var(--text-light);margin-bottom:3px">💡 Les transferts de véhicule sont détectés <strong>automatiquement</strong> — ils n\'apparaîtront pas dans les courriers.</div>'
     +'<input id="insert-stop-dep-search" placeholder="Rechercher..." style="width:100%;font-size:11px;padding:5px 8px;margin-top:4px" oninput="insertStopSearchPers(\'dep\')">'
     +'<div id="insert-stop-dep-results" style="max-height:100px;overflow-y:auto;margin-top:2px"></div>'
     +'<div id="insert-stop-dep-selected" style="margin-top:4px;font-size:11px"></div></div>';
@@ -5007,12 +5007,12 @@ function insertStopAddPers(side,persId,prenom,nom,foyer){
   el.innerHTML=list.map(function(pp,i){
     var isTransfert=pp.isTransfert||false;
     var transfertBtn=side==='dep'
-      ?'<span onclick="toggleTransfert(\''+side+'\','+i+')" title="'+(isTransfert?'Annuler le transfert':'Marquer comme transfert de véhicule')+'" style="cursor:pointer;margin-left:3px;font-size:9px;background:'+(isTransfert?'#f59e0b':'rgba(255,255,255,0.3)')+';padding:1px 4px;border-radius:6px;color:'+(isTransfert?'#1a1a1a':'inherit')+'">'+(isTransfert?'🔁 transfert':'🔁')+'</span>'
+      ?'<span onclick="toggleTransfert(\''+side+'\','+i+')" title="'+(isTransfert?'Annuler le marquage transfert':'Forcer comme transfert de véhicule')+'" style="cursor:pointer;margin-left:5px;font-size:10px;background:'+(isTransfert?'#f59e0b':'#e5e7eb')+';padding:2px 7px;border-radius:8px;color:'+(isTransfert?'#1a1a1a':'#6b7280')+';font-weight:600;border:none">'+(isTransfert?'🔁 Transfert':'🔁')+'</span>'
       :'';
-    return '<span style="display:inline-flex;align-items:center;gap:3px;background:'+(isTransfert?'#fef3c7':'(side===\'dep\'?\'var(--red-bg)\'  :\'var(--green-bg)\')')+';background:'+(isTransfert?'#fef3c7':side==='dep'?'var(--red-bg)':'var(--green-bg)')+';color:'+(isTransfert?'#92400e':side==='dep'?'var(--red)':'var(--green)')+';padding:2px 8px;border-radius:10px;font-size:10px;margin:2px">'
+    return '<span style="display:inline-flex;align-items:center;gap:3px;background:'+(isTransfert?'#fef3c7':side==='dep'?'var(--red-bg)':'var(--green-bg)')+';color:'+(isTransfert?'#92400e':side==='dep'?'var(--red)':'var(--green)')+';padding:3px 10px;border-radius:10px;font-size:11px;margin:2px">'
       +pp.prenom+' '+pp.nom
       +transfertBtn
-      +'<span style="cursor:pointer;font-weight:700" onclick="insertStopRemovePers(\''+side+'\','+i+')">×</span></span>';
+      +'<span style="cursor:pointer;font-weight:700;margin-left:4px" onclick="insertStopRemovePers(\''+side+'\','+i+')">×</span></span>';
   }).join('');
   document.getElementById('insert-stop-'+side+'-search').value='';
   document.getElementById('insert-stop-'+side+'-results').innerHTML='';
@@ -5879,6 +5879,21 @@ async function renderCourrier(){
   // Group by foyer: each unique foyer gets one courrier
   var courrierMap={};
   filtered.forEach(function(s){
+    // Pre-compute: for each person, which fids are transfer stops (should be excluded from lieu search)
+    // A fid is a transfer stop for a person if they appear in depPers isTransfert at that stop
+    var transferFids={};  // { persId_or_name: Set of fids }
+    s.convois.forEach(function(c){
+      c.stops.forEach(function(st){
+        (st.depPers||[]).forEach(function(pp){
+          if(!pp.isTransfert) return;
+          if(!st.fid) return;
+          var key=pp.id||(pp.prenom+' '+(pp.nom||''));
+          if(!transferFids[key]) transferFids[key]=new Set();
+          transferFids[key].add(st.fid);
+        });
+      });
+    });
+
     s.convois.forEach(function(c){
       // For each person in depart or arrivee
       function processPers(p, type){
@@ -5900,8 +5915,11 @@ async function renderCourrier(){
         var persId=(currentPers||p).id;
         c.stops.forEach(function(st){
           if(st.action==='depart'||st.action==='retour') return;
-          // Exclude transfer stops — a person in depPers with isTransfert=true is an intermediate
-          // vehicle change stop, not a real RDV point for the courrier
+          // Exclude stops that are transfer points for this person
+          // (depPers isTransfert OR arrPers at a known transfer fid)
+          var persKey2=persId||(frozenName);
+          var persTransferFids=transferFids[persId]||transferFids[frozenName]||transferFids[currentName]||new Set();
+          if(st.fid&&persTransferFids.has(st.fid)) return; // skip this transfer stop
           var stopPers=(st.arrPers||[]).concat(
             (st.depPers||[]).filter(function(x){return !x.isTransfert})
           );
@@ -5972,6 +5990,8 @@ async function renderCourrier(){
         if(hData.heures.length){
           c.stops.forEach(function(st,si){
             // Exclude transfer stops for heure computation too
+            var persTransferFids2=transferFids[persId]||transferFids[frozenName]||transferFids[currentName]||new Set();
+            if(st.fid&&persTransferFids2.has(st.fid)) return;
             var stopPers=(st.arrPers||[]).concat(
               (st.depPers||[]).filter(function(x){return !x.isTransfert})
             );
@@ -5994,8 +6014,8 @@ async function renderCourrier(){
       }
       (c.depart||[]).forEach(function(p){processPers(p,'depart')});
       (c.arrivee||[]).forEach(function(p){processPers(p,'arrivee')});
-    });
-  });
+    }); // end s.convois
+  }); // end filtered
   // Display preview
   var keys=Object.keys(courrierMap).sort();
   var html='<div class="card"><div class="stitle">Apercu des courriers ('+keys.length+' courrier'+(keys.length>1?'s':'')+')</div>';
