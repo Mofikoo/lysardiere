@@ -1073,7 +1073,7 @@ input:focus, select:focus {
 
   <div class="card">
     <div class="stitle">Ajouter un véhicule</div>
-    <div class="cols3" style="margin-bottom:12px">
+    <div class="cols3" style="margin-bottom:8px">
       <div><label>Nom / Surnom</label><input id="v-nom" placeholder="Ex : Trafic Blanc 1"></div>
       <div><label>Type</label>
         <select id="v-type">
@@ -1086,6 +1086,10 @@ input:focus, select:focus {
         <button class="btn btn-primary" style="width:100%" onclick="addVehicle()">+ Ajouter</button>
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid);cursor:pointer;margin-bottom:4px">
+      <input type="checkbox" id="v-manuel" style="width:auto">
+      <span>🚫 Véhicule manuel uniquement — <em>jamais utilisé par l'optimisation automatique</em></span>
+    </label>
   </div>
   <div class="card">
     <div class="stitle">Véhicules enregistrés (<span id="v-count">0</span>)</div>
@@ -2067,10 +2071,10 @@ function renderFlotte(){
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun véhicule.</div>';return}
-  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';var f=getVehicleFlags(v);var tags='';if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de péage</span>';if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+'</div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
+  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';var f=getVehicleFlags(v);var tags='';if(v.manuel_only) tags+='<span class="badge" style="background:#fef3c7;color:#92400e;margin-left:4px">🚫 Manuel</span>';if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de péage</span>';if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+(v.manuel_only?' — jamais utilisé en auto':'')+' </div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
   window.scrollTo({top:scrollY,behavior:'instant'});
 }
-async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;if(!nom){await lyAlert('Nom requis.','error');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97'};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';renderFlotte();renderVGrid()}
+async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;var manuelOnly=document.getElementById('v-manuel').checked;if(!nom){await lyAlert('Nom requis.','error');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97',manuel_only:manuelOnly};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';document.getElementById('v-manuel').checked=false;renderFlotte();renderVGrid()}
 async function delVehicle(id){if(!await lyConfirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
 
 // ── HEURES UTILITIES ──────────────────────────
@@ -3261,7 +3265,7 @@ function checkDoublonWarning(){
   else{el.style.display='none'}
 }
 function renderResume(type){var obj=type==='dep'?selDep:selArr;var sel=personnes.filter(function(p){return obj[p.id]});var el=document.getElementById(type+'-res');if(!sel.length){el.innerHTML='';return}var grouped={};sel.forEach(function(p){var lid=getPersonLieux(p)[0]||'';if(!grouped[lid])grouped[lid]=[];grouped[lid].push(p)});el.innerHTML='<div style="font-size:11px;color:var(--text-light);font-weight:600;margin-bottom:5px">'+sel.length+' sélectionné(s)</div>'+Object.keys(grouped).map(function(lid){var f=getLieu(lid)||{nom:'?'},ps=grouped[lid];return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px"><span>'+(type==='dep'?'🔴':'🟢')+'</span><strong>'+f.nom+'</strong><span style="color:var(--text-light)">'+ps.map(function(p){return p.prenom}).join(', ')+'</span></div>'}).join('')}
-function renderVGrid(){var sorted=vehicles.slice().sort(function(a,b){if(a.type===b.type) return a.label.localeCompare(b.label);return a.type==='trafic'?-1:1});document.getElementById('vg').innerHTML=sorted.map(function(v){return '<div class="vcard '+(selV[v.id]?'sel':'')+'" onclick="toggleV(\''+v.id+'\')"><div style="font-size:20px;margin-bottom:3px">'+v.ico+'</div><div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v.label+'</div><div style="font-size:10px;color:var(--text-light)">'+v.cap+' p.</div><div style="width:8px;height:8px;border-radius:50%;margin:4px auto 0;background:'+(selV[v.id]?'var(--green)':'var(--border)')+'"></div></div>'}).join('');updateCap()}
+function renderVGrid(){var sorted=vehicles.slice().sort(function(a,b){if(a.type===b.type) return a.label.localeCompare(b.label);return a.type==='trafic'?-1:1});document.getElementById('vg').innerHTML=sorted.map(function(v){var mBadge=v.manuel_only?'<div style="font-size:9px;color:#92400e;background:#fef3c7;border-radius:4px;padding:1px 4px;margin-top:2px">Manuel</div>':'';return '<div class="vcard '+(selV[v.id]?'sel':'')+'" onclick="toggleV(\''+v.id+'\')"><div style="font-size:20px;margin-bottom:3px">'+v.ico+'</div><div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v.label+'</div><div style="font-size:10px;color:var(--text-light)">'+v.cap+' p.</div>'+mBadge+'<div style="width:8px;height:8px;border-radius:50%;margin:4px auto 0;background:'+(selV[v.id]?'var(--green)':'var(--border)')+'"></div></div>';}).join('');updateCap()}
 function toggleV(id){selV[id]=!selV[id];renderVGrid()}
 function updateCap(){var vs=vehicles.filter(function(v){return selV[v.id]});document.getElementById('vcap').textContent=vs.reduce(function(s,v){return s+v.cap},0);document.getElementById('vcount').textContent=vs.length}
 function updateType(){var t=document.getElementById('ltype').value;document.getElementById('sec-dep').style.display=(t==='entree')?'none':'block';document.getElementById('sec-arr').style.display=(t==='sortie')?'none':'block'}
@@ -3777,7 +3781,7 @@ if(unassigned.length){
 if(sansGPS.length) errors.unshift('Lieux sans GPS ignorés : '+sansGPS.join(', '));
 return{convois:convois,errors:errors}}
 
-async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule.','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;
+async function lancerOptimisation(){var date=document.getElementById('ldate').value;if(!date){await lyAlert('Sélectionnez une date.','error');return}var deps=personnes.filter(function(p){return selDep[p.id]});var arrs=personnes.filter(function(p){return selArr[p.id]});var vehs=vehicles.filter(function(v){return selV[v.id]&&!v.manuel_only});if(!deps.length&&!arrs.length){await lyAlert('Sélectionnez au moins une personne.','error');return}if(!vehs.length){await lyAlert('Sélectionnez au moins un véhicule (non manuel).','error');return}var result=vrpSolve(deps,arrs,vehs,getParams());convoisOptimises=result.convois;
 solutionHistory=[{convois:result.convois,errors:result.errors,km:result.convois.reduce(function(s,c){return s+c.km},0)}];
 currentSolutionIdx=0;
 renderOptim(date,result.errors);show('optim');window.scrollTo({top:0,behavior:'smooth'});setPersist('⏳ Calcul distances réelles...','neutral');
