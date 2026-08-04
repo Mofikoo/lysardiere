@@ -460,7 +460,7 @@ LysPrint.buildCourrierPage = function(c, key) {
     const g = sejourGroups[gk];
     const nomsStr = singleLieu
       ? g.noms.join(', ')
-      : g.noms.map((n,i) => { const l=g.lieux[i]; return n+(l&&l.nom?` <span style="font-size:9pt;color:#555">(${l.nom})</span>`:''); }).join(', ');
+      : g.noms.map((n,i) => { const l=g.lieux[i]; return n+(l&&l.nom?` <span style="font-size:9pt;font-weight:700;color:#c0392b">(${l.nom})</span>`:''); }).join(', ');
     const dateRange = g.arr&&g.dep ? `Du ${g.arr.date} au ${g.dep.date}` : g.arr ? `Arrivée ${g.arr.date}` : `Départ ${g.dep.date}`;
     return `
       <div class="lp-trajet-card">
