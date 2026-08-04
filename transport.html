@@ -4513,6 +4513,7 @@ function execIsolerPassager(persId, side, vehId){
 
   // Create convoi with exact same structure as other convois
   var newConvoi={
+    id:'c'+Date.now(),
     vehicule:veh,
     stops:newStops,
     depart:side==='dep'?[persObj]:[],
@@ -4521,7 +4522,10 @@ function execIsolerPassager(persId, side, vehId){
     remplissage:Math.round(1/veh.cap*100),
     km:km,
     dureeMin:Math.round(km/p.vitesse*60),
+    maxDurMin:p.maxDurMin||480,
     type:side==='dep'?'depart_only':'arrivee_only',
+    heureDepart:'',
+    notes:'',
     mapsEnrichi:false,
     legDurations:null
   };
