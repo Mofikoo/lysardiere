@@ -639,7 +639,64 @@ async function saveSejour() {
 
 async function addToSejour(sid,pid) { await api('/rest/v1/sejours_personnes','POST',{sejour_id:sid,personne_id:pid,confirmed:true}); await softRefresh(['sejours_personnes']); }
 async function removeFromSejour(sid,pid) { await api(`/rest/v1/sejours_personnes?sejour_id=eq.${sid}&personne_id=eq.${pid}`,'DELETE'); await softRefresh(['sejours_personnes']); }
-async function addPersonToSejour(sid) { const sel=document.getElementById(`add-sel-${sid}`); if(!sel.value) return; await addToSejour(sid,sel.value); }
+async function addPersonToSejour(sid) {
+  const sel = document.getElementById(`add-sel-${sid}`);
+  if(!sel||!sel.value) return;
+  await addToSejour(sid, sel.value);
+  // Reset search
+  const inp = document.getElementById(`add-search-${sid}`);
+  if(inp) inp.value = '';
+  sel.value = '';
+  hideSejourDropdown(sid);
+}
+
+function filterSejourSearch(sid, query) {
+  const q = query.toLowerCase().trim();
+  const drop = document.getElementById(`add-drop-${sid}`);
+  if(!drop) return;
+  // Personnes pas encore dans ce séjour
+  const inSejour = allSejoursPersonnes.filter(sp=>sp.sejour_id===sid).map(sp=>sp.personne_id);
+  const candidates = allPersonnes.filter(p => !inSejour.includes(p.id));
+  const filtered = q
+    ? candidates.filter(p =>
+        `${p.prenom} ${p.nom} ${p.foyer}`.toLowerCase().includes(q)
+      ).slice(0, 12)
+    : candidates.slice(0, 12);
+
+  if(!filtered.length){
+    drop.innerHTML = `<div style="padding:10px 14px;font-size:12px;color:var(--text-light)">Aucun résultat</div>`;
+  } else {
+    drop.innerHTML = filtered.map(p => `
+      <div onmousedown="selectSejourPerson('${sid}','${p.id}','${(p.prenom+' '+p.nom).replace(/'/g,"\\'")}','${(p.foyer||'').replace(/'/g,"\\'")}', event)"
+        style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
+        onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
+        <span><strong>${p.prenom} ${p.nom}</strong></span>
+        <span style="font-size:11px;color:var(--text-light)">${p.foyer||''}</span>
+      </div>`).join('');
+  }
+  drop.style.display = 'block';
+}
+
+function showSejourDropdown(sid) {
+  const inp = document.getElementById(`add-search-${sid}`);
+  filterSejourSearch(sid, inp ? inp.value : '');
+}
+
+function hideSejourDropdown(sid) {
+  const drop = document.getElementById(`add-drop-${sid}`);
+  if(drop) drop.style.display = 'none';
+}
+
+function selectSejourPerson(sid, persId, nom, foyer, event) {
+  if(event) event.preventDefault();
+  const inp = document.getElementById(`add-search-${sid}`);
+  const sel = document.getElementById(`add-sel-${sid}`);
+  if(inp) inp.value = nom + (foyer ? ` — ${foyer}` : '');
+  if(sel) sel.value = persId;
+  hideSejourDropdown(sid);
+  // Auto-add immediately
+  addPersonToSejour(sid);
+}
 
 async function archiverSejour(sejourId) {
   const sejour = allSejours.find(s=>s.id===sejourId);
@@ -957,7 +1014,21 @@ function buildSejoursSection(personnesFiltered) {
       const estPasse=new Date(s.date_fin)<new Date();
       const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
       const btnModifier=`<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();ouvrirModifierSejour('${s.id}')">✏️ Modifier</button>`;
-      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}${btnModifier}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}${btnModifier}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}
+        <div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">+ Ajouter un vacancier</div>
+          <div style="position:relative;max-width:380px">
+            <input type="text" id="add-search-${s.id}" placeholder="🔍 Rechercher par nom, prénom ou foyer…"
+              style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none"
+              oninput="filterSejourSearch('${s.id}',this.value)"
+              onfocus="showSejourDropdown('${s.id}')"
+              onblur="setTimeout(()=>hideSejourDropdown('${s.id}'),150)"
+              autocomplete="off">
+            <div id="add-drop-${s.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;z-index:100"></div>
+          </div>
+          <input type="hidden" id="add-sel-${s.id}">
+        </div>
+      </div></div>`;
     }).join('');
     return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
   }).join('');
