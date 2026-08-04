@@ -3978,12 +3978,11 @@ function deplacerStop(convoiIdx,stopIdx){
     });
   });
   
-  // New vehicle section
-  var usedVehIds2=convoisOptimises.map(function(cc){return cc.vehicule.id});
-  var freeVehs2=vehicles.filter(function(v){return usedVehIds2.indexOf(v.id)<0});
-  if(freeVehs2.length){
-    html+='<div style="font-size:12px;font-weight:600;margin-top:14px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px">Isoler dans un nouveau véhicule :</div>';
-    freeVehs2.forEach(function(v){
+  // New vehicle section — propose all vehicles (a vehicle can be used in multiple convois)
+  var allVehs2=vehicles.filter(function(v){return !v.disabled});
+  if(allVehs2.length){
+    html+='<div style="font-size:12px;font-weight:600;margin-top:14px;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px">Isoler dans un nouveau convoi :</div>';
+    allVehs2.forEach(function(v){
       var nbPers=(stop.depPers||[]).length+(stop.arrPers||[]).length;
       var fits=nbPers<=v.cap;
       html+='<button class="btn btn-sm" style="margin:2px;font-size:10px;padding:3px 8px;'+(fits?'':'opacity:0.4;cursor:not-allowed;')+'" '
@@ -4302,7 +4301,19 @@ function ajouterPassager(persId,side,lieuOverrideId){
     if(extra<bestExtra){bestExtra=extra;bestConvoi=ci}
   });
   
-  if(bestConvoi<0){lyAlert('Aucun convoi compatible trouvé. Isolez cette personne dans un nouveau véhicule.','error');return}
+  if(bestConvoi<0){
+    // No compatible convoi — show vehicle selection for new convoi directly
+    var persName=(pers.prenom||'')+' '+((pers.nom||'').toUpperCase());
+    var allVehsIso=vehicles.filter(function(v){return !v.disabled});
+    if(!allVehsIso.length){lyAlert('Aucun convoi compatible et aucun véhicule disponible.','error');return;}
+    var vehBtns=allVehsIso.map(function(v){
+      return '<button class="btn btn-primary btn-sm" style="margin:4px;padding:6px 14px" onclick="execIsolerPassager(\''+persId+'\',\''+side+'\',\''+v.id+'\')">'+v.ico+' '+v.label+' ('+v.cap+' pl.)</button>';
+    }).join('');
+    showModal('<div style="font-size:14px;font-weight:600;margin-bottom:10px">Aucun convoi compatible pour '+persName+'</div>'
+      +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Choisissez un véhicule pour créer un nouveau convoi :</div>'
+      +vehBtns);
+    return;
+  }
   
   var targetConvoi=convoisOptimises[bestConvoi];
   
@@ -4460,6 +4471,36 @@ async function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
     lyAlert('Le recalcul Google Maps a échoué pour ce convoi. Les horaires sont estimés.','error');
   }
   lyAlert('Ordre des arrêts modifié.','success');
+}
+
+function execIsolerPassager(persId, side, vehId){
+  closeModal();
+  var pers=personnes.find(function(p){return p.id===persId});
+  var veh=vehicles.find(function(v){return v.id===vehId});
+  if(!pers||!veh) return;
+  var lieuId=getPersonLieux(pers)[0];
+  var lieu=getLieu(lieuId);
+  if(!lieu||!hasGPS(lieu)){lyAlert('Cette personne n\'a pas de lieu de RDV avec GPS.','error');return;}
+  var p=getParams();
+  // Build a minimal cluster for this person alone
+  var node={id:persId,prenom:pers.prenom,nom:pers.nom||'',side:side,
+    lat:lieu.lat,lng:lieu.lng,fid:lieuId,
+    depPers:side==='dep'?[{id:persId,prenom:pers.prenom,nom:pers.nom||'',isTransfert:false}]:[],
+    arrPers:side==='arr'?[{id:persId,prenom:pers.prenom,nom:pers.nom||'',isTransfert:false}]:[],
+    distLys:dLys(lieu),cap:bearing(LYS,lieu)};
+  var sim=buildStops([node],p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
+  var newConvoi={
+    vehicule:veh,
+    stops:sim,
+    depart:side==='dep'?[{id:persId,prenom:pers.prenom,nom:pers.nom||''}]:[],
+    arrivee:side==='arr'?[{id:persId,prenom:pers.prenom,nom:pers.nom||''}]:[],
+    peakSeats:1,
+    km:clusterKm([node],p)
+  };
+  convoisOptimises.push(newConvoi);
+  var dateStr=document.getElementById('ldate').value;
+  renderOptim(dateStr,[]);
+  lyAlert(pers.prenom+' '+pers.nom+' placé(e) dans un nouveau convoi ('+veh.label+').','success');
 }
 
 function execIsolerStop(fromIdx,stopIdx,vehId){
