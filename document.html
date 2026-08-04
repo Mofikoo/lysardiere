@@ -446,6 +446,8 @@ function buildArchivesSection() {
             <h3>${s.nom}</h3>
             <span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span>
             <span class="sejour-count">${personnes.length} vacancier(s)</span>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();ouvrirModifierSejour('${s.id}')">✏️ Modifier</button>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();desarchiverSejour('${s.id}')">📤 Désarchiver</button>
             <span class="sejour-chevron" id="schev-${uid}">▶</span>
           </div>
           <div class="sejour-body" id="${uid}">${cardsHtml}</div>
@@ -635,35 +637,74 @@ function toggleSejoursContainer() { const c=document.getElementById('sejours-con
 function toggleAClasser() { const c=document.getElementById('aclasser-container'),v=document.getElementById('aclasser-chevron'); c.style.display=c.style.display==='none'?'block':'none'; v?.classList.toggle('open'); }
 function toggleCat(id,chevId) { const el=document.getElementById(id),ch=document.getElementById(chevId); if(el) el.style.display=el.style.display==='none'?'block':'none'; if(ch) ch.classList.toggle('open'); }
 
-function buildPersonCard(p, sejourId=null) {
-  const docs=getPersonDocs(p.id), status=getStatus(p.id);
-  const personFiches=allFiches.filter(f=>f.personne_id===p.id);
-  const hasFiche=personFiches.length>0;
-  const lastFiche=personFiches[0];
+function buildPersonCardHeader(p) {
+  // Lightweight version — just the header, no docs computation
+  // Used during search to avoid computing docs for every person
+  const docs = getPersonDocs(p.id);
+  const status = getStatus(p.id);
+  const personFiches = allFiches.filter(f => f.personne_id === p.id);
 
-  let badgesHtml='';
+  let badgesHtml = '';
   if (status==='complete') badgesHtml=`<span class="badge badge-inscription">✅ Complet</span>`;
   else if (status==='pending') badgesHtml=`<span class="badge badge-pending">⏳ À vérifier</span>`;
-  else badgesHtml=REQUIRED_TYPES.map(t=>{ const has=docs.find(d=>d.type===t); return `<span class="badge ${has?`badge-${t}`:'missing'}">${has?TYPE_LABELS[t]:TYPE_LABELS[t]+' ✗'}</span>`; }).join('');
+  else badgesHtml = REQUIRED_TYPES.map(t=>{ const has=docs.find(d=>d.type===t); return `<span class="badge ${has?`badge-${t}`:'missing'}">${has?TYPE_LABELS[t]:TYPE_LABELS[t]+' ✗'}</span>`; }).join('');
+  if(personFiches.length>0) badgesHtml+=`<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">📋 Fiche reçue</span>`;
 
-  // Fiche formulaire badge
-  if(hasFiche){
-    badgesHtml+=`<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">📋 Fiche reçue</span>`;
+  const totalDocs = docs.length;
+  const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
+  const uid = `${p.id}-all`;
+
+  return `<div class="person-card">
+    <div class="person-header" onclick="toggleCardLazy('${uid}','${p.id}')">
+      <div class="person-avatar">${initials(p.prenom,p.nom)}</div>
+      <div class="person-info">
+        <div class="person-name">${p.prenom} ${p.nom}</div>
+        <div class="person-foyer">${p.foyer}</div>
+      </div>
+      <div class="doc-badges">${badgesHtml}</div>
+      ${docsLabel}
+      <span class="chevron" id="chev-${uid}">▶</span>
+    </div>
+    <div class="person-docs" id="docs-${uid}" style="display:none"></div>
+  </div>`;
+}
+
+function toggleCardLazy(uid, personId) {
+  const body = document.getElementById('docs-'+uid);
+  const chev = document.getElementById('chev-'+uid);
+  if (!body) return;
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    chev?.classList.remove('open');
+    return;
   }
+  // Load full content on first open
+  if (!body.dataset.loaded) {
+    const p = allPersonnes.find(x => x.id === personId);
+    if (p) body.innerHTML = buildPersonCardBody(p, null);
+    body.dataset.loaded = '1';
+  }
+  body.style.display = 'block';
+  chev?.classList.add('open');
+}
+
+function buildPersonCardBody(p, sejourId) {
+  // Full content — only computed when card is opened
+  const docs=getPersonDocs(p.id), status=getStatus(p.id);
+  const personFiches=allFiches.filter(f=>f.personne_id===p.id);
 
   const docRows=REQUIRED_TYPES.map(t=>{
     const typeDocs=docs.filter(d=>d.type===t);
     if (!typeDocs.length) return `<div class="doc-row"><span class="doc-type-pill missing">${TYPE_LABELS[t]}</span><span class="doc-missing">Document manquant</span></div>`;
-    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
+    return typeDocs.map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
   }).join('');
 
   const extraTypes=['ordonnance','divers','dossier_complet'];
-  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription" ${t==='inscription'?'selected':''}>📝 Inscription</option><option value="confidentiel" ${t==='confidentiel'?'selected':''}>🔒 Confidentiel</option><option value="dossier_complet" ${t==='dossier_complet'?'selected':''}>📁 Dossier complet</option><option value="ordonnance" ${t==='ordonnance'?'selected':''}>💊 Ordonnance</option><option value="divers" ${t==='divers'?'selected':''}>📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
+  const extraRows=extraTypes.flatMap(t=>docs.filter(d=>d.type===t).map(doc=>`<div class="doc-row"><span class="doc-type-pill ${t==='dossier_complet'?'inscription':t}">${TYPE_LABELS[t]}</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Modifier…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`)).join('');
 
   const unclassified=docs.filter(d=>!REQUIRED_TYPES.includes(d.type)&&!extraTypes.includes(d.type));
   const unclassifiedRows=unclassified.map(doc=>`<div class="doc-row"><span class="doc-type-pill nonclasse">📎 Non classé</span><span class="doc-filename">${doc.filename}</span><span class="doc-date">${fmtDate(doc.email_date)}</span><div class="doc-actions"><button class="btn btn-info btn-sm" onclick="openDoc('${esc(doc.storage_path)}','${esc(doc.filename)}')">Voir</button><select class="link-select" onchange="classifyDoc('${doc.id}',this.value)" style="height:28px;font-size:11px"><option value="">Classer…</option><option value="inscription">📝 Inscription</option><option value="confidentiel">🔒 Confidentiel</option><option value="dossier_complet">📁 Dossier complet</option><option value="ordonnance">💊 Ordonnance</option><option value="divers">📎 Divers</option></select><button class="btn btn-danger btn-icon btn-sm" onclick="deleteDoc('${doc.id}','${esc(doc.storage_path)}')" title="Supprimer">🗑</button></div></div>`).join('');
 
-  // Fiches formulaire rows
   const ficheRows = personFiches.map(f => {
     const typLabel = {weekend_theme:'Week-end thème',mini_sejour:'Mini séjour',weekend_ordinaire:'Week-end ordinaire',sejour:'Séjour long'}[f.type_sejour]||f.type_sejour;
     const sejNom = f.reponses_inscription?.sejour_choisi||'—';
@@ -686,12 +727,31 @@ function buildPersonCard(p, sejourId=null) {
   const btnValider=status==='pending'?`<div class="valider-block"><button class="btn btn-success btn-sm" onclick="validerDossier('${p.id}')">✅ Valider comme complet</button></div>`:'';
   const btnCompile = docs.length > 1 ? `<div class="valider-block"><button class="btn btn-info btn-sm" onclick="compilePDF('${p.id}','${p.prenom} ${p.nom}')">📄 Compiler tous les PDFs</button></div>` : '';
   const removeBtn=sejourId?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>`:'';
-  const uid=`${p.id}-${sejourId||'all'}`;
+
+  return `${docRows}${extraRows}${unclassifiedRows}${ficheRows}${btnValider}${btnCompile}${removeBtn}`;
+}
+
+// buildPersonCard: full card for sejour context (always visible body needed)
+function buildPersonCard(p, sejourId=null) {
+  const uid = `${p.id}-${sejourId||'all'}`;
+  const docs = getPersonDocs(p.id), status = getStatus(p.id);
+  const personFiches = allFiches.filter(f => f.personne_id === p.id);
+
+  let badgesHtml = '';
+  if (status==='complete') badgesHtml=`<span class="badge badge-inscription">✅ Complet</span>`;
+  else if (status==='pending') badgesHtml=`<span class="badge badge-pending">⏳ À vérifier</span>`;
+  else badgesHtml = REQUIRED_TYPES.map(t=>{ const has=docs.find(d=>d.type===t); return `<span class="badge ${has?`badge-${t}`:'missing'}">${has?TYPE_LABELS[t]:TYPE_LABELS[t]+' ✗'}</span>`; }).join('');
+  if(personFiches.length>0) badgesHtml+=`<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">📋 Fiche reçue</span>`;
 
   const totalDocs = docs.length;
   const docsLabel = totalDocs > 0 ? `<span style="font-size:11px;color:var(--text-light);flex-shrink:0">${totalDocs} doc${totalDocs>1?'s':''}</span>` : '';
-  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${docRows}${extraRows}${unclassifiedRows}${ficheRows}${btnValider}${btnCompile}</div></div>`;
+  const removeBtn = sejourId ? `<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="event.stopPropagation();removeFromSejour('${sejourId}','${p.id}')">Retirer</button>` : '';
+
+  const body = buildPersonCardBody(p, sejourId);
+
+  return `<div class="person-card"><div class="person-header" onclick="toggleCard('${uid}')"><div class="person-avatar">${initials(p.prenom,p.nom)}</div><div class="person-info"><div class="person-name">${p.prenom} ${p.nom}</div><div class="person-foyer">${p.foyer}</div></div><div class="doc-badges">${badgesHtml}</div>${docsLabel}${removeBtn}<span class="chevron" id="chev-${uid}">▶</span></div><div class="person-docs" id="docs-${uid}">${body}</div></div>`;
 }
+
 
 async function compilePDF(personneId, nom) {
   const docs = getPersonDocs(personneId);
@@ -777,7 +837,8 @@ function buildSejoursSection(personnesFiltered) {
       const uid=`sejour-${s.id}`;
       const estPasse=new Date(s.date_fin)<new Date();
       const btnArchiver=estPasse?`<button class="btn btn-archive btn-sm" onclick="event.stopPropagation();archiverSejour('${s.id}')">📦 Archiver</button>`:'';
-      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
+      const btnModifier=`<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();ouvrirModifierSejour('${s.id}')">✏️ Modifier</button>`;
+      return `<div class="sejour-block"><div class="sejour-header" onclick="toggleSejour('${uid}')"><h3>${s.nom}</h3><span class="sejour-dates">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span><span class="sejour-count">${personnes.length} vacancier(s)</span>${btnArchiver}${btnModifier}<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border-color:transparent;flex-shrink:0" onclick="event.stopPropagation();imprimerSejour('${s.id}')">🖨️ Tout imprimer</button><span class="sejour-chevron" id="schev-${uid}">▶</span></div><div class="sejour-body" id="${uid}">${cards}${options?`<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"><select class="link-select" id="add-sel-${s.id}"><option value="">+ Ajouter un vacancier</option>${options}</select><button class="btn btn-success btn-sm" onclick="addPersonToSejour('${s.id}')">Ajouter</button></div>`:''}</div></div>`;
     }).join('');
     return `<div style="margin-bottom:6px"><div class="cat-header" onclick="toggleCat('cat-${cat.key}','chev-cat-${cat.key}')">${cat.label} <span class="count">${sejours.length}</span><span class="chevron" id="chev-cat-${cat.key}" style="margin-left:auto">▶</span></div><div id="cat-${cat.key}" style="display:none">${sejoursHtml}</div></div>`;
   }).join('');
@@ -1494,6 +1555,87 @@ function imprimerFiche(ficheId){
   openPrintWindow(f.html_rendu, { title: `Dossier ${nom} — La Lysardière` });
 }
 
+// ── MODIFIER SÉJOUR ──────────────────────────────────────────────
+function ouvrirModifierSejour(sejourId) {
+  const s = [...allSejours, ...allArchivedSejours].find(x => x.id === sejourId);
+  if(!s) return;
+
+  let overlay = document.getElementById('modifier-sejour-overlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='modifier-sejour-overlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(overlay); }
+
+  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">
+    <div style="background:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">✏️ Modifier le séjour</span>
+      <button onclick="document.getElementById('modifier-sejour-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Nom du séjour *</label>
+        <input id="mod-sej-nom" type="text" value="${esc(s.nom)}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Date de début *</label>
+          <input id="mod-sej-debut" type="date" value="${s.date_debut||''}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Date de fin *</label>
+          <input id="mod-sej-fin" type="date" value="${s.date_fin||''}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Catégorie</label>
+        <select id="mod-sej-cat" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+          <option value="sejour" ${s.categorie==='sejour'?'selected':''}>Séjour</option>
+          <option value="weekend" ${s.categorie==='weekend'?'selected':''}>Week-end</option>
+          <option value="mini_sejour" ${s.categorie==='mini_sejour'?'selected':''}>Mini séjour</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
+        <button onclick="document.getElementById('modifier-sejour-overlay').remove()" style="padding:8px 18px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;background:white">Annuler</button>
+        <button onclick="sauvegarderSejour('${s.id}')" style="padding:8px 18px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.style.display='flex';
+}
+
+async function sauvegarderSejour(sejourId) {
+  const nom = document.getElementById('mod-sej-nom').value.trim();
+  const debut = document.getElementById('mod-sej-debut').value;
+  const fin = document.getElementById('mod-sej-fin').value;
+  const cat = document.getElementById('mod-sej-cat').value;
+  if(!nom||!debut||!fin){ alert('Tous les champs sont requis.'); return; }
+  try{
+    const jwt = await getJWT();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/sejours?id=eq.${sejourId}`,{
+      method:'PATCH',
+      headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({nom,date_debut:debut,date_fin:fin,categorie:cat})
+    });
+    if(!res.ok) throw new Error(await res.text());
+    document.getElementById('modifier-sejour-overlay').remove();
+    await softRefresh(['sejours']);
+  }catch(e){ alert('Erreur : '+e.message); }
+}
+
+async function desarchiverSejour(sejourId) {
+  const s = allArchivedSejours.find(x => x.id === sejourId);
+  if(!s) return;
+  if(!confirm(`Désarchiver le séjour "${s.nom}" ?\nIl réapparaîtra dans la liste des séjours actifs.`)) return;
+  try{
+    const jwt = await getJWT();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/sejours?id=eq.${sejourId}`,{
+      method:'PATCH',
+      headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({archived:false})
+    });
+    if(!res.ok) throw new Error(await res.text());
+    await softRefresh(['sejours']);
+  }catch(e){ alert('Erreur : '+e.message); }
+}
+
 // ── LIEN FORMULAIRE ──────────────────────────────────────
 function openLienFormulaireModal(){
   // Build absolute URL to formulaire.html in the same folder as this page
@@ -1661,7 +1803,7 @@ function renderVacanciers(){
   const container=document.getElementById('vacanciers-container');
   if(container){
     const wasOpen=container.style.display!=='none';
-    container.innerHTML=personnes.map(p=>buildPersonCard(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
+    container.innerHTML=personnes.map(p=>buildPersonCardHeader(p)).join('')||'<p class="empty">Aucun vacancier trouvé.</p>';
     // If searching and there are results, auto-open the container
     const q=document.getElementById('searchInput').value.trim();
     if(q&&personnes.length>0&&!wasOpen){
