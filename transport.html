@@ -4302,16 +4302,28 @@ function ajouterPassager(persId,side,lieuOverrideId){
   });
   
   if(bestConvoi<0){
-    // No compatible convoi — show vehicle selection for new convoi directly
+    // No compatible convoi — show vehicle selection for new convoi
     var persName=(pers.prenom||'')+' '+((pers.nom||'').toUpperCase());
     var allVehsIso=vehicles.filter(function(v){return !v.disabled});
     if(!allVehsIso.length){lyAlert('Aucun convoi compatible et aucun véhicule disponible.','error');return;}
+
+    var overlay=document.createElement('div');
+    overlay.className='ly-modal-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
     var vehBtns=allVehsIso.map(function(v){
-      return '<button class="btn btn-primary btn-sm" style="margin:4px;padding:6px 14px" onclick="execIsolerPassager(\''+persId+'\',\''+side+'\',\''+v.id+'\')">'+v.ico+' '+v.label+' ('+v.cap+' pl.)</button>';
+      return '<button class="btn btn-primary btn-sm" style="margin:4px;padding:8px 16px;display:block;width:100%;text-align:left" '
+        +'onclick="document.querySelector(\'.ly-modal-overlay\').remove();execIsolerPassager(\''+persId+'\',\''+side+'\',\''+v.id+'\')">'
+        +v.ico+' '+v.label+' — '+v.cap+' places</button>';
     }).join('');
-    showModal('<div style="font-size:14px;font-weight:600;margin-bottom:10px">Aucun convoi compatible pour '+persName+'</div>'
-      +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Choisissez un véhicule pour créer un nouveau convoi :</div>'
-      +vehBtns);
+    var box=document.createElement('div');
+    box.style.cssText='background:var(--card);border-radius:var(--radius);padding:24px;max-width:380px;width:90%;box-shadow:var(--shadow-lg)';
+    box.innerHTML='<div style="font-family:Fraunces,serif;font-size:15px;color:var(--forest);margin-bottom:6px">Aucun convoi compatible</div>'
+      +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:14px">Créer un nouveau convoi pour <strong>'+persName+'</strong> avec quel véhicule ?</div>'
+      +vehBtns
+      +'<div style="margin-top:12px"><button class="btn btn-sm" onclick="this.closest(\'.ly-modal-overlay\').remove()">Annuler</button></div>';
+    overlay.appendChild(box);
+    overlay.onclick=function(e){if(e.target===overlay) overlay.remove();};
+    document.body.appendChild(overlay);
     return;
   }
   
@@ -4474,7 +4486,9 @@ async function execReorderStops(convoiIdx,stopIdxA,stopIdxB){
 }
 
 function execIsolerPassager(persId, side, vehId){
-  closeModal();
+  // Close any open modal overlay
+  var existOverlay=document.querySelector('.ly-modal-overlay');
+  if(existOverlay) existOverlay.remove();
   var pers=personnes.find(function(p){return p.id===persId});
   var veh=vehicles.find(function(v){return v.id===vehId});
   if(!pers||!veh){lyAlert('Données manquantes.','error');return;}
