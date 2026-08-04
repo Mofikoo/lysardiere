@@ -538,17 +538,20 @@ function buildFilters() {
 }
 
 function buildStats() {
-  const c  = allPersonnes.filter(p=>getStatus(p.id)==='complete').length;
-  const pe = allPersonnes.filter(p=>getStatus(p.id)==='pending').length;
-  const i  = allPersonnes.filter(p=>getStatus(p.id)==='incomplete').length;
-  const v  = allPersonnes.filter(p=>getStatus(p.id)==='empty').length;
-  const a  = getUnlinked().length;
+  const complete  = allPersonnes.filter(p=>getStatus(p.id)==='complete').length;
+  const partial   = allPersonnes.filter(p=>getStatus(p.id)==='partial').length;
+  const docs_only = allPersonnes.filter(p=>getStatus(p.id)==='docs_only').length;
+  const empty     = allPersonnes.filter(p=>getStatus(p.id)==='empty').length;
+  const unlinked  = getUnlinked().length;
+  const fichesAClasser = allFiches.filter(f=>f.statut_matching!=='exact').length;
+
   document.getElementById('statsBar').innerHTML = `
-    <div class="stat-chip ok"><span class="num">${c}</span> complets</div>
-    <div class="stat-chip warn"><span class="num">${pe}</span> à vérifier</div>
-    <div class="stat-chip warn"><span class="num">${i}</span> incomplets</div>
-    <div class="stat-chip danger"><span class="num">${v}</span> sans doc</div>
-    <div class="stat-chip warn"><span class="num">${a}</span> à classer</div>
+    <div class="stat-chip ok"    ><span class="num">${complete}</span>  dossiers complets</div>
+    <div class="stat-chip warn"  ><span class="num">${partial}</span>   partiels</div>
+    <div class="stat-chip"       ><span class="num">${docs_only}</span> docs mail seuls</div>
+    <div class="stat-chip danger"><span class="num">${empty}</span>     sans aucun doc</div>
+    ${fichesAClasser > 0 ? `<div class="stat-chip warn"><span class="num">${fichesAClasser}</span> fiche${fichesAClasser>1?'s':''} à classer</div>` : ''}
+    ${unlinked > 0 ? `<div class="stat-chip warn"><span class="num">${unlinked}</span> mail${unlinked>1?'s':''} non classés</div>` : ''}
     <div class="stat-chip"><span class="num">${allPersonnes.length}</span> vacanciers</div>`;
 }
 
