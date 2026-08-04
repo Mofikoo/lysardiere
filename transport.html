@@ -4511,15 +4511,16 @@ function execIsolerPassager(persId, side, vehId){
   var newStops=buildStops([newNode],p.maxRetourDetour,p.vitesse,p.maxPassengerSurplusMin);
   var km=Math.round(routeLen(newStops.map(function(s){return s.pt})));
 
-  // Create convoi with exact same structure as other convois
+  var cap=parseInt(veh.cap)||8;
+  var pk=peakSeatsStops(newStops)||1;
   var newConvoi={
-    id:'c'+Date.now(),
+    id:'c'+convoisOptimises.length,
     vehicule:veh,
     stops:newStops,
     depart:side==='dep'?[persObj]:[],
     arrivee:side==='arr'?[persObj]:[],
-    peakSeats:1,
-    remplissage:Math.round(1/veh.cap*100),
+    peakSeats:pk,
+    remplissage:Math.round(pk/cap*100),
     km:km,
     dureeMin:Math.round(km/p.vitesse*60),
     maxDurMin:p.maxDurMin||480,
