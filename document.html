@@ -1561,44 +1561,95 @@ function ouvrirModifierSejour(sejourId) {
   if(!s) return;
 
   let overlay = document.getElementById('modifier-sejour-overlay');
-  if(!overlay){ overlay=document.createElement('div'); overlay.id='modifier-sejour-overlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(overlay); }
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='modifier-sejour-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)';
+    document.body.appendChild(overlay);
+  }
 
-  overlay.innerHTML = `<div style="background:white;border-radius:12px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">
-    <div style="background:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
-      <span style="color:white;font-family:'Fraunces',serif;font-size:16px">✏️ Modifier le séjour</span>
-      <button onclick="document.getElementById('modifier-sejour-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>
+  const catIcons = {sejour:'🏖️', weekend:'🏡', mini_sejour:'🌿'};
+  const catLabel = {sejour:'Séjour', weekend:'Week-end', mini_sejour:'Mini séjour'};
+
+  overlay.innerHTML = `
+  <div style="background:white;border-radius:20px;max-width:500px;width:100%;box-shadow:0 32px 80px rgba(24,83,79,0.25);overflow:hidden;animation:modalPop .2s ease">
+    <style>@keyframes modalPop{from{opacity:0;transform:scale(0.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}</style>
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#18534F,#2a7a74);padding:24px 24px 20px;position:relative">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div style="color:rgba(255,255,255,0.7);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px">Modifier</div>
+          <div style="color:white;font-family:'Fraunces',serif;font-size:20px;font-weight:700;line-height:1.2">${esc(s.nom)}</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:12px;margin-top:4px">${catIcons[s.categorie]||'📅'} ${catLabel[s.categorie]||s.categorie} · ${s.archived?'Archivé':'Actif'}</div>
+        </div>
+        <button onclick="document.getElementById('modifier-sejour-overlay').remove()" style="background:rgba(255,255,255,0.15);border:none;color:white;border-radius:10px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+      </div>
     </div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+
+    <!-- Body -->
+    <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
+
+      <!-- Nom -->
       <div>
-        <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Nom du séjour *</label>
-        <input id="mod-sej-nom" type="text" value="${esc(s.nom)}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        <label style="font-size:11px;font-weight:700;color:#1a5c4e;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Nom du séjour</label>
+        <input id="mod-sej-nom" type="text" value="${esc(s.nom)}"
+          style="width:100%;padding:10px 14px;border:2px solid #e5e0d6;border-radius:10px;font-size:15px;font-family:inherit;color:#1a2e2c;transition:border-color .15s;outline:none"
+          onfocus="this.style.borderColor='#18534F'" onblur="this.style.borderColor='#e5e0d6'">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+      <!-- Dates -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
-          <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Date de début *</label>
-          <input id="mod-sej-debut" type="date" value="${s.date_debut||''}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+          <label style="font-size:11px;font-weight:700;color:#1a5c4e;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de début</label>
+          <input id="mod-sej-debut" type="date" value="${s.date_debut||''}"
+            style="width:100%;padding:10px 14px;border:2px solid #e5e0d6;border-radius:10px;font-size:14px;font-family:inherit;color:#1a2e2c;transition:border-color .15s;outline:none"
+            onfocus="this.style.borderColor='#18534F'" onblur="this.style.borderColor='#e5e0d6'">
         </div>
         <div>
-          <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Date de fin *</label>
-          <input id="mod-sej-fin" type="date" value="${s.date_fin||''}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+          <label style="font-size:11px;font-weight:700;color:#1a5c4e;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de fin</label>
+          <input id="mod-sej-fin" type="date" value="${s.date_fin||''}"
+            style="width:100%;padding:10px 14px;border:2px solid #e5e0d6;border-radius:10px;font-size:14px;font-family:inherit;color:#1a2e2c;transition:border-color .15s;outline:none"
+            onfocus="this.style.borderColor='#18534F'" onblur="this.style.borderColor='#e5e0d6'">
         </div>
       </div>
+
+      <!-- Catégorie -->
       <div>
-        <label style="font-size:12px;color:var(--text-light);display:block;margin-bottom:4px">Catégorie</label>
-        <select id="mod-sej-cat" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
-          <option value="sejour" ${s.categorie==='sejour'?'selected':''}>Séjour</option>
-          <option value="weekend" ${s.categorie==='weekend'?'selected':''}>Week-end</option>
-          <option value="mini_sejour" ${s.categorie==='mini_sejour'?'selected':''}>Mini séjour</option>
-        </select>
+        <label style="font-size:11px;font-weight:700;color:#1a5c4e;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:8px">Catégorie</label>
+        <div style="display:flex;gap:8px">
+          ${['sejour','weekend','mini_sejour'].map(cat=>`
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="mod-sej-cat-radio" value="${cat}" ${(s.categorie||'sejour')===cat?'checked':''} style="display:none" onchange="document.getElementById('mod-sej-cat').value='${cat}';document.querySelectorAll('[name=mod-sej-cat-radio]').forEach((r,i)=>{r.closest('label').querySelector('div').style.background=r.checked?'#18534F':'#f5f3ef';r.closest('label').querySelector('div').style.color=r.checked?'white':'#5C6B6A';r.closest('label').querySelector('div').style.borderColor=r.checked?'#18534F':'#e5e0d6'})">
+              <div style="text-align:center;padding:10px 6px;border:2px solid ${(s.categorie||'sejour')===cat?'#18534F':'#e5e0d6'};border-radius:10px;background:${(s.categorie||'sejour')===cat?'#18534F':'#f5f3ef'};color:${(s.categorie||'sejour')===cat?'white':'#5C6B6A'};font-size:12px;font-weight:600;transition:all .15s">
+                <div style="font-size:18px;margin-bottom:2px">${catIcons[cat]}</div>
+                ${catLabel[cat]}
+              </div>
+            </label>`).join('')}
+        </div>
+        <input type="hidden" id="mod-sej-cat" value="${s.categorie||'sejour'}">
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
-        <button onclick="document.getElementById('modifier-sejour-overlay').remove()" style="padding:8px 18px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;background:white">Annuler</button>
-        <button onclick="sauvegarderSejour('${s.id}')" style="padding:8px 18px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">💾 Enregistrer</button>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;padding-top:6px">
+        <button onclick="document.getElementById('modifier-sejour-overlay').remove()"
+          style="flex:1;padding:11px;border:2px solid #e5e0d6;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;background:white;color:#5C6B6A;font-family:inherit;transition:all .15s"
+          onmouseover="this.style.background='#f5f3ef'" onmouseout="this.style.background='white'">
+          Annuler
+        </button>
+        <button onclick="sauvegarderSejour('${s.id}')"
+          style="flex:2;padding:11px;background:linear-gradient(135deg,#18534F,#2a7a74);color:white;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;box-shadow:0 4px 12px rgba(24,83,79,0.3);transition:all .15s"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(24,83,79,0.4)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(24,83,79,0.3)'">
+          💾 Enregistrer les modifications
+        </button>
       </div>
     </div>
   </div>`;
+
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
   overlay.style.display='flex';
+  setTimeout(()=>document.getElementById('mod-sej-nom')?.focus(), 100);
 }
 
 async function sauvegarderSejour(sejourId) {
