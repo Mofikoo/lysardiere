@@ -71,29 +71,39 @@ body {
 }
 .header-top {
   display: flex; align-items: center;
-  padding: 10px 20px; gap: 12px; min-height: 60px;
+  padding: 0 20px; gap: 0; height: 56px;
 }
-.header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-.header-brand img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
-.header-brand-text h1 { font-family: 'Fraunces', serif; font-size: 17px; color: var(--gold); line-height: 1.2; }
-.header-brand-text span { display: block; font-size: 9px; color: rgba(255,255,255,0.45); letter-spacing: 2px; text-transform: uppercase; }
-.header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; padding-right: 18px; border-right: 1px solid rgba(255,255,255,0.15); margin-right: 16px; }
+.header-brand img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.header-brand-text h1 { font-family: 'Fraunces', serif; font-size: 16px; color: var(--gold); line-height: 1; }
+.header-brand-text span { display: block; font-size: 8px; color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.header-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+/* Action groups */
+.hdr-group { display: flex; align-items: center; gap: 4px; padding: 0 10px; border-right: 1px solid rgba(255,255,255,0.12); }
+.hdr-group:last-child { border-right: none; padding-right: 0; }
+.hdr-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 8px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: all 0.15s; }
+.hdr-btn-ghost { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
+.hdr-btn-ghost:hover { background: rgba(255,255,255,0.2); color: white; }
+.hdr-btn-blue  { background: rgba(14,165,233,0.18); color: #7dd3fc; border: 1px solid rgba(125,211,252,0.25); }
+.hdr-btn-blue:hover  { background: rgba(14,165,233,0.3); color: white; }
+.hdr-btn-add   { background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.22); }
+.hdr-btn-add:hover   { background: rgba(255,255,255,0.24); }
 .back-link { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: var(--radius-xs); background: rgba(255,255,255,0.08); transition: all 0.15s; white-space: nowrap; }
 .back-link:hover { background: rgba(255,255,255,0.16); color: white; }
+
+/* TOOLBAR */
+.toolbar { background: var(--card); border-bottom: 1px solid var(--border-light); padding: 8px 20px; display: flex; gap: 6px; align-items: center; box-shadow: var(--shadow-sm); flex-wrap: nowrap; overflow-x: auto; }
+.toolbar input, .toolbar select { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; color: var(--text); background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s; height: 32px; flex-shrink: 0; }
+.toolbar input { min-width: 200px; flex: 1; }
+.toolbar select { flex-shrink: 0; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--forest-mid); box-shadow: 0 0 0 3px rgba(34,109,104,0.1); }
 
 /* BANNERS */
 .alert-banner { background: var(--orange-bg); border-left: 4px solid var(--orange); padding: 10px 20px; display: none; align-items: center; gap: 10px; font-size: 13px; color: #92400e; font-weight: 500; }
 .alert-banner.show { display: flex; }
 .confirm-banner { background: var(--blue-bg); border-left: 4px solid var(--blue); padding: 10px 20px; display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--blue); flex-wrap: wrap; }
 .confirm-banner.show { display: flex; }
-
-/* TOOLBAR */
-.toolbar { background: var(--card); border-bottom: 1px solid var(--border-light); padding: 10px 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; box-shadow: var(--shadow-sm); }
-.toolbar input, .toolbar select { border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 7px 11px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; height: 34px; }
-.toolbar input { min-width: 200px; flex: 1; max-width: 260px; }
-.toolbar input:focus, .toolbar select:focus { border-color: var(--forest-mid); box-shadow: 0 0 0 3px rgba(34,109,104,0.1); }
-
-/* STATS */
 .stats-bar { display: flex; gap: 8px; padding: 12px 20px; flex-wrap: wrap; background: linear-gradient(to right, var(--mint), #f0faf8); border-bottom: 1px solid var(--mint-deep); }
 .stat-chip { background: var(--card); border: 1px solid var(--border-light); border-radius: 30px; padding: 5px 14px; display: flex; align-items: center; gap: 7px; box-shadow: var(--shadow-sm); font-size: 12px; color: var(--text-mid); white-space: nowrap; }
 .stat-chip .num { font-size: 1.1rem; font-weight: 700; font-family: 'Fraunces', serif; }
@@ -263,6 +273,7 @@ body {
 
 <div class="header">
   <div class="header-top">
+    <!-- Logo + titre -->
     <a href="index.html" class="header-brand">
       <img src="icon-192.png" alt="La Lysardière">
       <div class="header-brand-text">
@@ -270,13 +281,24 @@ body {
         <span>Documents d'inscription</span>
       </div>
     </a>
+
+    <!-- Actions -->
     <div class="header-actions">
-      <a href="index.html" class="back-link">← Accueil</a>
-      <button class="btn btn-sm" onclick="openSejoursConfig()" title="Configurer les séjours du formulaire public">⚙️ Séjours formulaire</button>
-      <button class="btn btn-sm" onclick="openLienFormulaireModal()" title="Générer un lien à envoyer aux structures" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc">🔗 Lien formulaire</button>
-      <button class="btn btn-accent btn-sm" onclick="openModal()">+ Séjour</button>
-      <button class="btn btn-accent btn-sm" onclick="openAddDocModal()">+ Document</button>
-      <button class="btn btn-accent btn-sm" onclick="openAddPersonModal()">+ Vacancier</button>
+      <!-- Formulaire -->
+      <div class="hdr-group">
+        <button class="hdr-btn hdr-btn-ghost" onclick="openSejoursConfig()" title="Configurer les séjours du formulaire">⚙️ Séjours</button>
+        <button class="hdr-btn hdr-btn-blue" onclick="openLienFormulaireModal()" title="Générer un lien formulaire">🔗 Lien formulaire</button>
+      </div>
+      <!-- Créer -->
+      <div class="hdr-group">
+        <button class="hdr-btn hdr-btn-add" onclick="openModal()">+ Séjour</button>
+        <button class="hdr-btn hdr-btn-add" onclick="openAddDocModal()">+ Document</button>
+        <button class="hdr-btn hdr-btn-add" onclick="openAddPersonModal()">+ Vacancier</button>
+      </div>
+      <!-- Accueil -->
+      <div class="hdr-group">
+        <a href="index.html" class="hdr-btn hdr-btn-ghost">← Accueil</a>
+      </div>
     </div>
   </div>
 </div>
@@ -292,21 +314,21 @@ body {
   </select>
   <select id="filterStatus">
     <option value="">Tous les statuts</option>
-    <option value="complete">Dossier complet ✅</option>
-    <option value="partial">Dossier partiel 📝</option>
-    <option value="docs_only">Documents uniquement 📎</option>
-    <option value="empty">Rien reçu ⚠️</option>
+    <option value="complete">✅ Dossier complet</option>
+    <option value="partial">📝 Partiel</option>
+    <option value="docs_only">📎 Docs mail seuls</option>
+    <option value="empty">⚠️ Rien reçu</option>
   </select>
   <select id="filterFoyer">
     <option value="">Tous les foyers</option>
   </select>
   <select id="filterFiche" onchange="renderAll()">
     <option value="">Toutes les fiches</option>
-    <option value="avec_fiche">Avec fiche reçue 📋</option>
+    <option value="avec_fiche">📋 Avec fiche reçue</option>
     <option value="sans_fiche">Sans fiche reçue</option>
-    <option value="inscription">Fiche inscription 📝</option>
-    <option value="confidentiel">Fiche confidentielle 🔒</option>
-    <option value="complet">Dossier complet 📋</option>
+    <option value="inscription">📝 Inscription seule</option>
+    <option value="confidentiel">🔒 Confidentielle seule</option>
+    <option value="complet">📋 Dossier complet</option>
   </select>
   <select id="sortPersonnes" onchange="renderAll()">
     <option value="alpha">A → Z</option>
