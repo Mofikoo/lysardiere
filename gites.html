@@ -381,20 +381,28 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
   }
 
   // Rendu d'une personne avec highlight gîte + lettre retour
-  function renderPerson(p, isDep) {
+  // renderPerson(p, isDep, withAnnotation)
+  // isDep=true → départ : LETTRE uniquement (pas de surlignage)
+  // isDep=false → arrivée : SURLIGNAGE uniquement (pas de lettre)
+  // withAnnotation=false → stops timeline, aucune annotation
+  function renderPerson(p, isDep, withAnnotation) {
     var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-    var g = gites[key] || null;
+    var g = withAnnotation ? (gites[key] || null) : null;
     var gc = g ? GITE_COLORS[g] : null;
 
     var nameStyle = 'font-weight:700;';
     var suffix = '';
+
     if (gc) {
-      nameStyle += 'background:' + gc.bg + ';border-radius:4px;padding:1px 5px;';
-      if (!isDep) {
-        // ARR : ajouter la lettre du gîte
-        suffix = ' <span style="display:inline-block;background:' + gc.badge + ';color:white;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:800;letter-spacing:1px">' + gc.letter + '</span>';
+      if (isDep) {
+        // DEP : lettre seulement, pas de surlignage
+        suffix = ' <span style="display:inline-block;background:' + gc.badge + ';color:white;border-radius:4px;padding:0 6px;font-size:11px;font-weight:800;letter-spacing:1px">' + gc.letter + '</span>';
+      } else {
+        // ARR : surlignage seulement, pas de lettre
+        nameStyle += 'background:' + gc.bg + ';border-radius:4px;padding:1px 5px;';
       }
     }
+
     var foyerSpan = p.foyer ? ' <span style="font-size:10px;color:#5C6B6A;font-weight:600">('+p.foyer+')</span>' : '';
     var dirSpan = isDep
       ? ' <span style="color:#C0392B;font-size:11px;font-weight:700">DEP</span>'
@@ -454,9 +462,9 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
       + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
       + '<div style="font-size:13px;line-height:2.2">'
-      + c.depart.map(function(p){return renderPerson(p, true);}).join('<br>')
+      + c.depart.map(function(p){return renderPerson(p, true, true);}).join('<br>')
       + (c.depart.length&&c.arrivee.length?'<br>':'')
-      + c.arrivee.map(function(p){return renderPerson(p, false);}).join('<br>')
+      + c.arrivee.map(function(p){return renderPerson(p, false, true);}).join('<br>')
       + '</div></div>'
       + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
       + '<div style="font-size:13px;line-height:2.2">'
@@ -481,14 +489,14 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
         phaseHtml='<span style="background:#D5F0EC;color:#18534F;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase aller</span>';
         pLine='<strong>'+sn+' à bord</strong>';
       } else if(s.action==='depot'){
-        pLine='<strong style="color:#C0392B">Dép.</strong> : '+(s.depPers||[]).map(function(p){return renderPerson(p,true);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+        pLine='<strong style="color:#C0392B">Dép.</strong> : '+(s.depPers||[]).map(function(p){return renderPerson(p,true,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
       } else if(s.action==='rotation'){
-        pLine='<strong style="color:#C0392B">Dép</strong>: '+(s.depPers||[]).map(function(p){return renderPerson(p,true);}).join(', ')
-          +' / <strong style="color:#1a7a4a">Arr</strong>: '+(s.arrPers||[]).map(function(p){return renderPerson(p,false);}).join(', ')
+        pLine='<strong style="color:#C0392B">Dép</strong>: '+(s.depPers||[]).map(function(p){return renderPerson(p,true,false);}).join(', ')
+          +' / <strong style="color:#1a7a4a">Arr</strong>: '+(s.arrPers||[]).map(function(p){return renderPerson(p,false,false);}).join(', ')
           +' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
       } else if(s.action==='pickup'){
         phaseHtml='<span style="background:#EAFAF1;color:#1a7a4a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase retour</span>';
-        pLine='<strong style="color:#1a7a4a">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return renderPerson(p,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+        pLine='<strong style="color:#1a7a4a">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return renderPerson(p,false,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
       } else if(s.action==='retour'){
         pLine='<strong>'+sn+' à l\'arrivée</strong>';
       }
