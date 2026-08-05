@@ -66,6 +66,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .gite-btn.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte);color:var(--hulotte)}
 .gite-btn.sixties{background:var(--sixties-bg);border-color:var(--sixties);color:var(--sixties)}
 .gite-btn.envolee{background:var(--envolee-bg);border-color:var(--envolee);color:var(--envolee)}
+.gite-btn.floridorlot{background:#e3f2fd;border-color:#1565c0;color:#1565c0}
 .gite-btn.none{background:#f5f5f5;border-color:#bbb;color:#666}
 .gite-btn.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 .gite-btn:not(.active){opacity:0.55}
@@ -82,11 +83,13 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .person-chip.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte)}
 .person-chip.sixties{background:var(--sixties-bg);border-color:var(--sixties)}
 .person-chip.envolee{background:var(--envolee-bg);border-color:var(--envolee)}
+.person-chip.floridorlot{background:#e3f2fd;border-color:#1565c0}
 .person-name{font-size:13px;font-weight:600;color:var(--text)}
 .person-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
 .person-chip.hulotte .person-tag{background:var(--hulotte);color:white}
 .person-chip.sixties .person-tag{background:var(--sixties);color:white}
 .person-chip.envolee .person-tag{background:var(--envolee);color:white}
+.person-chip.floridorlot .person-tag{background:#1565c0;color:white}
 .person-dir{font-size:10px;color:var(--text-mid)}
 
 /* ── ACTIVE GITE INDICATOR ── */
@@ -121,6 +124,8 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
   </a>
   <div class="header-actions">
     <button class="hdr-btn hdr-btn-primary" id="btn-print" onclick="imprimerFiches()" style="display:none">🖨️ Imprimer les fiches annotées</button>
+    <button class="hdr-btn hdr-btn-ghost" id="btn-gites" onclick="imprimerFeuillesGites()" style="display:none">📋 Feuilles départ par gîte</button>
+    <button class="hdr-btn hdr-btn-ghost" id="btn-gites-arr" onclick="imprimerFeuillesArrivee()" style="display:none">🏡 Feuilles arrivée par gîte</button>
     <a href="transport.html" class="hdr-btn hdr-btn-ghost">← Trajets</a>
   </div>
 </div>
@@ -142,9 +147,10 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
   <div class="legend" id="legend-section">
     <h3>Gîtes — cliquez sur un gîte pour l'activer, puis cliquez sur les vacanciers</h3>
     <div class="gite-btns">
-      <button class="gite-btn hulotte active" onclick="setActiveGite('hulotte')" id="gbtn-hulotte">🌲 Hulotte</button>
-      <button class="gite-btn sixties active" onclick="setActiveGite('sixties')" id="gbtn-sixties">🎵 Sixties</button>
-      <button class="gite-btn envolee active" onclick="setActiveGite('envolee')" id="gbtn-envolee">🦋 Envolée</button>
+      <button class="gite-btn hulotte active" onclick="setActiveGite('hulotte')" id="gbtn-hulotte">Hulotte</button>
+      <button class="gite-btn sixties active" onclick="setActiveGite('sixties')" id="gbtn-sixties">Sixties</button>
+      <button class="gite-btn envolee active" onclick="setActiveGite('envolee')" id="gbtn-envolee">Envolée</button>
+      <button class="gite-btn floridorlot active" onclick="setActiveGite('floridorlot')" id="gbtn-floridorlot">Floridorlot</button>
       <button class="gite-btn none active" onclick="setActiveGite('none')" id="gbtn-none">✕ Effacer</button>
     </div>
   </div>
@@ -172,9 +178,10 @@ var gites = {};              // { "Prénom NOM": 'hulotte'|'sixties'|'envolee'|n
 var activeGite = 'hulotte';  // gîte actuellement sélectionné dans la palette
 
 var GITE_COLORS = {
-  hulotte:  { label:'🌲 Hulotte', letter:'H', color:'#2e7d32', bg:'rgba(76,175,80,0.35)', badge:'#2e7d32', badgeBg:'#e8f5e9' },
-  sixties:  { label:'🎵 Sixties', letter:'S', color:'#ad1457', bg:'rgba(240,98,146,0.35)', badge:'#ad1457', badgeBg:'#fce4ec' },
-  envolee:  { label:'🦋 Envolée', letter:'E', color:'#f57f17', bg:'rgba(255,193,7,0.45)', badge:'#e65100', badgeBg:'#fff8e1' },
+  hulotte:  { label:'Hulotte', letter:'H', color:'#2e7d32', bg:'rgba(76,175,80,0.35)', badge:'#2e7d32', badgeBg:'#e8f5e9' },
+  sixties:  { label:'Sixties', letter:'S', color:'#ad1457', bg:'rgba(240,98,146,0.35)', badge:'#ad1457', badgeBg:'#fce4ec' },
+  envolee:     { label:'Envolée',    letter:'E', color:'#f57f17', bg:'rgba(255,193,7,0.45)',   badge:'#e65100', badgeBg:'#fff8e1' },
+  floridorlot: { label:'Floridorlot', letter:'F', color:'#1565c0', bg:'rgba(66,165,245,0.28)',  badge:'#1565c0', badgeBg:'#e3f2fd' },
 };
 
 // ── SUPABASE ─────────────────────────────────────────────────────
@@ -228,6 +235,8 @@ function chargerSemaine() {
   document.getElementById('legend-section').style.display = 'block';
   document.getElementById('vacanciers-section').style.display = 'block';
   document.getElementById('btn-print').style.display = 'inline-flex';
+  document.getElementById('btn-gites').style.display = 'inline-flex';
+  document.getElementById('btn-gites-arr').style.display = 'inline-flex';
 
   setActiveGite(activeGite);
   renderPersonGrid();
@@ -237,7 +246,7 @@ function chargerSemaine() {
 function setActiveGite(g) {
   activeGite = g;
   // Update buttons
-  ['hulotte','sixties','envolee','none'].forEach(function(id) {
+  ['hulotte','sixties','envolee','floridorlot','none'].forEach(function(id) {
     var btn = document.getElementById('gbtn-' + id);
     if (!btn) return;
     if (id === g) {
@@ -540,6 +549,184 @@ function fmtDateLong(d) {
   if (!d) return '';
   try { return new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
   catch(e){ return d; }
+}
+
+// ── FEUILLES DE DÉPART PAR GÎTE ─────────────────────────────────
+function imprimerFeuillesGites() {
+  if (!currentSemaine) return;
+
+  var GITE_NAMES = { hulotte: 'Hulotte', sixties: 'Sixties', envolee: 'Envolée', floridorlot: 'Floridorlot' };
+  var GITE_STYLE = {
+    hulotte:     { color: '#2e7d32', bg: '#e8f5e9', border: '#2e7d32' },
+    sixties:     { color: '#ad1457', bg: '#fce4ec', border: '#ad1457' },
+    envolee:     { color: '#e65100', bg: '#fff8e1', border: '#f57f17' },
+    floridorlot: { color: '#1565c0', bg: '#e3f2fd', border: '#1565c0' },
+  };
+
+  function fmtDur(min){ return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0'); }
+
+  var html = '';
+
+  ['hulotte','sixties','envolee','floridorlot'].forEach(function(gite) {
+    var gc = GITE_STYLE[gite];
+    var giteName = GITE_NAMES[gite];
+
+    // Trouver tous les convois qui ont au moins 1 vacancier de ce gîte EN DÉPART
+    var convoisAvecGite = [];
+
+    currentSemaine.convois.forEach(function(c) {
+      var vacanciersDuGite = (c.depart||[]).filter(function(p) {
+        var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+        return gites[key] === gite;
+      });
+      if (vacanciersDuGite.length > 0) {
+        convoisAvecGite.push({ convoi: c, vacanciers: vacanciersDuGite });
+      }
+    });
+
+    if (convoisAvecGite.length === 0) return; // pas de vacanciers dans ce gîte
+
+    // ── PAGE ──
+    html += '<div style="page-break-after:always;page-break-inside:avoid;padding:30mm 20mm;font-family:Arial,Helvetica,sans-serif;background:white">';
+
+    // Titre gîte
+    html += '<div style="text-align:center;margin-bottom:30pt">'
+      + '<div style="display:inline-block;background:' + gc.bg + ';border:3px solid ' + gc.border + ';border-radius:16pt;padding:12pt 40pt">'
+      + '<div style="font-size:32pt;font-weight:900;color:' + gc.color + ';letter-spacing:2pt;font-family:Georgia,serif">' + giteName + '</div>'
+      + '</div>'
+      + '<div style="margin-top:10pt;font-size:11pt;color:#888">'
+        + new Date(currentSemaine.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+      + '</div>'
+      + '</div>';
+
+    // Un bloc par convoi
+    convoisAvecGite.forEach(function(item, idx) {
+      var c = item.convoi;
+      var vacs = item.vacanciers;
+      var conducteur = c.conducteur || '—';
+      var heure = c.heureDepart || '—';
+      var vehicule = c.vehicule ? c.vehicule.label : 'Véhicule';
+
+      html += '<div style="margin-bottom:22pt;border:1.5pt solid #ddd;border-radius:10pt;overflow:hidden">';
+
+      // Sous-titre véhicule
+      html += '<div style="background:#1a2e2c;padding:10pt 16pt;display:flex;align-items:center;justify-content:space-between">'
+        + '<div style="color:white;font-size:14pt;font-weight:700">'
+          + '🚐 ' + vehicule
+        + '</div>'
+        + '<div style="display:flex;gap:20pt">'
+          + (conducteur !== '—' ? '<span style="color:rgba(255,255,255,0.85);font-size:12pt">👤 ' + conducteur + '</span>' : '')
+          + '<span style="color:' + (heure!=='—'?'#D4AF6A':'rgba(255,255,255,0.5)') + ';font-size:13pt;font-weight:700">🕐 ' + heure + '</span>'
+        + '</div>'
+        + '</div>';
+
+      // Liste vacanciers
+      html += '<div style="padding:10pt 16pt">';
+      vacs.forEach(function(p, pi) {
+        var zebra = pi%2===0 ? 'background:#f9f9f9' : 'background:white';
+        html += '<div style="' + zebra + ';padding:7pt 10pt;border-radius:6pt;display:flex;align-items:center;gap:10pt">'
+          + '<span style="display:inline-block;width:22pt;height:22pt;border-radius:50%;background:' + gc.color + ';color:white;text-align:center;line-height:22pt;font-size:10pt;font-weight:700;flex-shrink:0">' + (pi+1) + '</span>'
+          + '<span style="font-size:13pt;font-weight:700;color:#1a2e2c">' + p.prenom + ' ' + (p.nom||'').toUpperCase() + '</span>'
+          + (p.foyer ? '<span style="font-size:10pt;color:#888;margin-left:auto">' + p.foyer + '</span>' : '')
+          + '</div>';
+      });
+      html += '</div>';
+
+      // Total
+      html += '<div style="padding:6pt 16pt;border-top:1pt solid #eee;background:#f5f5f5;text-align:right;font-size:11pt;color:#555;font-weight:600">'
+        + vacs.length + ' vacancier' + (vacs.length>1?'s':'') + ' dans ce véhicule'
+        + '</div>';
+
+      html += '</div>';
+    });
+
+    // Total gîte
+    var totalVacs = convoisAvecGite.reduce(function(sum,i){return sum+i.vacanciers.length;},0);
+    html += '<div style="text-align:center;margin-top:10pt;font-size:12pt;color:#666;border-top:1pt solid #ddd;padding-top:10pt">'
+      + '<strong>' + totalVacs + ' vacancier' + (totalVacs>1?'s':'') + '</strong> au gîte ' + giteName
+      + '</div>';
+
+    html += '</div>'; // end page
+  });
+
+  if (!html) return;
+
+  if (typeof openPrintWindow !== 'undefined') {
+    openPrintWindow(html, { title: 'Feuilles de départ par gîte — ' + currentSemaine.date });
+  } else {
+    alert('print.js non chargé.');
+  }
+}
+
+// ── FEUILLES D'ARRIVÉE PAR GÎTE ─────────────────────────────────
+function imprimerFeuillesArrivee() {
+  if (!currentSemaine) return;
+
+  var GITE_NAMES    = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot' };
+  var GITE_STYLE    = {
+    hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
+    sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
+    envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
+    floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
+  };
+
+  var html = '';
+
+  ['hulotte','sixties','envolee','floridorlot'].forEach(function(gite) {
+    var gc = GITE_STYLE[gite];
+    var giteName = GITE_NAMES[gite];
+
+    // Vacanciers arrivant dans ce gîte (dans c.arrivee)
+    var seen = {};
+    var vacanciers = [];
+    currentSemaine.convois.forEach(function(c) {
+      (c.arrivee||[]).forEach(function(p) {
+        var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+        if (gites[key] === gite && !seen[key]) {
+          seen[key] = true;
+          vacanciers.push({ prenom: p.prenom, nom: (p.nom||'').toUpperCase() });
+        }
+      });
+    });
+
+    if (!vacanciers.length) return;
+
+    // Tri alphabétique par nom
+    vacanciers.sort(function(a,b){ return a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom); });
+
+    html += '<div style="page-break-after:always;page-break-inside:avoid;padding:30mm 24mm;font-family:Arial,Helvetica,sans-serif;background:white;min-height:267mm">';
+
+    // Titre gîte
+    html += '<div style="text-align:center;margin-bottom:40pt">'
+      + '<div style="display:inline-block;background:' + gc.bg + ';border:3pt solid ' + gc.border + ';border-radius:16pt;padding:14pt 50pt">'
+      + '<div style="font-size:38pt;font-weight:900;color:' + gc.color + ';letter-spacing:2pt;font-family:Georgia,serif">' + giteName + '</div>'
+      + '</div>'
+      + '</div>';
+
+    // Liste vacanciers
+    html += '<div style="max-width:420pt;margin:0 auto">';
+    vacanciers.forEach(function(p, i) {
+      var zebra = i%2===0 ? '#f9f9f9' : 'white';
+      html += '<div style="background:' + zebra + ';padding:10pt 16pt;border-radius:8pt;margin-bottom:4pt;display:flex;align-items:center;gap:14pt;border:1pt solid #eee">'
+        + '<span style="color:' + gc.color + ';font-size:12pt;font-weight:700;width:20pt;text-align:right;flex-shrink:0">' + (i+1) + '</span>'
+        + '<span style="font-size:16pt;font-weight:700;color:#1a2e2c">' + p.prenom + ' ' + p.nom + '</span>'
+        + '</div>';
+    });
+    html += '</div>';
+
+    // Total
+    html += '<div style="text-align:center;margin-top:24pt;font-size:12pt;color:#888">'
+      + vacanciers.length + ' vacancier' + (vacanciers.length>1?'s':'') + ' attendu' + (vacanciers.length>1?'s':'')
+      + '</div>';
+
+    html += '</div>';
+  });
+
+  if (!html) return;
+
+  if (typeof openPrintWindow !== 'undefined') {
+    openPrintWindow(html, { title: 'Feuilles arrivée par gîte' });
+  }
 }
 
 init();
