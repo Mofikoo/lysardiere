@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gîtes — La Lysardière</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="print.js"></script>
+<style>
+/* ── VARIABLES ── */
+:root{
+  --forest:#18534F;--forest-mid:#226D68;--gold:#D4AF6A;--gold-deep:#B8943A;
+  --red:#c0392b;--green:#1a7a4a;--blue:#0077A8;
+  --mint:#EEF7F5;--bg:#F5F3EE;--card:#FFFFFF;
+  --text:#1a2e2c;--text-mid:#5C6B6A;--text-light:#8FA5A3;
+  --border:#E5E0D6;--border-light:#EDE8E0;
+  --shadow-sm:0 1px 3px rgba(24,83,79,0.08);
+  --shadow-md:0 4px 16px rgba(24,83,79,0.12);
+  --radius:14px;--radius-sm:10px;--radius-xs:7px;
+  /* Gîtes colors */
+  --hulotte:#2e7d32;--hulotte-bg:#e8f5e9;--hulotte-hl:rgba(76,175,80,0.35);
+  --sixties:#ad1457;--sixties-bg:#fce4ec;--sixties-hl:rgba(240,98,146,0.35);
+  --envolee:#f57f17;--envolee-bg:#fff8e1;--envolee-hl:rgba(255,193,7,0.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap');
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,var(--forest),var(--forest-mid));
+  padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(24,83,79,0.25);
+}
+.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.header-brand img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.header-title{font-family:'Fraunces',serif;font-size:16px;color:var(--gold)}
+.header-sub{font-size:8px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase}
+.header-actions{display:flex;align-items:center;gap:8px}
+.hdr-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;white-space:nowrap;transition:all 0.15s}
+.hdr-btn-ghost{background:rgba(255,255,255,0.12);color:white}
+.hdr-btn-ghost:hover{background:rgba(255,255,255,0.22)}
+.hdr-btn-primary{background:var(--gold);color:var(--forest)}
+.hdr-btn-primary:hover{background:var(--gold-deep)}
+
+/* ── MAIN ── */
+.main{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+
+/* ── SELECTOR ── */
+.selector-card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light)}
+.selector-card h2{font-family:'Fraunces',serif;font-size:16px;color:var(--forest);margin-bottom:14px}
+.selector-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.selector-row select{flex:1;min-width:200px;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border-color 0.2s}
+.selector-row select:focus{border-color:var(--forest-mid)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all 0.15s}
+.btn-primary{background:linear-gradient(135deg,var(--forest),var(--forest-mid));color:white}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-print{background:var(--gold);color:var(--forest);padding:9px 20px}
+.btn-print:hover{background:var(--gold-deep)}
+
+/* ── LEGEND / GÎTES BUTTONS ── */
+.legend{background:var(--card);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);display:none}
+.legend h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-mid);margin-bottom:10px}
+.gite-btns{display:flex;gap:8px;flex-wrap:wrap}
+.gite-btn{padding:7px 16px;border-radius:20px;border:2px solid;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;transition:all 0.15s;user-select:none}
+.gite-btn.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte);color:var(--hulotte)}
+.gite-btn.sixties{background:var(--sixties-bg);border-color:var(--sixties);color:var(--sixties)}
+.gite-btn.envolee{background:var(--envolee-bg);border-color:var(--envolee);color:var(--envolee)}
+.gite-btn.none{background:#f5f5f5;border-color:#bbb;color:#666}
+.gite-btn.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.gite-btn:not(.active){opacity:0.55}
+
+/* ── VACANCIERS LIST ── */
+.vacanciers-section{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);display:none}
+.vacanciers-section h3{font-family:'Fraunces',serif;font-size:15px;color:var(--forest);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.person-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.person-chip{
+  padding:8px 12px;border-radius:10px;border:2px solid var(--border);background:var(--bg);
+  cursor:pointer;transition:all 0.15s;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.person-chip:hover{border-color:var(--forest-mid)}
+.person-chip.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte)}
+.person-chip.sixties{background:var(--sixties-bg);border-color:var(--sixties)}
+.person-chip.envolee{background:var(--envolee-bg);border-color:var(--envolee)}
+.person-name{font-size:13px;font-weight:600;color:var(--text)}
+.person-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
+.person-chip.hulotte .person-tag{background:var(--hulotte);color:white}
+.person-chip.sixties .person-tag{background:var(--sixties);color:white}
+.person-chip.envolee .person-tag{background:var(--envolee);color:white}
+.person-dir{font-size:10px;color:var(--text-mid)}
+
+/* ── ACTIVE GITE INDICATOR ── */
+.active-gite-bar{
+  display:none;padding:8px 16px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;
+  align-items:center;gap:8px;
+}
+.active-gite-bar.hulotte{background:var(--hulotte-bg);color:var(--hulotte);border:1.5px solid var(--hulotte)}
+.active-gite-bar.sixties{background:var(--sixties-bg);color:var(--sixties);border:1.5px solid var(--sixties)}
+.active-gite-bar.envolee{background:var(--envolee-bg);color:var(--envolee);border:1.5px solid var(--envolee)}
+.active-gite-bar.none{background:#f5f5f5;color:#666;border:1.5px solid #bbb}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px;color:var(--text-light);font-size:14px}
+
+/* ── PRINT ── */
+@media print{
+  .header,.legend,.selector-card,.vacanciers-section,.no-print{display:none!important}
+  body{background:white}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="transport.html" class="header-brand">
+    <img src="icon-192.png" alt="La Lysardière">
+    <div>
+      <div class="header-title">La Lysardière</div>
+      <div class="header-sub">Annotation Gîtes</div>
+    </div>
+  </a>
+  <div class="header-actions">
+    <button class="hdr-btn hdr-btn-primary" id="btn-print" onclick="imprimerFiches()" style="display:none">🖨️ Imprimer les fiches annotées</button>
+    <a href="transport.html" class="hdr-btn hdr-btn-ghost">← Trajets</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Sélection de la semaine -->
+  <div class="selector-card">
+    <h2>🗓️ Choisir une semaine</h2>
+    <div class="selector-row">
+      <select id="semaine-select" onchange="chargerSemaine()">
+        <option value="">— Sélectionnez une semaine —</option>
+      </select>
+    </div>
+    <div id="semaine-info" style="margin-top:10px;font-size:12px;color:var(--text-mid)"></div>
+  </div>
+
+  <!-- Sélection du gîte actif -->
+  <div class="legend" id="legend-section">
+    <h3>Gîtes — cliquez sur un gîte pour l'activer, puis cliquez sur les vacanciers</h3>
+    <div class="gite-btns">
+      <button class="gite-btn hulotte active" onclick="setActiveGite('hulotte')" id="gbtn-hulotte">🌲 Hulotte</button>
+      <button class="gite-btn sixties active" onclick="setActiveGite('sixties')" id="gbtn-sixties">🎵 Sixties</button>
+      <button class="gite-btn envolee active" onclick="setActiveGite('envolee')" id="gbtn-envolee">🦋 Envolée</button>
+      <button class="gite-btn none active" onclick="setActiveGite('none')" id="gbtn-none">✕ Effacer</button>
+    </div>
+  </div>
+
+  <!-- Barre gîte actif -->
+  <div class="active-gite-bar" id="active-gite-bar"></div>
+
+  <!-- Liste vacanciers -->
+  <div class="vacanciers-section" id="vacanciers-section">
+    <h3>👥 Vacanciers de la semaine <span id="vac-count" style="background:var(--mint);border-radius:20px;padding:2px 10px;font-size:12px;font-family:'DM Sans';font-weight:700"></span></h3>
+    <div class="person-grid" id="person-grid"></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────
+var SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
+var SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+var LOGO_URL='icon-192.png';
+
+// ── ÉTAT ────────────────────────────────────────────────────────
+var currentSemaine = null;   // données semaine chargée
+var gites = {};              // { "Prénom NOM": 'hulotte'|'sixties'|'envolee'|null }
+var activeGite = 'hulotte';  // gîte actuellement sélectionné dans la palette
+
+var GITE_COLORS = {
+  hulotte:  { label:'🌲 Hulotte', letter:'H', color:'#2e7d32', bg:'rgba(76,175,80,0.35)', badge:'#2e7d32', badgeBg:'#e8f5e9' },
+  sixties:  { label:'🎵 Sixties', letter:'S', color:'#ad1457', bg:'rgba(240,98,146,0.35)', badge:'#ad1457', badgeBg:'#fce4ec' },
+  envolee:  { label:'🦋 Envolée', letter:'E', color:'#f57f17', bg:'rgba(255,193,7,0.45)', badge:'#e65100', badgeBg:'#fff8e1' },
+};
+
+// ── SUPABASE ─────────────────────────────────────────────────────
+async function supaFetch(path, method, body) {
+  var url = SUPA_URL + '/rest/v1/' + path;
+  var headers = { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json' };
+  var opts = { method: method || 'GET', headers: headers };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch(url, opts);
+  if (!method || method === 'GET') return await r.json();
+  return r.ok;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+async function init() {
+  // Charger semaines + archives
+  var rows = await supaFetch('semaines?select=*&order=updated_at.desc');
+  var archives = await supaFetch('archives?select=*&order=updated_at.desc');
+  var all = [...(rows||[]), ...(archives||[])];
+
+  var sel = document.getElementById('semaine-select');
+  all.forEach(function(row) {
+    var s = row.data || row;
+    if (!s || !s.convois || !s.convois.length) return;
+    var opt = document.createElement('option');
+    opt.value = row.id;
+    var label = fmtDateShort(s.date) + ' — ' + (s.convois.length) + ' convoi(s)' + (s.label ? ' · ' + s.label : '');
+    if (archives.some(function(a){return a.id===row.id})) label = '📦 ' + label;
+    opt.textContent = label;
+    opt._data = s;
+    sel.appendChild(opt);
+  });
+}
+
+// ── CHARGER SEMAINE ──────────────────────────────────────────────
+function chargerSemaine() {
+  var sel = document.getElementById('semaine-select');
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt._data) { currentSemaine = null; return; }
+  currentSemaine = opt._data;
+
+  // Restaurer gîtes depuis localStorage
+  var key = 'gites_' + currentSemaine.date;
+  gites = JSON.parse(localStorage.getItem(key) || '{}');
+
+  // Infos
+  document.getElementById('semaine-info').textContent =
+    fmtDateLong(currentSemaine.date) + ' — ' + currentSemaine.convois.length + ' convoi(s)';
+
+  // Afficher sections
+  document.getElementById('legend-section').style.display = 'block';
+  document.getElementById('vacanciers-section').style.display = 'block';
+  document.getElementById('btn-print').style.display = 'inline-flex';
+
+  setActiveGite(activeGite);
+  renderPersonGrid();
+}
+
+// ── GÎTE ACTIF ───────────────────────────────────────────────────
+function setActiveGite(g) {
+  activeGite = g;
+  // Update buttons
+  ['hulotte','sixties','envolee','none'].forEach(function(id) {
+    var btn = document.getElementById('gbtn-' + id);
+    if (!btn) return;
+    if (id === g) {
+      btn.classList.add('active');
+      btn.style.opacity = '1';
+      btn.style.transform = 'scale(1.05)';
+    } else {
+      btn.classList.remove('active');
+      btn.style.opacity = '0.45';
+      btn.style.transform = '';
+    }
+  });
+  // Active bar
+  var bar = document.getElementById('active-gite-bar');
+  if (g === 'none') {
+    bar.className = 'active-gite-bar none';
+    bar.style.display = 'flex';
+    bar.textContent = '✕ Mode effacer — cliquez sur un vacancier pour retirer son gîte';
+  } else if (GITE_COLORS[g]) {
+    bar.className = 'active-gite-bar ' + g;
+    bar.style.display = 'flex';
+    bar.textContent = 'Gîte actif : ' + GITE_COLORS[g].label + ' — cliquez sur les vacanciers pour les assigner';
+  }
+}
+
+// ── AFFECTER UN GÎTE ─────────────────────────────────────────────
+function assignGite(personKey) {
+  if (activeGite === 'none') {
+    delete gites[personKey];
+  } else {
+    gites[personKey] = activeGite;
+  }
+  // Sauvegarder
+  if (currentSemaine) {
+    localStorage.setItem('gites_' + currentSemaine.date, JSON.stringify(gites));
+  }
+  renderPersonGrid();
+}
+
+// ── LISTE VACANCIERS ─────────────────────────────────────────────
+function getAllPersons() {
+  if (!currentSemaine) return [];
+  var seen = {};
+  var persons = [];
+  currentSemaine.convois.forEach(function(c) {
+    (c.depart||[]).forEach(function(p) {
+      var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+      if (!seen[key]) { seen[key] = true; persons.push({ key: key, prenom: p.prenom, nom: p.nom||'', dir: 'DEP' }); }
+    });
+    (c.arrivee||[]).forEach(function(p) {
+      var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+      if (!seen[key]) { seen[key] = true; persons.push({ key: key, prenom: p.prenom, nom: p.nom||'', dir: 'ARR' }); }
+    });
+  });
+  return persons.sort(function(a,b){ return a.key.localeCompare(b.key); });
+}
+
+function renderPersonGrid() {
+  var persons = getAllPersons();
+  document.getElementById('vac-count').textContent = persons.length + ' vacanciers';
+  var html = persons.map(function(p) {
+    var g = gites[p.key] || null;
+    var chipClass = g ? ' ' + g : '';
+    var tag = g ? '<span class="person-tag">' + GITE_COLORS[g].letter + '</span>' : '<span style="font-size:10px;color:#bbb">—</span>';
+    return '<div class="person-chip' + chipClass + '" onclick="assignGite(\'' + p.key.replace(/'/g,"\\'") + '\')" title="Cliquer pour assigner au gîte actif">'
+      + '<span class="person-name">' + p.prenom + ' ' + p.nom.toUpperCase() + '</span>'
+      + tag
+      + '</div>';
+  }).join('');
+  document.getElementById('person-grid').innerHTML = html || '<div class="empty">Aucun vacancier dans cette semaine.</div>';
+}
+
+// ── IMPRESSION ───────────────────────────────────────────────────
+function imprimerFiches() {
+  if (!currentSemaine) return;
+  var dateLabel = fmtDateLong(currentSemaine.date);
+  var html = generateFichesAnnoteesHTML(currentSemaine.convois, dateLabel);
+  if (typeof openPrintWindow !== 'undefined') {
+    openPrintWindow(html, { title: 'Fiches annotées — ' + dateLabel });
+  } else {
+    alert('print.js non chargé.');
+  }
+}
+
+// ── GÉNÉRATION HTML FICHES ANNOTÉES ─────────────────────────────
+function generateFichesAnnoteesHTML(convois, dateLabel) {
+  var COLORS = ['#18534F','#D6955B','#226D68','#6B3FA0','#0077A8','#C0392B','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
+  var PIQUENIQUE_HTML = '<div style="background:#C0392B;color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
+
+  function fmtDur(min){ return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0'); }
+  function fmtH(mins){ if(mins===undefined||mins===null) return ''; var h=Math.floor(mins/60)%24,m=mins%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+  function col(i){ return COLORS[i%COLORS.length]; }
+  function getBadgeSt(t){ if(t==='rotation') return 'background:#FFF3E0;color:#c05020'; if(t==='depart_only') return 'background:#FDEDEC;color:#C0392B'; return 'background:#EAFAF1;color:#1a7a4a'; }
+  function dp(a,b){ var R=6371,r=Math.PI/180,la1=parseFloat(a.lat),lo1=parseFloat(a.lng),la2=parseFloat(b.lat),lo2=parseFloat(b.lng); var x=Math.sin((la2-la1)*r/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)**2; return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+  function buildMapsUrl(c){ var wps=[]; c.stops.forEach(function(s){if(s.pt&&s.pt.lat) wps.push(s.pt.lat+','+s.pt.lng)}); return 'https://www.google.com/maps/dir/'+wps.join('/'); }
+  function roundQ(withBuf,rawArr){ var rem=withBuf%15,r=rem<=7?withBuf-rem:withBuf+(15-rem); if(r-rawArr<10) r=withBuf-rem+15; return r; }
+
+  function computeHeures(c){
+    if(!c.heureDepart) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
+    var parts=c.heureDepart.split(':');
+    var startMin=parseInt(parts[0])*60+parseInt(parts[1]);
+    var useLeg=c.legDurations&&c.legDurations.length;
+    var est=[];
+    if(!useLeg&&c.stops&&c.stops.length>1){
+      for(var ei=0;ei<c.stops.length-1;ei++){
+        var a=c.stops[ei].pt,b=c.stops[ei+1].pt;
+        if(a&&b&&a.lat&&b.lat) est.push({min:Math.round(dp(a,b)*1.3/50*60)});
+        else est.push({min:15});
+      }
+    }
+    var legs=useLeg?c.legDurations:est;
+    if(!legs.length) return{heures:[],rawArrivals:[],piqueniqueIdx:-1,piqueniqueCount:0};
+    var nb=legs.length+1,MIDI=720,pqIdx=-1;
+    if(startMin<MIDI){
+      var sd=startMin,sa=[startMin];
+      for(var si=0;si<legs.length;si++){var arr=sd+legs[si].min;sa.push(arr);if(si<legs.length-1) sd=roundQ(arr+15,arr);}
+      if(sa[nb-1]>MIDI){
+        var bi=-1,bs=Infinity;
+        for(var j=1;j<nb-1;j++){var sc=Math.abs(sa[j]-MIDI);if(sa[j]>810) sc+=500;if(sc<bs){bs=sc;bi=j;}}
+        if(bi>0) pqIdx=bi;
+      }
+    }
+    var heures=[],raw=[];
+    heures[0]=startMin;raw[0]=startMin;
+    var dp2=startMin;
+    for(var m=1;m<nb;m++){
+      var ra=dp2+legs[m-1].min;raw[m]=ra;
+      if(m===nb-1){heures[m]=ra;continue;}
+      var isPQ=(m===pqIdx),rdv=roundQ(ra+(isPQ?60:15),ra);
+      if(c.customHeures&&c.customHeures[m]!==undefined) rdv=c.customHeures[m];
+      heures[m]=rdv;dp2=rdv;
+    }
+    var pqCount=0;
+    if(pqIdx>0&&c.stops){
+      for(var pc=pqIdx;pc<c.stops.length;pc++){
+        var st=c.stops[pc];
+        if(st.action==='depot'||st.action==='rotation') pqCount+=(st.depPers||[]).length;
+      }
+    }
+    return{heures:heures,rawArrivals:raw,piqueniqueIdx:pqIdx,piqueniqueCount:pqCount};
+  }
+
+  // Rendu d'une personne avec highlight gîte + lettre retour
+  function renderPerson(p, isDep) {
+    var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+    var g = gites[key] || null;
+    var gc = g ? GITE_COLORS[g] : null;
+
+    var nameStyle = 'font-weight:700;';
+    var suffix = '';
+    if (gc) {
+      nameStyle += 'background:' + gc.bg + ';border-radius:4px;padding:1px 5px;';
+      if (!isDep) {
+        // ARR : ajouter la lettre du gîte
+        suffix = ' <span style="display:inline-block;background:' + gc.badge + ';color:white;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:800;letter-spacing:1px">' + gc.letter + '</span>';
+      }
+    }
+    var foyerSpan = p.foyer ? ' <span style="font-size:10px;color:#5C6B6A;font-weight:600">('+p.foyer+')</span>' : '';
+    var dirSpan = isDep
+      ? ' <span style="color:#C0392B;font-size:11px;font-weight:700">DEP</span>'
+      : ' <span style="color:#1a7a4a;font-size:11px;font-weight:700">ARR</span>';
+    return '<span style="' + nameStyle + '">' + p.prenom + ' ' + (p.nom||'').toUpperCase() + '</span>' + foyerSpan + suffix + dirSpan;
+  }
+
+  function renderTimeDetail(si, rawArr, heures, pqIdx){
+    if(si===0||!rawArr[si]) return '';
+    if(si===rawArr.length-1) return '';
+    var arrive=rawArr[si],rdv=heures[si],pause=rdv-arrive;
+    if(pause<=0) return ' <span style="background:#EAFAF1;color:#1a7a4a;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">'+fmtH(rdv)+'</span>';
+    return ' <span style="background:#EBF5FB;color:#0077A8;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Arr. '+fmtH(arrive)+'</span>'
+      +' <span style="background:#FEF9E7;color:#1a5c4e;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">Pause '+pause+'min</span>'
+      +' <span style="background:#EAFAF1;color:#1a7a4a;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px">RDV '+fmtH(rdv)+'</span>';
+  }
+
+  // Légende gîtes à afficher en haut de chaque fiche
+  var giteLegende = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+    + Object.entries(GITE_COLORS).map(function(e){
+        var g=e[0],gc=e[1];
+        return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:' + gc.badgeBg + ';border:1.5px solid ' + gc.badge + ';font-size:11px;font-weight:700;color:' + gc.badge + '">'
+          + '<span style="display:inline-block;background:' + gc.badge + ';color:white;border-radius:3px;padding:0 5px;font-size:11px">' + gc.letter + '</span>'
+          + gc.label + '</span>';
+      }).join('')
+    + '</div>';
+
+  var html = '';
+  convois.forEach(function(c, i) {
+    var mapsUrl = buildMapsUrl(c);
+    var clr = col(i);
+    var tl = c.type==='rotation'?'Rotation':c.type==='depart_only'?'Départ':'Arrivée';
+    var maxDur = c.maxDurMin||420;
+    var durC = c.dureeMin > maxDur ? '#C0392B' : '#1a7a4a';
+    var hData = computeHeures(c);
+    var heures = hData.heures, rawArr = hData.rawArrivals, pqIdx = hData.piqueniqueIdx, pqCount = hData.piqueniqueCount;
+
+    html += '<div style="border:2px solid #1a2e2c;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+
+    // Header convoi
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #1a2e2c;flex-wrap:wrap;gap:8px">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '<img src="' + LOGO_URL + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px">'+(i+1)+'</div>'
+      + '<div><div style="font-size:15px;font-weight:700">Convoi '+(i+1)+' — '+c.vehicule.label+(c.conducteur?' — '+c.conducteur:'')+'</div>'
+      + '<div style="font-size:12px;color:#5C6B6A;font-weight:600">'+dateLabel+(c.heureDepart?' · Départ '+c.heureDepart:'')+'</div></div></div>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<span style="font-size:13px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
+      + '<span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;'+getBadgeSt(c.type)+'">'+tl+'</span>'
+      + (pqCount>0?'<span style="background:#C0392B;color:white;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
+      + '</div></div>';
+
+    // Légende gîtes
+    html += giteLegende;
+
+    // Passagers + trajet (2 colonnes)
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
+      + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
+      + '<div style="font-size:13px;line-height:2.2">'
+      + c.depart.map(function(p){return renderPerson(p, true);}).join('<br>')
+      + (c.depart.length&&c.arrivee.length?'<br>':'')
+      + c.arrivee.map(function(p){return renderPerson(p, false);}).join('<br>')
+      + '</div></div>'
+      + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
+      + '<div style="font-size:13px;line-height:2.2">'
+      + 'Distance : <strong>~'+c.km+' km</strong><br>'
+      + 'Durée : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>'
+      + 'Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'
+      + (c.conducteur?'<br>Conducteur : <strong>'+c.conducteur+'</strong>':'')
+      + (c.notes?'<br>Notes : <em>'+(c.notes||'')+'</em>':'')
+      + '</div></div></div>';
+
+    // Timeline arrêts
+    html += '<div style="background:white;border:2px solid #F5F3EE;padding:16px;border-radius:10px">'
+      + '<div style="font-size:11px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrêts</div>';
+
+    c.stops.forEach(function(s, si) {
+      var dotC = s.action==='depart'||s.action==='retour'?'#18534F':s.action==='pickup'?'#1a7a4a':'#C0392B';
+      var heureStr = (si===0||si===c.stops.length-1)&&heures[si]!==undefined
+        ? ' <span style="background:#EEF7F5;color:#18534F;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+fmtH(heures[si])+'</span>' : '';
+      var phaseHtml='', pLine='', sn=s.seats||0;
+
+      if(s.action==='depart'){
+        phaseHtml='<span style="background:#D5F0EC;color:#18534F;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase aller</span>';
+        pLine='<strong>'+sn+' à bord</strong>';
+      } else if(s.action==='depot'){
+        pLine='<strong style="color:#C0392B">Dép.</strong> : '+(s.depPers||[]).map(function(p){return renderPerson(p,true);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='rotation'){
+        pLine='<strong style="color:#C0392B">Dép</strong>: '+(s.depPers||[]).map(function(p){return renderPerson(p,true);}).join(', ')
+          +' / <strong style="color:#1a7a4a">Arr</strong>: '+(s.arrPers||[]).map(function(p){return renderPerson(p,false);}).join(', ')
+          +' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='pickup'){
+        phaseHtml='<span style="background:#EAFAF1;color:#1a7a4a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase retour</span>';
+        pLine='<strong style="color:#1a7a4a">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return renderPerson(p,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='retour'){
+        pLine='<strong>'+sn+' à l\'arrivée</strong>';
+      }
+
+      var timeDetail = renderTimeDetail(si, rawArr, heures, pqIdx);
+
+      html += '<div style="display:flex;gap:0;position:relative;margin-bottom:4px">'
+        + '<div style="width:2px;background:#E5E0D6;margin-left:19px;margin-right:0;'+(si===c.stops.length-1?'opacity:0':'')+'"></div>'
+        + '<div style="display:flex;gap:12px;padding:6px 0 6px 0;flex:1">'
+        + '<div style="width:38px;height:38px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;flex-shrink:0;margin-left:0">'+(si+1)+'</div>'
+        + '<div style="flex:1;padding-top:2px">'
+        + (phaseHtml?'<div style="margin-bottom:2px">'+phaseHtml+'</div>':'')
+        + '<div style="font-size:14px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:4px">'+s.pt.nom+heureStr+timeDetail+'</div>'
+        + (s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:11px;color:#5C6B6A">'+s.pt.adresse+'</div>':'')
+        + '<div style="font-size:12px;color:#5C6B6A">'+pLine+'</div>'
+        + '</div></div></div>';
+
+      if (si === pqIdx) html += PIQUENIQUE_HTML;
+    });
+
+    // QR Maps
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(mapsUrl);
+    html += '</div><div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#EBF5FB;border-radius:10px;border:1px solid #b8ddf0;margin-top:12px">'
+      + '<img src="' + qrUrl + '" style="width:80px;height:80px;flex-shrink:0;border:1px solid #ddd">'
+      + '<div><div style="font-size:11px;font-weight:700;color:#0077A8;margin-bottom:3px">Itinéraire Google Maps</div>'
+      + '<div style="font-size:8px;color:#0077A8;word-break:break-all">'+mapsUrl+'</div>'
+      + '<a href="'+mapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;background:#0077A8;color:white;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;text-decoration:none">Ouvrir Maps</a>'
+      + '</div></div></div>';
+  });
+
+  return html;
+}
+
+// ── UTILITAIRES ──────────────────────────────────────────────────
+function fmtDateShort(d) {
+  if (!d) return '';
+  try { return new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+  catch(e){ return d; }
+}
+function fmtDateLong(d) {
+  if (!d) return '';
+  try { return new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+  catch(e){ return d; }
+}
+
+init();
+</script>
+</body>
+</html>
