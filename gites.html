@@ -594,10 +594,12 @@ function imprimerFeuillesGites() {
       var c = item.convoi, vacs = item.vacanciers;
       var conducteur = c.conducteur||'—', heure = c.heureDepart||'—', vehicule = c.vehicule?c.vehicule.label:'Véhicule';
       inner += '<div style="margin-bottom:10px;border:1.5px solid #ddd;border-radius:8px;overflow:hidden">';
-      inner += '<div style="background:#1a2e2c;padding:7px 14px;display:flex;align-items:center;justify-content:space-between">'
-        + '<span style="color:white;font-size:13px;font-weight:700">🚐 '+vehicule+'</span>'
-        + '<span style="color:#D4AF6A;font-size:13px;font-weight:700">'+heure+'</span>'
-        + (conducteur!=='—'?'<span style="color:rgba(255,255,255,0.8);font-size:12px">👤 '+conducteur+'</span>':'')
+      inner += '<div style="background:#1a2e2c;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">'
+        + '<span style="color:white;font-size:16px;font-weight:900;letter-spacing:0.5px">🚐 '+vehicule+'</span>'
+        + '<div style="display:flex;align-items:center;gap:12px">'
+        + (conducteur!=='—'?'<span style="color:rgba(255,255,255,0.7);font-size:12px">👤 '+conducteur+'</span>':'')
+        + '<span style="background:#C0392B;color:white;font-size:17px;font-weight:900;padding:3px 14px;border-radius:8px;letter-spacing:1px">'+heure+'</span>'
+        + '</div>'
         + '</div>';
       vacs.forEach(function(p, pi) {
         inner += '<div style="padding:5px 14px;background:'+(pi%2?'white':'#f9f9f9')+';display:flex;align-items:center;gap:10px">'
