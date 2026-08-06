@@ -2514,9 +2514,9 @@ async function submitForm(){
   let personneId=match.id;
   let statut=match.status;
 
-  if(statut==='nouveau'){
-    personneId=await createPersonne(nom,prenom);
-  }
+  // Si pas de match exact → on ne crée PAS de vacancier automatiquement.
+  // La fiche atterrira dans "À classer" dans documents.html avec personne_id=null
+  // L'équipe pourra ensuite la relier manuellement au bon vacancier.
 
   // Upload photo
   const photoFile=document.getElementById('conf-photo-input').files[0];
