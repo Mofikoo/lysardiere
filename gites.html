@@ -489,6 +489,10 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
     var hData = computeHeures(c);
     var heures = hData.heures, rawArr = hData.rawArrivals, pqIdx = hData.piqueniqueIdx, pqCount = hData.piqueniqueCount;
 
+    var nbStops = c.stops ? c.stops.length : 0;
+    var splitMode = nbStops >= 6; // 2 pages si >= 6 arrêts
+
+    // ── PAGE 1 : header + passagers + arrêts (1ère moitié si split) ──
     html += '<div style="border:1.5px solid #b0c4c2;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always">';
 
     // Header convoi
@@ -502,12 +506,13 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
       + '<span style="font-size:13px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
       + '<span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;'+getBadgeSt(c.type)+'">'+tl+'</span>'
       + (pqCount>0?'<span style="background:#C0392B;color:white;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
+      + (splitMode?'<span style="background:#EEF7F5;color:#18534F;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600">1/2</span>':'')
       + '</div></div>';
 
     // Légende gîtes
     html += giteLegende;
 
-    // Passagers + trajet (2 colonnes)
+    // Passagers + trajet
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
       + '<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
       + '<div style="font-size:13px;line-height:2.2">'
@@ -524,10 +529,12 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
       + (c.notes?'<br>Notes : <em>'+(c.notes||'')+'</em>':'')
       + '</div></div></div>';
 
-    // Timeline arrêts
-    html += '<div style="background:white;border:2px solid #F5F3EE;padding:16px;border-radius:10px">'
-      + '<div style="font-size:11px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrêts</div>';
+    // Timeline arrêts — si split : tous les stops page 1, QR page 2
+    // Si pas split : tout sur une page
+    var stopsHeaderHtml = '<div style="background:white;border:1.5px solid #e5e0d6;padding:16px;border-radius:10px">'
+      + '<div style="font-size:11px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrêts</div>';
 
+    var stopsBodyHtml = '';
     c.stops.forEach(function(s, si) {
       var dotC = s.action==='depart'||s.action==='retour'?'#18534F':s.action==='pickup'?'#1a7a4a':'#C0392B';
       var heureStr = (si===0||si===c.stops.length-1)&&heures[si]!==undefined
@@ -552,7 +559,7 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
 
       var timeDetail = renderTimeDetail(si, rawArr, heures, pqIdx);
 
-      html += '<div style="display:flex;gap:0;position:relative;margin-bottom:4px">'
+      var stopHtml = '<div style="display:flex;gap:0;position:relative;margin-bottom:4px">'
         + '<div style="width:2px;background:#E5E0D6;margin-left:19px;margin-right:0;'+(si===c.stops.length-1?'opacity:0':'')+'"></div>'
         + '<div style="display:flex;gap:12px;padding:6px 0 6px 0;flex:1">'
         + '<div style="width:38px;height:38px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;flex-shrink:0;margin-left:0">'+(si+1)+'</div>'
@@ -563,17 +570,36 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
         + '<div style="font-size:12px;color:#5C6B6A">'+pLine+'</div>'
         + '</div></div></div>';
 
-      if (si === pqIdx) html += PIQUENIQUE_HTML;
+      stopHtml += (si === pqIdx ? PIQUENIQUE_HTML : '');
+      stopsBodyHtml += stopHtml;
     });
 
-    // QR Maps
+    // QR
     var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(mapsUrl);
-    html += '</div><div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#EBF5FB;border-radius:10px;border:1px solid #b8ddf0;margin-top:12px">'
+    var qrHtml = '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#EBF5FB;border-radius:10px;border:1px solid #b8ddf0;margin-top:12px">'
       + '<img src="' + qrUrl + '" style="width:80px;height:80px;flex-shrink:0;border:1px solid #ddd">'
       + '<div><div style="font-size:11px;font-weight:700;color:#0077A8;margin-bottom:3px">Itinéraire Google Maps</div>'
       + '<div style="font-size:8px;color:#0077A8;word-break:break-all">'+mapsUrl+'</div>'
       + '<a href="'+mapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;background:#0077A8;color:white;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;text-decoration:none">Ouvrir Maps</a>'
-      + '</div></div></div>';
+      + '</div></div>';
+
+    if (!splitMode) {
+      // Tout sur une page
+      html += stopsHeaderHtml + stopsBodyHtml + '</div>' + qrHtml + '</div>';
+    } else {
+      // PAGE 1 : header + passagers + stops
+      html += stopsHeaderHtml + stopsBodyHtml + '</div></div>';
+
+      // PAGE 2 : header allégé (rappel) + QR
+      html += '<div style="border:1.5px solid #b0c4c2;border-radius:14px;padding:20px;background:white;page-break-inside:avoid;page-break-after:always">';
+      // Rappel convoi
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid #b0c4c2">'
+        + '<div style="width:32px;height:32px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px">'+(i+1)+'</div>'
+        + '<div style="font-size:14px;font-weight:700;color:#18534F">Convoi '+(i+1)+' — '+c.vehicule.label+(c.conducteur?' — '+c.conducteur:'')+' <span style="font-size:11px;color:#999;font-weight:400">· suite</span></div>'
+        + '<span style="margin-left:auto;background:#EEF7F5;color:#18534F;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600">2/2</span>'
+        + '</div>';
+      html += qrHtml + '</div>';
+    }
   return html;
 }
 
