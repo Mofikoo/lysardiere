@@ -90,7 +90,7 @@ const LYS_PRINT_CSS = `
     text-transform: uppercase;
     letter-spacing: 0.8pt;
     padding: 3pt 8pt;
-    margin: 8pt 0 5pt;
+    margin: 12pt 0 6pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -102,7 +102,7 @@ const LYS_PRINT_CSS = `
   /* ── FIELDS ── */
   .lp-row2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; margin-bottom: 4pt; }
   .lp-row3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; margin-bottom: 4pt; }
-  .lp-field { margin-bottom: 4pt; }
+  .lp-field { margin-bottom: 6pt; }
   .lp-label {
     font-size: 7pt;
     color: #888;
@@ -137,8 +137,8 @@ const LYS_PRINT_CSS = `
   .lp-yn-inline-wrap {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3pt 12pt;
-    margin-bottom: 5pt;
+    gap: 4pt 12pt;
+    margin-bottom: 8pt;
   }
   .lp-yn-inline {
     display: flex;
@@ -159,7 +159,7 @@ const LYS_PRINT_CSS = `
     display: flex;
     align-items: center;
     gap: 6pt;
-    margin-bottom: 3pt;
+    margin-bottom: 5pt;
     font-size: 9pt;
   }
   .lp-chk-label { color: #888; font-size: 7pt; text-transform: uppercase; }
@@ -168,7 +168,7 @@ const LYS_PRINT_CSS = `
 
   /* ── TEXTAREA ── */
   .lp-ta {
-    margin-bottom: 5pt;
+    margin-bottom: 8pt;
   }
   .lp-ta-value {
     border: 0.75pt solid #ddd;
@@ -185,7 +185,7 @@ const LYS_PRINT_CSS = `
   .lp-grille {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 6pt;
+    margin-bottom: 8pt;
     font-size: 8.5pt;
   }
   .lp-grille th {
@@ -204,7 +204,7 @@ const LYS_PRINT_CSS = `
   .lp-grille tr.lp-sub td.lp-act { padding-left: 12pt; color: #555; font-style: italic; }
 
   /* ── TROUBLES (2 colonnes) ── */
-  .lp-troubles { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; margin-bottom: 5pt; }
+  .lp-troubles { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; margin-bottom: 9pt; }
   .lp-troubles-col { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
   .lp-troubles-col th { background: #f0f0f0; padding: 2pt 5pt; text-align: left; border: 0.75pt solid #ddd; font-size: 8pt; }
   .lp-troubles-col td { padding: 2pt 5pt; border: 0.75pt solid #eee; }
