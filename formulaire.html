@@ -3338,7 +3338,15 @@ function prefillConfIdentityFromMini(){
 function nextStep(){
   if(currentStep===1&&!selectedTypeSejour){document.getElementById('error-type').style.display='block';return;}
   if(currentStep===1&&FORM_MODE!=='confidentiel'&&ficheInscriptionBuiltFor!==selectedTypeSejour) buildFicheInscription();
-  if(currentStep===1&&FORM_MODE==='confidentiel') prefillConfIdentityFromMini();
+
+  // Validation de l'étape courante avant d'avancer
+  if(!validateStep(currentStep)){
+    // Scroll vers le premier champ en erreur
+    const firstErr = document.querySelector('.error, .radio-error');
+    if(firstErr) firstErr.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
   // Find next step in ACTIVE_STEPS after currentStep
   const currentIdx = ACTIVE_STEPS.indexOf(currentStep);
   const nextDOMStep = currentIdx>=0 ? ACTIVE_STEPS[currentIdx+1] : null;
