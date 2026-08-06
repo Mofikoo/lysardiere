@@ -66,8 +66,8 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .gite-btn.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte);color:var(--hulotte)}
 .gite-btn.sixties{background:var(--sixties-bg);border-color:var(--sixties);color:var(--sixties)}
 .gite-btn.envolee{background:var(--envolee-bg);border-color:var(--envolee);color:var(--envolee)}
-.gite-btn.floridorlot{background:#e3f2fd;border-color:#1565c0;color:#1565c0}
-.gite-btn.arces{background:#f3e5f5;border-color:#6a1b9a;color:#6a1b9a}
+.gite-btn.floridorlot{background:#f3e5f5;border-color:#6a1b9a;color:#6a1b9a}
+.gite-btn.arces{background:#e3f2fd;border-color:#1565c0;color:#1565c0}
 .gite-btn.none{background:#f5f5f5;border-color:#bbb;color:#666}
 .gite-btn.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 .gite-btn:not(.active){opacity:0.55}
@@ -84,15 +84,15 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .person-chip.hulotte{background:var(--hulotte-bg);border-color:var(--hulotte)}
 .person-chip.sixties{background:var(--sixties-bg);border-color:var(--sixties)}
 .person-chip.envolee{background:var(--envolee-bg);border-color:var(--envolee)}
-.person-chip.floridorlot{background:#e3f2fd;border-color:#1565c0}
-.person-chip.arces{background:#f3e5f5;border-color:#6a1b9a}
+.person-chip.floridorlot{background:#f3e5f5;border-color:#6a1b9a}
+.person-chip.arces{background:#e3f2fd;border-color:#1565c0}
 .person-name{font-size:13px;font-weight:600;color:var(--text)}
 .person-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
 .person-chip.hulotte .person-tag{background:var(--hulotte);color:white}
 .person-chip.sixties .person-tag{background:var(--sixties);color:white}
 .person-chip.envolee .person-tag{background:var(--envolee);color:white}
-.person-chip.floridorlot .person-tag{background:#1565c0;color:white}
-.person-chip.arces .person-tag{background:#6a1b9a;color:white}
+.person-chip.floridorlot .person-tag{background:#6a1b9a;color:white}
+.person-chip.arces .person-tag{background:#1565c0;color:white}
 .person-dir{font-size:10px;color:var(--text-mid)}
 
 /* ── ACTIVE GITE INDICATOR ── */
@@ -249,8 +249,8 @@ var GITE_COLORS = {
   hulotte:  { label:'Hulotte', letter:'H', color:'#2e7d32', bg:'rgba(76,175,80,0.35)', badge:'#2e7d32', badgeBg:'#e8f5e9' },
   sixties:  { label:'Sixties', letter:'S', color:'#ad1457', bg:'rgba(240,98,146,0.35)', badge:'#ad1457', badgeBg:'#fce4ec' },
   envolee:     { label:'Envolée',    letter:'E', color:'#f57f17', bg:'rgba(255,193,7,0.45)',   badge:'#e65100', badgeBg:'#fff8e1' },
-  floridorlot: { label:'Floridorlot', letter:'F', color:'#1565c0', bg:'rgba(66,165,245,0.28)',  badge:'#1565c0', badgeBg:'#e3f2fd' },
-  arces:       { label:'Arces',       letter:'A', color:'#6a1b9a', bg:'rgba(171,71,188,0.22)',   badge:'#6a1b9a', badgeBg:'#f3e5f5' },
+  floridorlot: { label:'Floridorlot', letter:'F', color:'#6a1b9a', bg:'rgba(171,71,188,0.22)',  badge:'#6a1b9a', badgeBg:'#f3e5f5' },
+  arces:       { label:'Arces',       letter:'A', color:'#1565c0', bg:'rgba(66,165,245,0.28)',   badge:'#1565c0', badgeBg:'#e3f2fd' },
 };
 
 // ── SUPABASE ─────────────────────────────────────────────────────
@@ -774,8 +774,8 @@ function imprimerFeuillesGites() {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
-    floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
-    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    floridorlot: { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    arces:       { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
   };
 
   var pages = [];
@@ -880,8 +880,8 @@ function imprimerFeuillesArrivee() {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
-    floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
-    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    floridorlot: { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    arces:       { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
   };
 
   // Tailles selon nombre de vacanciers (max 12, lisible de loin)
@@ -962,8 +962,8 @@ function imprimerAffichesVehicules() {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
-    floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
-    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    floridorlot: { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
+    arces:       { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
   };
   var GITE_ORDER = ['hulotte','sixties','envolee','floridorlot','arces'];
 
