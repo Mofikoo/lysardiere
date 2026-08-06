@@ -451,10 +451,10 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
     var hData = computeHeures(c);
     var heures = hData.heures, rawArr = hData.rawArrivals, pqIdx = hData.piqueniqueIdx, pqCount = hData.piqueniqueCount;
 
-    html += '<div style="border:2px solid #1a2e2c;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always;box-shadow:0 4px 16px rgba(0,0,0,0.08)">';
+    html += '<div style="border:1.5px solid #b0c4c2;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always">';
 
     // Header convoi
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #1a2e2c;flex-wrap:wrap;gap:8px">'
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid #b0c4c2;flex-wrap:wrap;gap:8px">'
       + '<div style="display:flex;align-items:center;gap:10px">'
       + '<img src="' + LOGO_URL + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
       + '<div style="width:36px;height:36px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px">'+(i+1)+'</div>'
@@ -471,13 +471,13 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
 
     // Passagers + trajet (2 colonnes)
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
-      + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
+      + '<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
       + '<div style="font-size:13px;line-height:2.2">'
       + c.depart.map(function(p){return renderPerson(p, true, true);}).join('<br>')
       + (c.depart.length&&c.arrivee.length?'<br>':'')
       + c.arrivee.map(function(p){return renderPerson(p, false, true);}).join('<br>')
       + '</div></div>'
-      + '<div style="background:#F5F3EE;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#1a2e2c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
+      + '<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
       + '<div style="font-size:13px;line-height:2.2">'
       + 'Distance : <strong>~'+c.km+' km</strong><br>'
       + 'Durée : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>'
@@ -596,11 +596,11 @@ function imprimerFeuillesGites() {
       var c = item.convoi, vacs = item.vacanciers;
       var conducteur = c.conducteur||'—', heure = c.heureDepart||'—', vehicule = c.vehicule?c.vehicule.label:'Véhicule';
       inner += '<div style="margin-bottom:10px;border:1.5px solid #ddd;border-radius:8px;overflow:hidden">';
-      inner += '<div style="background:#1a2e2c;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">'
-        + '<span style="color:white;font-size:16px;font-weight:900;letter-spacing:0.5px">🚐 '+vehicule+'</span>'
+      inner += '<div style="background:#f5f5f5;border:1.5px solid #ccc;border-bottom:2.5px solid '+gc.border+';padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">'
+        + '<span style="color:#1a2e2c;font-size:16px;font-weight:900;letter-spacing:0.5px">🚐 '+vehicule+'</span>'
         + '<div style="display:flex;align-items:center;gap:12px">'
-        + (conducteur!=='—'?'<span style="color:rgba(255,255,255,0.7);font-size:12px">👤 '+conducteur+'</span>':'')
-        + '<span style="background:#C0392B;color:white;font-size:17px;font-weight:900;padding:3px 14px;border-radius:8px;letter-spacing:1px">'+heure+'</span>'
+        + (conducteur!=='—'?'<span style="color:#666;font-size:12px">👤 '+conducteur+'</span>':'')
+        + '<span style="color:#C0392B;font-size:17px;font-weight:900;border:2px solid #C0392B;border-radius:8px;padding:2px 12px;letter-spacing:1px">'+heure+'</span>'
         + '</div>'
         + '</div>';
       vacs.forEach(function(p, pi) {
@@ -782,13 +782,13 @@ function imprimerAffichesVehicules() {
     html += '<div style="text-align:center;margin-bottom:8mm">';
 
     // Nom véhicule — très grand
-    html += '<div style="font-size:52pt;font-weight:900;color:#1a2e2c;letter-spacing:1pt;line-height:1;font-family:Georgia,serif">'
+    html += '<div style="font-size:52pt;font-weight:900;color:#18534F;letter-spacing:1pt;line-height:1;font-family:Georgia,serif">'
       + vehicule + '</div>';
 
     // Heure — rouge, gros
     if (heure) {
-      html += '<div style="display:inline-block;background:#C0392B;color:white;font-size:38pt;font-weight:900;'
-        + 'border-radius:12pt;padding:4pt 28pt;margin-top:6pt;letter-spacing:3pt">'
+      html += '<div style="display:inline-block;color:#C0392B;font-size:38pt;font-weight:900;'
+        + 'border:3pt solid #C0392B;border-radius:12pt;padding:4pt 28pt;margin-top:6pt;letter-spacing:3pt">'
         + heure + '</div>';
     }
 
