@@ -67,6 +67,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .gite-btn.sixties{background:var(--sixties-bg);border-color:var(--sixties);color:var(--sixties)}
 .gite-btn.envolee{background:var(--envolee-bg);border-color:var(--envolee);color:var(--envolee)}
 .gite-btn.floridorlot{background:#e3f2fd;border-color:#1565c0;color:#1565c0}
+.gite-btn.arces{background:#f3e5f5;border-color:#6a1b9a;color:#6a1b9a}
 .gite-btn.none{background:#f5f5f5;border-color:#bbb;color:#666}
 .gite-btn.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 .gite-btn:not(.active){opacity:0.55}
@@ -84,12 +85,14 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 .person-chip.sixties{background:var(--sixties-bg);border-color:var(--sixties)}
 .person-chip.envolee{background:var(--envolee-bg);border-color:var(--envolee)}
 .person-chip.floridorlot{background:#e3f2fd;border-color:#1565c0}
+.person-chip.arces{background:#f3e5f5;border-color:#6a1b9a}
 .person-name{font-size:13px;font-weight:600;color:var(--text)}
 .person-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
 .person-chip.hulotte .person-tag{background:var(--hulotte);color:white}
 .person-chip.sixties .person-tag{background:var(--sixties);color:white}
 .person-chip.envolee .person-tag{background:var(--envolee);color:white}
 .person-chip.floridorlot .person-tag{background:#1565c0;color:white}
+.person-chip.arces .person-tag{background:#6a1b9a;color:white}
 .person-dir{font-size:10px;color:var(--text-mid)}
 
 /* ── ACTIVE GITE INDICATOR ── */
@@ -144,6 +147,17 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
     <div id="semaine-info" style="margin-top:10px;font-size:12px;color:var(--text-mid)"></div>
   </div>
 
+  <!-- Sélecteur séjour -->
+  <div class="selector-card" id="sejour-section" style="display:none">
+    <h2>🗓️ Séjour pour l'assignation des gîtes</h2>
+    <div class="selector-row">
+      <select id="sejour-gite-select" onchange="onSejourGiteChange()">
+        <option value="">— Choisir le séjour —</option>
+      </select>
+    </div>
+    <div id="sejour-gite-info" style="margin-top:8px;font-size:12px;color:var(--text-mid)"></div>
+  </div>
+
   <!-- Sélection du gîte actif -->
   <div class="legend" id="legend-section">
     <h3>Gîtes — cliquez sur un gîte pour l'activer, puis cliquez sur les vacanciers</h3>
@@ -152,6 +166,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
       <button class="gite-btn sixties active" onclick="setActiveGite('sixties')" id="gbtn-sixties">Sixties</button>
       <button class="gite-btn envolee active" onclick="setActiveGite('envolee')" id="gbtn-envolee">Envolée</button>
       <button class="gite-btn floridorlot active" onclick="setActiveGite('floridorlot')" id="gbtn-floridorlot">Floridorlot</button>
+      <button class="gite-btn arces active" onclick="setActiveGite('arces')" id="gbtn-arces">Arces</button>
       <button class="gite-btn none active" onclick="setActiveGite('none')" id="gbtn-none">✕ Effacer</button>
     </div>
   </div>
@@ -173,16 +188,69 @@ var SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
 var SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 var LOGO_URL='icon-192.png';
 
-// ── ÉTAT ────────────────────────────────────────────────────────
-var currentSemaine = null;   // données semaine chargée
-var gites = {};              // { "Prénom NOM": 'hulotte'|'sixties'|'envolee'|null }
-var activeGite = 'hulotte';  // gîte actuellement sélectionné dans la palette
+var currentSemaine = null;
+var gites = {};
+var activeGite = 'hulotte';
+var currentSejourId = null;
+
+// ── SUPABASE HELPERS ─────────────────────────────────────────────
+var _persCache = null;
+
+async function supaFetch(path, method, body) {
+  var url = SUPA_URL + '/rest/v1/' + path;
+  var headers = { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json' };
+  var opts = { method: method || 'GET', headers: headers };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch(url, opts);
+  if (!method || method === 'GET') { var t=await r.text(); return t?JSON.parse(t):[]; }
+  return r.ok;
+}
+
+async function getPersonnes() {
+  if (!_persCache) _persCache = await supaFetch('personnes?select=id,data');
+  return _persCache || [];
+}
+
+function personKey(data) {
+  return ((data.prenom||'')+' '+((data.nom||'').toUpperCase())).trim();
+}
+
+async function loadGitesFromSupabase() {
+  if (!currentSejourId) { gites={}; return; }
+  var rows = await supaFetch('vacancier_gites?sejour_id=eq.'+currentSejourId+'&select=personne_id,gite_id');
+  var personnes = await getPersonnes();
+  var persMap = {};
+  personnes.forEach(function(p){ persMap[p.id]=p.data||{}; });
+  gites = {};
+  (rows||[]).forEach(function(r){
+    var d=persMap[r.personne_id];
+    if(d){ gites[personKey(d)]=r.gite_id; }
+  });
+}
+
+async function saveGiteToSupabase(pKey, giteId) {
+  if (!currentSejourId) { alert('Sélectionnez un séjour avant d\'assigner un gîte.'); return; }
+  var personnes = await getPersonnes();
+  var found = personnes.find(function(p){ return personKey(p.data||{})===pKey; });
+  if (!found) return;
+  if (!giteId) {
+    await fetch(SUPA_URL+'/rest/v1/vacancier_gites?personne_id=eq.'+found.id+'&sejour_id=eq.'+currentSejourId,
+      {method:'DELETE',headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}});
+  } else {
+    await fetch(SUPA_URL+'/rest/v1/vacancier_gites', {
+      method:'POST',
+      headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({personne_id:found.id,sejour_id:currentSejourId,gite_id:giteId,updated_at:new Date().toISOString()})
+    });
+  }
+}
 
 var GITE_COLORS = {
   hulotte:  { label:'Hulotte', letter:'H', color:'#2e7d32', bg:'rgba(76,175,80,0.35)', badge:'#2e7d32', badgeBg:'#e8f5e9' },
   sixties:  { label:'Sixties', letter:'S', color:'#ad1457', bg:'rgba(240,98,146,0.35)', badge:'#ad1457', badgeBg:'#fce4ec' },
   envolee:     { label:'Envolée',    letter:'E', color:'#f57f17', bg:'rgba(255,193,7,0.45)',   badge:'#e65100', badgeBg:'#fff8e1' },
   floridorlot: { label:'Floridorlot', letter:'F', color:'#1565c0', bg:'rgba(66,165,245,0.28)',  badge:'#1565c0', badgeBg:'#e3f2fd' },
+  arces:       { label:'Arces',       letter:'A', color:'#6a1b9a', bg:'rgba(171,71,188,0.22)',   badge:'#6a1b9a', badgeBg:'#f3e5f5' },
 };
 
 // ── SUPABASE ─────────────────────────────────────────────────────
@@ -215,30 +283,62 @@ async function init() {
     opt._data = s;
     sel.appendChild(opt);
   });
+
+  // Charger séjours pour l'assignation des gîtes
+  var today = new Date().toISOString().slice(0,10);
+  var soon = new Date(); soon.setDate(soon.getDate()+60);
+  var soonStr = soon.toISOString().slice(0,10);
+  var sejours = await supaFetch('sejours?archived=eq.false&date_fin=gte.'+today+'&select=id,nom,date_debut,date_fin&order=date_debut.asc');
+
+  var sejourSel = document.getElementById('sejour-gite-select');
+  (sejours||[]).forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.nom + ' (' + fmtDateShort(s.date_debut) + ' → ' + fmtDateShort(s.date_fin) + ')';
+    sejourSel.appendChild(opt);
+  });
+
+  // Auto-select séjour actif
+  var current = (sejours||[]).find(function(s){ return s.date_debut<=today&&s.date_fin>=today; }) || (sejours||[])[0];
+  if (current) {
+    sejourSel.value = current.id;
+    await onSejourGiteChange();
+  }
+
+  document.getElementById('sejour-section').style.display = 'block';
+}
+
+async function onSejourGiteChange() {
+  var sel = document.getElementById('sejour-gite-select');
+  currentSejourId = sel.value || null;
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('sejour-gite-info').textContent = currentSejourId
+    ? 'Séjour sélectionné — les assignations seront sauvegardées en base'
+    : '';
+  gites = {};
+  if (currentSejourId) await loadGitesFromSupabase();
+  if (currentSemaine) renderPersonGrid();
 }
 
 // ── CHARGER SEMAINE ──────────────────────────────────────────────
-function chargerSemaine() {
+async function chargerSemaine() {
   var sel = document.getElementById('semaine-select');
   var opt = sel.options[sel.selectedIndex];
   if (!opt || !opt._data) { currentSemaine = null; return; }
   currentSemaine = opt._data;
 
-  // Restaurer gîtes depuis localStorage
-  var key = 'gites_' + currentSemaine.date;
-  gites = JSON.parse(localStorage.getItem(key) || '{}');
-
-  // Infos
   document.getElementById('semaine-info').textContent =
     fmtDateLong(currentSemaine.date) + ' — ' + currentSemaine.convois.length + ' convoi(s)';
 
-  // Afficher sections
   document.getElementById('legend-section').style.display = 'block';
   document.getElementById('vacanciers-section').style.display = 'block';
   document.getElementById('btn-print').style.display = 'inline-flex';
   document.getElementById('btn-gites').style.display = 'inline-flex';
   document.getElementById('btn-gites-arr').style.display = 'inline-flex';
   document.getElementById('btn-affiches').style.display = 'inline-flex';
+
+  // Charger les gîtes depuis Supabase pour le séjour sélectionné
+  await loadGitesFromSupabase();
 
   setActiveGite(activeGite);
   renderPersonGrid();
@@ -248,7 +348,7 @@ function chargerSemaine() {
 function setActiveGite(g) {
   activeGite = g;
   // Update buttons
-  ['hulotte','sixties','envolee','floridorlot','none'].forEach(function(id) {
+  ['hulotte','sixties','envolee','floridorlot','arces','none'].forEach(function(id) {
     var btn = document.getElementById('gbtn-' + id);
     if (!btn) return;
     if (id === g) {
@@ -275,15 +375,13 @@ function setActiveGite(g) {
 }
 
 // ── AFFECTER UN GÎTE ─────────────────────────────────────────────
-function assignGite(personKey) {
+async function assignGite(personKey) {
   if (activeGite === 'none') {
     delete gites[personKey];
+    await saveGiteToSupabase(personKey, null);
   } else {
     gites[personKey] = activeGite;
-  }
-  // Sauvegarder
-  if (currentSemaine) {
-    localStorage.setItem('gites_' + currentSemaine.date, JSON.stringify(gites));
+    await saveGiteToSupabase(personKey, activeGite);
   }
   renderPersonGrid();
 }
@@ -671,17 +769,18 @@ function fmtDateLong(d) {
 function imprimerFeuillesGites() {
   if (!currentSemaine) return;
 
-  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot' };
+  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
     floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
+    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
   };
 
   var pages = [];
 
-  ['hulotte','sixties','envolee','floridorlot'].forEach(function(gite) {
+  ['hulotte','sixties','envolee','floridorlot','arces'].forEach(function(gite) {
     var gc = GITE_STYLE[gite];
     var giteName = GITE_NAMES[gite];
 
@@ -776,12 +875,13 @@ function imprimerFeuillesGites() {
 function imprimerFeuillesArrivee() {
   if (!currentSemaine) return;
 
-  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot' };
+  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
     floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
+    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
   };
 
   // Tailles selon nombre de vacanciers (max 12, lisible de loin)
@@ -797,7 +897,7 @@ function imprimerFeuillesArrivee() {
 
   var html = '';
 
-  ['hulotte','sixties','envolee','floridorlot'].forEach(function(gite) {
+  ['hulotte','sixties','envolee','floridorlot','arces'].forEach(function(gite) {
     var gc = GITE_STYLE[gite];
     var giteName = GITE_NAMES[gite];
 
@@ -857,14 +957,15 @@ function imprimerFeuillesArrivee() {
 function imprimerAffichesVehicules() {
   if (!currentSemaine) return;
 
-  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot' };
+  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
     sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
     envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
     floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
+    arces:       { color:'#6a1b9a', bg:'#f3e5f5', border:'#6a1b9a' },
   };
-  var GITE_ORDER = ['hulotte','sixties','envolee','floridorlot'];
+  var GITE_ORDER = ['hulotte','sixties','envolee','floridorlot','arces'];
 
   var html = '';
 
