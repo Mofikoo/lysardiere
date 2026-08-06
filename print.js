@@ -135,18 +135,23 @@ const LYS_PRINT_CSS = `
   }
   .lp-yn-box.checked { font-weight: 700; color: #1a5c4e; }
   .lp-yn-inline-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3pt 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3pt 12pt;
     margin-bottom: 5pt;
   }
   .lp-yn-inline {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4pt;
-    margin-right: 14pt;
     font-size: 9pt;
     white-space: nowrap;
+    min-width: 0;
+  }
+  .lp-yn-inline .lp-yn-label,
+  .lp-yn-inline > span:first-child {
+    flex: 1;
+    min-width: 0;
   }
 
   /* ── CHECKBOXES multiples ── */
