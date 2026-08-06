@@ -692,6 +692,13 @@ function imprimerFeuillesGites() {
       });
       if (vacs.length) convoisAvecGite.push({ convoi:c, vacanciers:vacs });
     });
+
+    // Trier par heure de départ croissante
+    convoisAvecGite.sort(function(a, b) {
+      var ha = a.convoi.heureDepart || '99:99';
+      var hb = b.convoi.heureDepart || '99:99';
+      return ha.localeCompare(hb);
+    });
     if (!convoisAvecGite.length) return;
 
     // Compter le nb total de lignes (1 par convoi header + 1 par vacancier + 1 total)
