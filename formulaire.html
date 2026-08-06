@@ -266,16 +266,6 @@ textarea{resize:vertical;min-height:80px}
 
       <div id="error-type" class="alert alert-error" style="display:none;margin-top:14px">Veuillez choisir un type de séjour.</div>
 
-      <!-- Mini-champs identité pour mode confidentiel uniquement -->
-      <div id="conf-mini-identity" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
-        <div class="section-header" style="font-size:13px;margin-bottom:10px">Identité du vacancier</div>
-        <div class="field-row cols3">
-          <div class="field-group"><label class="field-label">Nom <span class="req">*</span></label><input type="text" id="mini-nom" placeholder="NOM"></div>
-          <div class="field-group"><label class="field-label">Prénom <span class="req">*</span></label><input type="text" id="mini-prenom" placeholder="Prénom"></div>
-          <div class="field-group"><label class="field-label">Âge <span class="req">*</span></label><input type="number" id="mini-age" placeholder="ex: 35" min="1" max="99"></div>
-        </div>
-        <div class="field-group"><label class="field-label">Nom et date du séjour <span class="req">*</span></label><input type="text" id="mini-sejour" placeholder="ex: Séjour mer du 1 au 15 juillet 2026"></div>
-      </div>
     </div>
   </div>
 
@@ -311,7 +301,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="field-row cols2">
         <div class="field-group">
           <label class="field-label">Nom et date du séjour <span class="req">*</span></label>
-          <input type="text" id="conf-sejour-nom" placeholder="ex: Mini séjour Périgord du 7 au 11 mai">
+          <div style="position:relative">
+            <input type="text" id="conf-sejour-nom" placeholder="Tapez pour rechercher un séjour…"
+              autocomplete="off"
+              oninput="filterSejourAutocomplete(this.value)"
+              onfocus="filterSejourAutocomplete(this.value)"
+              onblur="setTimeout(()=>{const d=document.getElementById('sejour-ac-drop');if(d)d.style.display='none'},150)">
+            <div id="sejour-ac-drop" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--forest-mid);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:200px;overflow-y:auto;z-index:500"></div>
+          </div>
         </div>
         <div class="field-group">
           <label class="field-label">Autonomie <span class="req">*</span></label>
@@ -2506,10 +2503,10 @@ async function submitForm(){
   const data=collectAllData();
   // In confidentiel mode, nom/prenom come from mini identity fields in step-1
   const nom = FORM_MODE==='confidentiel'
-    ? (document.getElementById('mini-nom')?.value||data.confidentielle.identite.nom||'')
+    ? (data.confidentielle.identite.nom||'')
     : (data.inscription.participant.nom||'');
   const prenom = FORM_MODE==='confidentiel'
-    ? (document.getElementById('mini-prenom')?.value||data.confidentielle.identite.prenom||'')
+    ? (data.confidentielle.identite.prenom||'')
     : (data.inscription.participant.prenom||'');
 
   // Matching personne
@@ -3120,6 +3117,43 @@ async function loadSejoursFromSupabase(){
   }catch(e){
     console.warn('Impossible de charger les séjours depuis Supabase, utilisation des valeurs par défaut.',e);
   }
+}
+
+// ── AUTOCOMPLETE SÉJOUR (étape 3) ────────────────────────────────
+function filterSejourAutocomplete(query) {
+  var drop = document.getElementById('sejour-ac-drop');
+  if (!drop) return;
+
+  // Collecter toutes les sessions de SEJOURS_CONFIG
+  var suggestions = [];
+  Object.values(SEJOURS_CONFIG).forEach(function(cfg) {
+    (cfg.sessions || []).forEach(function(s) {
+      if (s && !suggestions.includes(s)) suggestions.push(s);
+    });
+  });
+
+  // Filtrer selon la saisie
+  var q = (query || '').toLowerCase().trim();
+  var filtered = q
+    ? suggestions.filter(function(s) { return s.toLowerCase().includes(q); })
+    : suggestions;
+
+  if (!filtered.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = filtered.map(function(s) {
+    return '<div onmousedown="selectSejourSuggestion(\'' + s.replace(/'/g,"\\'") + '\')" '
+      + 'style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;color:#1a2e2c" '
+      + 'onmouseover="this.style.background=\'#f0faf8\'" onmouseout="this.style.background=\'white\'">'
+      + s + '</div>';
+  }).join('');
+  drop.style.display = 'block';
+}
+
+function selectSejourSuggestion(value) {
+  var inp = document.getElementById('conf-sejour-nom');
+  var drop = document.getElementById('sejour-ac-drop');
+  if (inp) inp.value = value;
+  if (drop) drop.style.display = 'none';
 }
 
 // ── MODE FORMULAIRE (paramètre URL ?mode=) ──
