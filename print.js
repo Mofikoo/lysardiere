@@ -372,7 +372,7 @@ LysPrint._header = (title, subtitle='') => `
   <div class="lp-header">
     <div>
       <div class="lp-logo">La Lysardière
-        <div class="lp-logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>
+        <div class="lp-logo-sub">64 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>
         05 53 30 57 15 / 06 03 88 15 13 — Siret : 79926743000012 — N° Atout France : IM024140012</div>
       </div>
     </div>
@@ -525,7 +525,7 @@ LysPrint.buildCourrierPage = function(c, key) {
       <div class="lp-header">
         <div>
           <div class="lp-logo">La Lysardière
-            <div class="lp-logo-sub">84 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>
+            <div class="lp-logo-sub">64 Route de Sainte Mondane — 24370 Saint Julien de Lampon<br>
             05 53 30 57 15 / 06 03 88 15 13<br>
             Siret : 79926743000012 — N° Atout France : IM024140012</div>
           </div>
@@ -888,7 +888,7 @@ LysPrint.buildDossier = function(data, mode) {
       <div class="lp-sig-line">Signature :</div>
     </div>
 
-    <div class="lp-footer">La Lysardière — 84 Route de Sainte Mondane, 24370 Saint Julien de Lampon — 05 53 30 57 15 / 06 03 88 15 13</div>
+    <div class="lp-footer">La Lysardière — 64 Route de Sainte Mondane, 24370 Saint Julien de Lampon — 05 53 30 57 15 / 06 03 88 15 13</div>
   </div>`;
 
   return pages;
