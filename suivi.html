@@ -489,35 +489,12 @@ async function loadAll(){
   // Build suivi map
   allVacancierGites = vgRows||[];
   suiviData = {};
-  (suiviRows||[]).forEach(r=>{ suiviData[r.id]={animateurs:r.animateurs||'',vehicules:r.vehicules||[]}; });
+  (suiviRows||[]).forEach(r=>{ suiviData[r.gite_id]={sejour_id:r.sejour_id,animateurs:r.animateurs||'',vehicules:r.vehicules||[]}; });
 
-  // Populate sejour selector
-  const sel = document.getElementById('sejour-select');
-  sel.innerHTML = '<option value="">— Choisir un séjour —</option>';
-  allSejours.forEach(s=>{
-    const opt=document.createElement('option');
-    opt.value=s.id;
-    opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';
-    sel.appendChild(opt);
-  });
-
-  // Auto-select current/next sejour
-  const today=new Date().toISOString().slice(0,10);
-  const current=allSejours.find(s=>s.date_debut<=today&&s.date_fin>=today)
-    || allSejours.find(s=>s.date_debut>=today)
-    || allSejours[0];
-  if(current){ sel.value=current.id; onSejourChange(); }
-}
-
-function onSejourChange(){
-  const sel=document.getElementById('sejour-select');
-  currentSejourId=sel.value||null;
-  const s=allSejours.find(x=>x.id===currentSejourId);
-  document.getElementById('sejour-dates').textContent=s?fmtDateLong(s.date_debut)+' → '+fmtDateLong(s.date_fin):'';
-  if(!currentSejourId){ document.getElementById('gites-grid').innerHTML='<div class="no-sejour">Sélectionnez un séjour pour afficher le suivi</div>'; return; }
-  // Load gites assignments from localStorage
-  gitesAssignments=JSON.parse(localStorage.getItem('gites_'+s?.date_debut)||'{}');
   // Archivage auto des séjours terminés
+  await autoArchiveSejours();
+  renderGites();
+
 async function autoArchiveSejours(){
   const today=new Date().toISOString().slice(0,10);
   for(const g of GITES){
