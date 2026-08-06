@@ -325,44 +325,9 @@ function renderPersonGrid() {
 function imprimerFiches() {
   if (!currentSemaine) return;
   var dateLabel = fmtDateLong(currentSemaine.date);
-  var convois = currentSemaine.convois;
-
-  // Générer le HTML de chaque convoi séparément
-  var pages = convois.map(function(c, i) {
-    return generateFicheConvoi(c, i, dateLabel, convois);
-  });
-
-  // Envelopper chaque page dans un container A4 avec scale JS
-  var html = pages.map(function(inner, idx) {
-    var isLast = idx === pages.length - 1;
-    return '<div class="lys-page" style="'+(isLast?'':'page-break-after:always;')
-      + 'width:210mm;height:297mm;overflow:hidden;position:relative;box-sizing:border-box">'
-      + '<div class="lys-inner" style="position:absolute;top:0;left:0;width:210mm;'
-      + 'transform-origin:top left;padding:14mm 12mm;box-sizing:border-box">'
-      + inner
-      + '</div></div>';
-  }).join('');
-
-  var fullHtml = '<style>'
-    + '@page{size:A4 portrait;margin:0}'
-    + 'body{margin:0;padding:0;background:white}'
-    + '.lys-page{margin:0;padding:0}'
-    + '</style>'
-    + html
-    + '<script>'
-    + 'window.addEventListener("load",function(){'
-    + '  document.querySelectorAll(".lys-page").forEach(function(page){'
-    + '    var inner=page.querySelector(".lys-inner");'
-    + '    var ph=page.offsetHeight,iw=inner.scrollWidth,ih=inner.scrollHeight;'
-    + '    var scale=Math.min(page.offsetWidth/iw,ph/ih,1);'
-    + '    inner.style.transform="scale("+scale+")";'
-    + '  });'
-    + '  setTimeout(function(){window.print();},600);'
-    + '});'
-    + '<\\/script>';
-
+  var html = generateFichesAnnoteesHTML(currentSemaine.convois, dateLabel);
   if (typeof openPrintWindow !== 'undefined') {
-    openPrintWindow(fullHtml, { title: 'Fiches annotées — ' + dateLabel });
+    openPrintWindow(html, { title: 'Fiches annotées — ' + dateLabel });
   }
 }
 
@@ -490,7 +455,93 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
     var heures = hData.heures, rawArr = hData.rawArrivals, pqIdx = hData.piqueniqueIdx, pqCount = hData.piqueniqueCount;
 
     var nbStops = c.stops ? c.stops.length : 0;
-    var splitMode = nbStops >= 6; // 2 pages si >= 6 arrêts
+
+    html += '<div style="border:1.5px solid #b0c4c2;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always">';
+
+    // Header convoi
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid #b0c4c2;flex-wrap:wrap;gap:8px">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '<img src="' + LOGO_URL + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px">'+(i+1)+'</div>'
+      + '<div><div style="font-size:15px;font-weight:700">Convoi '+(i+1)+' — '+c.vehicule.label+(c.conducteur?' — '+c.conducteur:'')+'</div>'
+      + '<div style="font-size:12px;color:#5C6B6A;font-weight:600">'+dateLabel+(c.heureDepart?' · Départ '+c.heureDepart:'')+'</div></div></div>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<span style="font-size:13px;font-weight:700;color:'+durC+'">'+fmtDur(c.dureeMin)+'</span>'
+      + '<span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;'+getBadgeSt(c.type)+'">'+tl+'</span>'
+      + (pqCount>0?'<span style="background:#C0392B;color:white;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700">'+pqCount+' pique-nique'+(pqCount>1?'s':'')+'</span>':'')
+      + '</div></div>';
+
+    // Légende gîtes
+    html += giteLegende;
+
+    // Passagers + trajet
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
+      + '<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Passagers</div>'
+      + '<div style="font-size:13px;line-height:2.2">'
+      + c.depart.map(function(p){return renderPerson(p, true, true);}).join('<br>')
+      + (c.depart.length&&c.arrivee.length?'<br>':'')
+      + c.arrivee.map(function(p){return renderPerson(p, false, true);}).join('<br>')
+      + '</div></div>'
+      + '<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Trajet</div>'
+      + '<div style="font-size:13px;line-height:2.2">'
+      + 'Distance : <strong>~'+c.km+' km</strong><br>'
+      + 'Durée : <strong style="color:'+durC+'">~'+fmtDur(c.dureeMin)+'</strong><br>'
+      + 'Pic : <strong>'+c.peakSeats+'/'+c.vehicule.cap+'</strong>'
+      + (c.conducteur?'<br>Conducteur : <strong>'+c.conducteur+'</strong>':'')
+      + (c.notes?'<br>Notes : <em>'+(c.notes||'')+'</em>':'')
+      + '</div></div></div>';
+
+    // Timeline arrêts
+    html += '<div style="background:white;border:1.5px solid #e5e0d6;padding:16px;border-radius:10px">'
+      + '<div style="font-size:11px;font-weight:700;color:#18534F;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Ordre des arrêts</div>';
+
+    c.stops.forEach(function(s, si) {
+      var dotC = s.action==='depart'||s.action==='retour'?'#18534F':s.action==='pickup'?'#1a7a4a':'#C0392B';
+      var heureStr = (si===0||si===c.stops.length-1)&&heures[si]!==undefined
+        ? ' <span style="background:#EEF7F5;color:#18534F;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+fmtH(heures[si])+'</span>' : '';
+      var phaseHtml='', pLine='', sn=s.seats||0;
+
+      if(s.action==='depart'){
+        phaseHtml='<span style="background:#D5F0EC;color:#18534F;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase aller</span>';
+        pLine='<strong>'+sn+' à bord</strong>';
+      } else if(s.action==='depot'){
+        pLine='<strong style="color:#C0392B">Dép.</strong> : '+(s.depPers||[]).map(function(p){return renderPerson(p,true,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='rotation'){
+        pLine='<strong style="color:#C0392B">Dép</strong>: '+(s.depPers||[]).map(function(p){return renderPerson(p,true,false);}).join(', ')
+          +' / <strong style="color:#1a7a4a">Arr</strong>: '+(s.arrPers||[]).map(function(p){return renderPerson(p,false,false);}).join(', ')
+          +' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='pickup'){
+        phaseHtml='<span style="background:#EAFAF1;color:#1a7a4a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Phase retour</span>';
+        pLine='<strong style="color:#1a7a4a">Arr.</strong> : '+(s.arrPers||[]).map(function(p){return renderPerson(p,false,false);}).join(', ')+' <strong>['+sn+'/'+c.vehicule.cap+']</strong>';
+      } else if(s.action==='retour'){
+        pLine='<strong>'+sn+' à l\'arrivée</strong>';
+      }
+
+      var timeDetail = renderTimeDetail(si, rawArr, heures, pqIdx);
+
+      html += '<div style="display:flex;gap:0;position:relative;margin-bottom:4px">'
+        + '<div style="width:2px;background:#E5E0D6;margin-left:19px;margin-right:0;'+(si===c.stops.length-1?'opacity:0':'')+'"></div>'
+        + '<div style="display:flex;gap:12px;padding:6px 0 6px 0;flex:1">'
+        + '<div style="width:38px;height:38px;border-radius:50%;background:'+dotC+';display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;flex-shrink:0;margin-left:0">'+(si+1)+'</div>'
+        + '<div style="flex:1;padding-top:2px">'
+        + (phaseHtml?'<div style="margin-bottom:2px">'+phaseHtml+'</div>':'')
+        + '<div style="font-size:14px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:4px">'+s.pt.nom+heureStr+timeDetail+'</div>'
+        + (s.pt.adresse&&s.action!=='depart'&&s.action!=='retour'?'<div style="font-size:11px;color:#5C6B6A">'+s.pt.adresse+'</div>':'')
+        + '<div style="font-size:12px;color:#5C6B6A">'+pLine+'</div>'
+        + '</div></div></div>';
+
+      if (si === pqIdx) html += PIQUENIQUE_HTML;
+    });
+
+    // QR Maps
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent(mapsUrl);
+    html += '</div><div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#EBF5FB;border-radius:10px;border:1px solid #b8ddf0;margin-top:12px">'
+      + '<img src="' + qrUrl + '" style="width:80px;height:80px;flex-shrink:0;border:1px solid #ddd">'
+      + '<div><div style="font-size:11px;font-weight:700;color:#0077A8;margin-bottom:3px">Itinéraire Google Maps</div>'
+      + '<div style="font-size:8px;color:#0077A8;word-break:break-all">'+mapsUrl+'</div>'
+      + '<a href="'+mapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;background:#0077A8;color:white;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;text-decoration:none">Ouvrir Maps</a>'
+      + '</div></div></div>';
+  return html;
 
     // ── PAGE 1 : header + passagers + arrêts (1ère moitié si split) ──
     html += '<div style="border:1.5px solid #b0c4c2;border-radius:14px;padding:20px;margin-bottom:14px;background:white;page-break-inside:avoid;page-break-after:always">';
