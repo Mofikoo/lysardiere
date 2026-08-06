@@ -126,6 +126,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
     <button class="hdr-btn hdr-btn-primary" id="btn-print" onclick="imprimerFiches()" style="display:none">🖨️ Imprimer les fiches annotées</button>
     <button class="hdr-btn hdr-btn-ghost" id="btn-gites" onclick="imprimerFeuillesGites()" style="display:none">📋 Feuilles départ par gîte</button>
     <button class="hdr-btn hdr-btn-ghost" id="btn-gites-arr" onclick="imprimerFeuillesArrivee()" style="display:none">🏡 Feuilles arrivée par gîte</button>
+    <button class="hdr-btn hdr-btn-ghost" id="btn-affiches" onclick="imprimerAffichesVehicules()" style="display:none">🚐 Affiches véhicules</button>
     <a href="transport.html" class="hdr-btn hdr-btn-ghost">← Trajets</a>
   </div>
 </div>
@@ -237,6 +238,7 @@ function chargerSemaine() {
   document.getElementById('btn-print').style.display = 'inline-flex';
   document.getElementById('btn-gites').style.display = 'inline-flex';
   document.getElementById('btn-gites-arr').style.display = 'inline-flex';
+  document.getElementById('btn-affiches').style.display = 'inline-flex';
 
   setActiveGite(activeGite);
   renderPersonGrid();
@@ -727,6 +729,121 @@ function imprimerFeuillesArrivee() {
   if (!html) return;
   if (typeof openPrintWindow !== 'undefined') {
     openPrintWindow(html, { title:'Feuilles arrivée par gîte' });
+  }
+}
+
+// ── AFFICHES VÉHICULES (PAYSAGE) ────────────────────────────────
+function imprimerAffichesVehicules() {
+  if (!currentSemaine) return;
+
+  var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot' };
+  var GITE_STYLE = {
+    hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
+    sixties:     { color:'#ad1457', bg:'#fce4ec', border:'#ad1457' },
+    envolee:     { color:'#e65100', bg:'#fff8e1', border:'#f57f17' },
+    floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
+  };
+  var GITE_ORDER = ['hulotte','sixties','envolee','floridorlot'];
+
+  var html = '';
+
+  currentSemaine.convois.forEach(function(c, idx) {
+    var vehicule  = c.vehicule ? c.vehicule.label : 'Véhicule ' + (idx+1);
+    var heure     = c.heureDepart || '';
+    var conducteur = c.conducteur || '';
+
+    // Regrouper les vacanciers en départ par gîte
+    var byGite = {};
+    GITE_ORDER.forEach(function(g){ byGite[g] = []; });
+    var sansGite = [];
+
+    (c.depart||[]).forEach(function(p) {
+      var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+      var g = gites[key] || null;
+      if (g && byGite[g]) byGite[g].push(p);
+      else sansGite.push(p);
+    });
+
+    // Nombre total de vacanciers pour adapter taille
+    var total = (c.depart||[]).length;
+    var nameSize = total <= 4  ? 28
+                 : total <= 6  ? 24
+                 : total <= 8  ? 20
+                 : total <= 12 ? 17
+                 : 14;
+
+    // Page paysage : 297mm × 210mm
+    html += '<div style="page-break-after:always;page-break-inside:avoid;'
+      + 'width:277mm;height:190mm;box-sizing:border-box;padding:10mm 14mm;'
+      + 'font-family:Arial,Helvetica,sans-serif;background:white;'
+      + 'display:flex;flex-direction:column;align-items:center;justify-content:center">';
+
+    // ── BLOC CENTRAL : Véhicule + Heure ──
+    html += '<div style="text-align:center;margin-bottom:8mm">';
+
+    // Nom véhicule — très grand
+    html += '<div style="font-size:52pt;font-weight:900;color:#1a2e2c;letter-spacing:1pt;line-height:1;font-family:Georgia,serif">'
+      + vehicule + '</div>';
+
+    // Heure — rouge, gros
+    if (heure) {
+      html += '<div style="display:inline-block;background:#C0392B;color:white;font-size:38pt;font-weight:900;'
+        + 'border-radius:12pt;padding:4pt 28pt;margin-top:6pt;letter-spacing:3pt">'
+        + heure + '</div>';
+    }
+
+    // Conducteur
+    if (conducteur) {
+      html += '<div style="font-size:14pt;color:#888;margin-top:4pt">👤 ' + conducteur + '</div>';
+    }
+
+    html += '</div>'; // fin bloc central
+
+    // ── VACANCIERS PAR GÎTE ──
+    html += '<div style="width:100%;display:flex;gap:6mm;justify-content:center;flex-wrap:wrap">';
+
+    var hasAny = false;
+    GITE_ORDER.forEach(function(g) {
+      var vacs = byGite[g];
+      if (!vacs.length) return;
+      hasAny = true;
+      var gc = GITE_STYLE[g];
+      html += '<div style="background:'+gc.bg+';border:2.5pt solid '+gc.border+';border-radius:10pt;padding:6pt 14pt;min-width:100pt">';
+      html += '<div style="font-size:11pt;font-weight:800;color:'+gc.color+';text-transform:uppercase;letter-spacing:1pt;margin-bottom:4pt;border-bottom:1.5pt solid '+gc.border+';padding-bottom:3pt">'
+        + GITE_NAMES[g] + '</div>';
+      vacs.forEach(function(p) {
+        html += '<div style="font-size:'+nameSize+'pt;font-weight:700;color:#1a2e2c;line-height:1.4">'
+          + p.prenom + ' ' + (p.nom||'').toUpperCase() + '</div>';
+      });
+      html += '</div>';
+    });
+
+    // Vacanciers sans gîte
+    if (sansGite.length) {
+      html += '<div style="background:#f5f5f5;border:2pt dashed #bbb;border-radius:10pt;padding:6pt 14pt;min-width:100pt">';
+      html += '<div style="font-size:11pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1pt;margin-bottom:4pt">Non classés</div>';
+      sansGite.forEach(function(p) {
+        html += '<div style="font-size:'+nameSize+'pt;font-weight:700;color:#555;line-height:1.4">'
+          + p.prenom + ' ' + (p.nom||'').toUpperCase() + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>'; // fin vacanciers
+    html += '</div>'; // fin page
+  });
+
+  if (!html) return;
+
+  // CSS paysage
+  var fullHtml = '<style>'
+    + '@page{size:A4 landscape;margin:10mm 10mm}'
+    + 'body{margin:0;padding:0;background:white}'
+    + '</style>'
+    + html;
+
+  if (typeof openPrintWindow !== 'undefined') {
+    openPrintWindow(fullHtml, { title:'Affiches véhicules' });
   }
 }
 
