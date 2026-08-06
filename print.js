@@ -100,8 +100,8 @@ const LYS_PRINT_CSS = `
   .lp-section-grey   { background: #4a4a4a; }
 
   /* ── FIELDS ── */
-  .lp-row2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; margin-bottom: 4pt; }
-  .lp-row3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; margin-bottom: 4pt; }
+  .lp-row2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; margin-bottom: 4pt; background: #f8f9fb; border-radius: 5pt; padding: 4pt 6pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .lp-row3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; margin-bottom: 4pt; background: #f8f9fb; border-radius: 5pt; padding: 4pt 6pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .lp-field { margin-bottom: 6pt; }
   .lp-label {
     font-size: 7pt;
@@ -125,6 +125,11 @@ const LYS_PRINT_CSS = `
     gap: 6pt;
     margin-bottom: 3pt;
     font-size: 9pt;
+    padding: 3pt 6pt;
+    border-radius: 4pt;
+    background: #f5faf8;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .lp-yn-label { flex: 1; }
   .lp-yn-box {
@@ -139,6 +144,11 @@ const LYS_PRINT_CSS = `
     grid-template-columns: 1fr 1fr;
     gap: 4pt 12pt;
     margin-bottom: 8pt;
+    background: #f5faf8;
+    border-radius: 5pt;
+    padding: 6pt 8pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .lp-yn-inline {
     display: flex;
@@ -176,7 +186,7 @@ const LYS_PRINT_CSS = `
     min-height: 22pt;
     font-size: 9.5pt;
     line-height: 1.5;
-    background: #fafafa;
+    background: #f7fbf9;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -206,7 +216,7 @@ const LYS_PRINT_CSS = `
   /* ── TROUBLES (2 colonnes) ── */
   .lp-troubles { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; margin-bottom: 9pt; }
   .lp-troubles-col { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-  .lp-troubles-col th { background: #f0f0f0; padding: 2pt 5pt; text-align: left; border: 0.75pt solid #ddd; font-size: 8pt; }
+  .lp-troubles-col th { background: #eef5f2; padding: 2pt 5pt; text-align: left; border: 0.75pt solid #ddd; font-size: 8pt; }
   .lp-troubles-col td { padding: 2pt 5pt; border: 0.75pt solid #eee; }
   .lp-troubles-col td.lp-chk { text-align: center; width: 22pt; }
   .lp-troubles-col td.lp-prec { color: #555; font-size: 7.5pt; }
@@ -216,6 +226,11 @@ const LYS_PRINT_CSS = `
     margin-top: 10pt;
     border-top: 0.75pt solid #ddd;
     padding-top: 8pt;
+    background: #f8f9fb;
+    border-radius: 5pt;
+    padding: 8pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .lp-sig-line {
     margin-top: 16pt;
