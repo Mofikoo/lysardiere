@@ -325,16 +325,54 @@ function renderPersonGrid() {
 function imprimerFiches() {
   if (!currentSemaine) return;
   var dateLabel = fmtDateLong(currentSemaine.date);
-  var html = generateFichesAnnoteesHTML(currentSemaine.convois, dateLabel);
+  var convois = currentSemaine.convois;
+
+  // Générer le HTML de chaque convoi séparément
+  var pages = convois.map(function(c, i) {
+    return generateFicheConvoi(c, i, dateLabel, convois);
+  });
+
+  // Envelopper chaque page dans un container A4 avec scale JS
+  var html = pages.map(function(inner, idx) {
+    var isLast = idx === pages.length - 1;
+    return '<div class="lys-page" style="'+(isLast?'':'page-break-after:always;')
+      + 'width:210mm;height:297mm;overflow:hidden;position:relative;box-sizing:border-box">'
+      + '<div class="lys-inner" style="position:absolute;top:0;left:0;width:210mm;'
+      + 'transform-origin:top left;padding:14mm 12mm;box-sizing:border-box">'
+      + inner
+      + '</div></div>';
+  }).join('');
+
+  var fullHtml = '<style>'
+    + '@page{size:A4 portrait;margin:0}'
+    + 'body{margin:0;padding:0;background:white}'
+    + '.lys-page{margin:0;padding:0}'
+    + '</style>'
+    + html
+    + '<script>'
+    + 'window.addEventListener("load",function(){'
+    + '  document.querySelectorAll(".lys-page").forEach(function(page){'
+    + '    var inner=page.querySelector(".lys-inner");'
+    + '    var ph=page.offsetHeight,iw=inner.scrollWidth,ih=inner.scrollHeight;'
+    + '    var scale=Math.min(page.offsetWidth/iw,ph/ih,1);'
+    + '    inner.style.transform="scale("+scale+")";'
+    + '  });'
+    + '  setTimeout(function(){window.print();},600);'
+    + '});'
+    + '<\\/script>';
+
   if (typeof openPrintWindow !== 'undefined') {
-    openPrintWindow(html, { title: 'Fiches annotées — ' + dateLabel });
-  } else {
-    alert('print.js non chargé.');
+    openPrintWindow(fullHtml, { title: 'Fiches annotées — ' + dateLabel });
   }
 }
 
 // ── GÉNÉRATION HTML FICHES ANNOTÉES ─────────────────────────────
+// ── GÉNÉRATION HTML FICHES ANNOTÉES ─────────────────────────────
 function generateFichesAnnoteesHTML(convois, dateLabel) {
+  return convois.map(function(c,i){ return generateFicheConvoi(c,i,dateLabel,convois); }).join('');
+}
+
+function generateFicheConvoi(c, i, dateLabel, convois) {
   var COLORS = ['#18534F','#D6955B','#226D68','#6B3FA0','#0077A8','#C0392B','#5d4037','#16a085','#8e6b3e','#1a7a4a','#c05020','#5b3a8b'];
   var PIQUENIQUE_HTML = '<div style="background:#C0392B;color:white;font-weight:700;font-size:12px;text-align:center;padding:8px 12px;border-radius:6px;margin:6px 0 6px 42px;letter-spacing:0.5px;border:2px solid #8B1A10">PAUSE PIQUE-NIQUE (1h)</div>';
 
@@ -442,7 +480,7 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
     + '</div>';
 
   var html = '';
-  convois.forEach(function(c, i) {
+  var html = '';
     var mapsUrl = buildMapsUrl(c);
     var clr = col(i);
     var tl = c.type==='rotation'?'Rotation':c.type==='depart_only'?'Départ':'Arrivée';
@@ -536,10 +574,9 @@ function generateFichesAnnoteesHTML(convois, dateLabel) {
       + '<div style="font-size:8px;color:#0077A8;word-break:break-all">'+mapsUrl+'</div>'
       + '<a href="'+mapsUrl+'" target="_blank" style="display:inline-block;margin-top:5px;background:#0077A8;color:white;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;text-decoration:none">Ouvrir Maps</a>'
       + '</div></div></div>';
-  });
-
   return html;
 }
+
 
 // ── UTILITAIRES ──────────────────────────────────────────────────
 function fmtDateShort(d) {
