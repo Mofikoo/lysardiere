@@ -659,17 +659,27 @@ function imprimerFeuillesArrivee() {
     floridorlot: { color:'#1565c0', bg:'#e3f2fd', border:'#1565c0' },
   };
 
-  var pages = [];
+  // Tailles selon nombre de vacanciers (max 12, lisible de loin)
+  // A4 dispo ~237mm après marges 16mm top+bottom+30mm titre
+  function sizes(n) {
+    // nameSize en pt, paddingV en pt
+    if (n <= 4)  return { name: 36, pad: 16 };
+    if (n <= 6)  return { name: 30, pad: 12 };
+    if (n <= 8)  return { name: 26, pad: 10 };
+    if (n <= 10) return { name: 22, pad:  8 };
+    return            { name: 18, pad:  6 };
+  }
+
+  var html = '';
 
   ['hulotte','sixties','envolee','floridorlot'].forEach(function(gite) {
     var gc = GITE_STYLE[gite];
     var giteName = GITE_NAMES[gite];
 
-    var seen = {};
-    var vacanciers = [];
+    var seen = {}, vacanciers = [];
     currentSemaine.convois.forEach(function(c) {
       (c.arrivee||[]).forEach(function(p) {
-        var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
+        var key = (p.prenom||'')+' '+((p.nom||'').toUpperCase());
         if (gites[key] === gite && !seen[key]) {
           seen[key] = true;
           vacanciers.push({ prenom: p.prenom, nom: (p.nom||'').toUpperCase() });
@@ -681,54 +691,40 @@ function imprimerFeuillesArrivee() {
     vacanciers.sort(function(a,b){ return a.nom.localeCompare(b.nom)||a.prenom.localeCompare(b.prenom); });
 
     var n = vacanciers.length;
-    var inner = '';
+    var sz = sizes(n);
 
-    // Titre
-    inner += '<div style="text-align:center;margin-bottom:16px">'
-      + '<div style="display:inline-block;background:'+gc.bg+';border:3px solid '+gc.border+';border-radius:12px;padding:8px 36px">'
-      + '<div style="font-size:28px;font-weight:900;color:'+gc.color+';letter-spacing:1px;font-family:Georgia,serif">'+giteName+'</div>'
+    html += '<div style="page-break-after:always;page-break-inside:avoid;'
+      + 'padding:16mm 16mm;font-family:Arial,Helvetica,sans-serif;background:white;'
+      + 'height:265mm;box-sizing:border-box;display:flex;flex-direction:column;">';
+
+    // Titre grand et centré
+    html += '<div style="text-align:center;margin-bottom:10mm;flex-shrink:0">'
+      + '<div style="display:inline-block;background:'+gc.bg+';border:4pt solid '+gc.border+';border-radius:14pt;padding:10pt 48pt">'
+      + '<div style="font-size:44pt;font-weight:900;color:'+gc.color+';letter-spacing:2pt;font-family:Georgia,serif">'+giteName+'</div>'
       + '</div></div>';
 
-    // Liste
+    // Liste — flex:1, espace réparti uniformément
+    html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly">';
     vacanciers.forEach(function(p, i) {
-      inner += '<div style="padding:7px 14px;background:'+(i%2?'white':gc.bg)+';border-radius:5px;margin-bottom:3px;display:flex;align-items:center;gap:10px;border:0.5px solid #ddd">'
-        + '<span style="color:'+gc.color+';font-weight:700;font-size:12px;width:20px;text-align:right;flex-shrink:0">'+(i+1)+'</span>'
-        + '<span style="font-size:15px;font-weight:700;color:#1a2e2c">'+p.prenom+' '+p.nom+'</span>'
+      html += '<div style="background:'+(i%2===0?gc.bg:'white')+';border-radius:8pt;'
+        + 'padding:'+sz.pad+'pt 20pt;border:1pt solid #ddd;'
+        + 'display:flex;align-items:center;gap:14pt">'
+        + '<span style="color:'+gc.color+';font-size:'+(sz.name*0.7)+'pt;font-weight:700;width:24pt;text-align:right;flex-shrink:0;opacity:0.7">'+(i+1)+'</span>'
+        + '<span style="font-size:'+sz.name+'pt;font-weight:800;color:#1a2e2c;letter-spacing:0.5pt">'+p.prenom+' '+p.nom+'</span>'
         + '</div>';
     });
+    html += '</div>';
 
-    inner += '<div style="text-align:center;font-size:11px;color:#999;margin-top:8px">'+n+' vacancier'+(n>1?'s':'')+' attendu'+(n>1?'s':'')+'</div>';
+    // Total discret
+    html += '<div style="text-align:center;margin-top:4mm;flex-shrink:0;font-size:10pt;color:#bbb">'
+      + n + ' vacancier'+(n>1?'s':'')+' attendu'+(n>1?'s':'')+'</div>';
 
-    pages.push(inner);
+    html += '</div>';
   });
 
-  if (!pages.length) return;
-
-  // Même système de scale que imprimerFeuillesGites
-  var html = pages.map(function(inner, idx) {
-    var isLast = idx === pages.length - 1;
-    return '<div class="lys-page" style="'+(isLast?'':'page-break-after:always;')+'width:210mm;height:297mm;overflow:hidden;position:relative;box-sizing:border-box">'
-      + '<div class="lys-inner" style="position:absolute;top:0;left:0;width:210mm;transform-origin:top left;padding:16mm 14mm;box-sizing:border-box">'
-      + inner
-      + '</div></div>';
-  }).join('');
-
-  var fullHtml = '<style>@page{size:A4 portrait;margin:0}body{margin:0;padding:0}.lys-page{margin:0;padding:0}</style>'
-    + html
-    + '<script>'
-    + 'window.addEventListener("load",function(){'
-    + '  document.querySelectorAll(".lys-page").forEach(function(page){'
-    + '    var inner=page.querySelector(".lys-inner");'
-    + '    var ph=page.offsetHeight,iw=inner.scrollWidth,ih=inner.scrollHeight;'
-    + '    var scaleX=page.offsetWidth/iw,scaleY=ph/ih,scale=Math.min(scaleX,scaleY,1);'
-    + '    inner.style.transform="scale("+scale+")";'
-    + '  });'
-    + '  setTimeout(function(){window.print();},600);'
-    + '});'
-    + '<\/script>';
-
+  if (!html) return;
   if (typeof openPrintWindow !== 'undefined') {
-    openPrintWindow(fullHtml, { title:'Feuilles arrivée par gîte' });
+    openPrintWindow(html, { title:'Feuilles arrivée par gîte' });
   }
 }
 
