@@ -114,10 +114,7 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
     <div><div class="hd-title">La Lysardière</div><div class="hd-sub">Suivi & Gîtes</div></div>
   </a>
   <div class="header-right">
-    <button class="hdr-btn hdr-btn-gold" id="btn-print-fiches" onclick="imprimerFiches()" style="display:none">🖨️ Fiches annotées</button>
-    <button class="hdr-btn hdr-btn-ghost" id="btn-print-dep" onclick="imprimerFeuillesGites()" style="display:none">📋 Feuilles départ</button>
-    <button class="hdr-btn hdr-btn-ghost" id="btn-print-arr" onclick="imprimerFeuillesArrivee()" style="display:none">🏡 Feuilles arrivée</button>
-    <button class="hdr-btn hdr-btn-ghost" id="btn-print-aff" onclick="imprimerAffichesVehicules()" style="display:none">🚐 Affiches véhicules</button>
+    <button class="hdr-btn hdr-btn-gold" onclick="ouvrirModalImpression()">🖨️ Impression</button>
     <a href="index.html" class="hdr-btn hdr-btn-ghost">← Accueil</a>
   </div>
 </div>
@@ -128,10 +125,7 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
 
   <div class="selector-card">
     <h2>🗓️ Journée de transport</h2>
-    <select class="sel-input" id="journee-select" onchange="chargerJournee()">
-      <option value="">— Sélectionner une journée —</option>
-    </select>
-    <div class="sel-info" id="journee-info"></div>
+
   </div>
 
   <div id="assignation-section" style="display:none">    <div class="section-title">👥 Vacanciers non assignés <span class="count" id="unassigned-count">0</span></div>
@@ -177,7 +171,8 @@ const GITE_ORDER=['hulotte','sixties','envolee','floridorlot','arces'];
 const GITE_STYLE={hulotte:{color:'#2e7d32',bg:'#e8f5e9',border:'#2e7d32'},sixties:{color:'#ad1457',bg:'#fce4ec',border:'#ad1457'},envolee:{color:'#e65100',bg:'#fff8e1',border:'#f57f17'},floridorlot:{color:'#6a1b9a',bg:'#f3e5f5',border:'#6a1b9a'},arces:{color:'#1565c0',bg:'#e3f2fd',border:'#1565c0'}};
 
 const _supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{auth:{persistSession:true,storageKey:'lys_session',storage:localStorage,autoRefreshToken:true}});
-let currentJournee=null,giteAssignments={},activeGite='hulotte';
+let giteAssignments={},activeGite='hulotte';
+let currentJourneeConvois=null; // pour impression fiches annotées uniquement
 let allSejours=[],allVehicules=[],suiviData={},allFiches=[],allDocuments=[],allPersonnes=[];
 let allAnimateurs=[],giteAnimateurs=[],allVacancierGites=[];
 
@@ -211,11 +206,22 @@ async function init(){
   allAnimateurs=animateursRows||[];
   giteAnimateurs=giteAnimateursRows||[];
   allVacancierGites=vacancierGitesRows||[];
-  const sel=document.getElementById('journee-select');
+  // Populate modal journée selector
+  const modalSel=document.getElementById('modal-journee-select');
   const all=[...(rows||[]),...(archives||[])];
-  all.forEach(row=>{const s=row.data||row;if(!s||!s.convois||!s.convois.length)return;const opt=document.createElement('option');opt.value=row.id;const isArch=(archives||[]).some(a=>a.id===row.id);opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');opt._data=s;sel.appendChild(opt);});
-  renderGites(); // Afficher les cartes gîtes même sans journée
-  if(sel.options.length>1){sel.selectedIndex=1;chargerJournee();}
+  all.forEach(row=>{
+    const s=row.data||row;
+    if(!s||!s.convois||!s.convois.length)return;
+    const opt=document.createElement('option');
+    opt.value=row.id;
+    const isArch=(archives||[]).some(a=>a.id===row.id);
+    opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');
+    opt._data=s;
+    modalSel.appendChild(opt);
+  });
+  if(modalSel.options.length>1) modalSel.selectedIndex=1;
+  renderGites();
+  renderUnassigned();
   // Populate archives sejour selector — actifs + archivés
   const archSel = document.getElementById('archive-sejour-select');
   if(sejours?.length){
@@ -230,22 +236,52 @@ async function init(){
   }
 }
 
-async function chargerJournee(){
-  const sel=document.getElementById('journee-select');
-  const opt=sel.options[sel.selectedIndex];
-  if(!opt||!opt._data){currentJournee=null;return;}
-  currentJournee=opt._data;
-  document.getElementById('journee-info').textContent=fmtDateLong(currentJournee.date)+' — '+currentJournee.convois.length+' convoi(s)';
-  ['btn-print-fiches','btn-print-dep','btn-print-arr','btn-print-aff'].forEach(id=>{document.getElementById(id).style.display='inline-flex';});
-  document.getElementById('palette-section').style.display='block';
-  document.getElementById('assignation-section').style.display='block';
-  await chargerGiteAssignments();
-  renderGites();renderUnassigned();
+// chargerJournee supprimé
+
+// ── MODALE IMPRESSION ────────────────────────────────────────────
+function ouvrirModalImpression(){
+  document.getElementById('modal-impression').classList.add('open');
+}
+function fermerModalImpression(){
+  document.getElementById('modal-impression').classList.remove('open');
+}
+
+function imprimerFeuillesDepSejours(){
+  fermerModalImpression();
+  _imprimerFeuillesSejours('dep');
+}
+function imprimerFeuillesArrSejours(){
+  fermerModalImpression();
+  _imprimerFeuillesSejours('arr');
+}
+
+function _imprimerFeuillesSejours(mode){
+  let html='';
+  GITE_ORDER.forEach(gite=>{
+    const gc=GITE_STYLE[gite];
+    const giteName=GITE_NAMES[gite];
+    const gS=suiviData[gite]||{};
+    const sejour=allSejours.find(s=>s.id===gS.sejour_id);
+    if(!sejour) return;
+    const pids=allVacancierGites.filter(vg=>vg.gite_id===gite&&vg.sejour_id===sejour.id).map(vg=>vg.personne_id);
+    const vacanciers=allPersonnes.filter(p=>pids.includes(p.id));
+    if(!vacanciers.length) return;
+    vacanciers.sort((a,b)=>(a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||''));
+    const n=vacanciers.length;
+    const sz=n<=4?{name:36,pad:16}:n<=6?{name:30,pad:12}:n<=8?{name:26,pad:10}:n<=10?{name:22,pad:8}:{name:18,pad:6};
+    const dateLabel=mode==='dep'?`Départ ${fmtDate(sejour.date_debut)}`:`Retour ${fmtDate(sejour.date_fin)}`;
+    html+=`<div style="page-break-after:always;padding:16mm 16mm;font-family:Arial,Helvetica,sans-serif;background:white;height:265mm;box-sizing:border-box;display:flex;flex-direction:column">`;
+    html+=`<div style="text-align:center;margin-bottom:10mm;flex-shrink:0"><div style="display:inline-block;background:${gc.bg};border:4pt solid ${gc.border};border-radius:14pt;padding:10pt 48pt"><div style="font-size:44pt;font-weight:900;color:${gc.color};letter-spacing:2pt;font-family:Georgia,serif">${giteName}</div></div><div style="font-size:14pt;color:#888;margin-top:4mm">${dateLabel}</div></div>`;
+    html+=`<div style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly">`;
+    vacanciers.forEach((p,i)=>{html+=`<div style="background:${i%2===0?gc.bg:'white'};border-radius:8pt;padding:${sz.pad}pt 20pt;border:1pt solid #ddd;display:flex;align-items:center;gap:14pt"><span style="color:${gc.color};font-size:${sz.name*0.7}pt;font-weight:700;width:24pt;text-align:right;opacity:0.7">${i+1}</span><span style="font-size:${sz.name}pt;font-weight:800;color:#1a2e2c">${p.prenom} ${(p.nom||'').toUpperCase()}</span></div>`;});
+    html+=`</div><div style="text-align:center;margin-top:4mm;font-size:10pt;color:#bbb">${n} vacancier${n>1?'s':''}</div></div>`;
+  });
+  if(!html){alert('Aucun vacancier assigné aux gîtes.');return;}
+  if(typeof openPrintWindow!=='undefined') openPrintWindow(html,{title:mode==='dep'?'Feuilles départ':'Feuilles arrivée'});
 }
 
 async function chargerGiteAssignments(){
-  if(!currentJournee) return;
-  // Séjours actuellement assignés aux gîtes — seules ces assignations sont pertinentes
+  // Séjours actuellement assignés aux gîtes
   const activeSejourIds = Object.values(suiviData).map(s=>s.sejour_id).filter(Boolean);
   if(!activeSejourIds.length){ giteAssignments={}; return; }
   const rows = await supa('vacancier_gites?sejour_id=in.('+activeSejourIds.join(',')+')'+'&select=personne_id,gite_id,sejour_id');
@@ -262,9 +298,10 @@ function fmtH(mins){if(mins==null)return'';const h=Math.floor(mins/60)%24,m=mins
 function fmtDur(min){return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0');}
 
 function getAllPersonsInJournee(){
-  if(!currentJournee)return[];
+  // Legacy - now uses giteAssignments from vacancier_gites
+  if(!getConvois().length)return[];
   const seen={},result=[];
-  (currentJournee.convois||[]).forEach(c=>{
+  ((document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[])||[]).forEach(c=>{
     [...(c.depart||[]),...(c.arrivee||[])].forEach(p=>{
       const key=personKey(p);
       if(!seen[key]){seen[key]=true;const found=allPersonnes.find(x=>x.prenom?.toLowerCase()===p.prenom?.toLowerCase()&&x.nom?.toUpperCase()===p.nom?.toUpperCase());result.push({...p,id:found?.id||null,foyer:found?.foyer||p.foyer||''});}
@@ -281,11 +318,15 @@ function getStatus(pid){
   const di=d.some(x=>x.type==='inscription'||x.type==='dossier_complet'),dc=d.some(x=>x.type==='confidentiel'||x.type==='dossier_complet');
   if((hi||di)&&(hc||dc))return'complete';if(hi||hc||di||dc)return'partial';return'empty';
 }
-function getConvois(){return currentJournee?.convois||[];}
+function getConvois(){
+  const opt=document.getElementById('modal-journee-select');
+  const sel=opt?.options[opt?.selectedIndex];
+  return sel?._data?.convois||[];
+}
 
 function renderGites(){
   const grid=document.getElementById('gites-grid');
-  if(!currentJournee){grid.innerHTML='<div class="empty-state">Sélectionnez une journée de transport</div>';return;}
+  // Cartes gîtes toujours affichées
   const today=new Date().toISOString().slice(0,10);
   const sejoursActifs=allSejours.filter(s=>s.date_fin>=today);
   grid.innerHTML=GITES.map(g=>{
@@ -323,8 +364,10 @@ function renderGites(){
 }
 
 function renderUnassigned(){
-  const allP=getAllPersonsInJournee();
-  const unassigned=allP.filter(p=>!giteAssignments[personKey(p)]);
+  // Vacanciers des séjours actifs non assignés à un gîte
+  const activeSejourIds=Object.values(suiviData).map(s=>s.sejour_id).filter(Boolean);
+  const assignedPids=new Set(allVacancierGites.filter(vg=>activeSejourIds.includes(vg.sejour_id)).map(vg=>vg.personne_id));
+  const unassigned=allPersonnes.filter(p=>!assignedPids.has(p.id)).sort((a,b)=>a.nom?.localeCompare(b.nom||'')||a.prenom?.localeCompare(b.prenom||''));
   document.getElementById('unassigned-count').textContent=unassigned.length;
   const grid=document.getElementById('unassigned-grid');
   if(!unassigned.length){grid.innerHTML='<div style="color:var(--green);font-size:13px;font-weight:600;padding:8px">✅ Tous les vacanciers sont assignés</div>';return;}
@@ -337,6 +380,12 @@ function setActiveGite(g){
   const nb=document.getElementById('gbtn-none');if(nb){nb.style.opacity=g==='none'?'1':'0.45';nb.style.transform=g==='none'?'scale(1.05)':'';}
   const bar=document.getElementById('active-bar');bar.className='active-bar '+(g==='none'?'none':g);bar.style.display='flex';
   bar.textContent=g==='none'?'✕ Mode effacer — cliquez sur un vacancier':'Gîte actif : '+(GITE_COLORS[g]?.label||g)+' — cliquez sur un vacancier';
+}
+
+async function assignGiteById(personId){
+  const p=allPersonnes.find(x=>x.id===personId);
+  if(!p) return;
+  await assignGite(personKey(p));
 }
 
 async function assignGite(pKey){
@@ -441,18 +490,18 @@ async function assignManuel(giteId, personId, pKey){
 }
 
 // ── IMPRESSION ───────────────────────────────────────────────────
-function imprimerFiches() {
-  if (!currentJournee) return;
-  var dateLabel = fmtDateLong(currentJournee.date);
-  var html = generateFichesAnnoteesHTML(currentJournee.convois, dateLabel);
-  if (typeof openPrintWindow !== 'undefined') {
-    openPrintWindow(html, { title: 'Fiches annotées — ' + dateLabel });
-  }
+function imprimerFiches(){
+  fermerModalImpression();
+  const _mSel=document.getElementById('modal-journee-select');
+  const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
+  if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
+  const dateLabel=fmtDateLong(_journee.date);
+  const html=generateFichesAnnoteesHTML(_journee.convois||[], dateLabel);
+  if(typeof openPrintWindow!=='undefined') openPrintWindow(html,{title:'Fiches annotées — '+dateLabel});
 }
 
-// ── FEUILLES DE DÉPART PAR GÎTE ─────────────────────────────────
-function imprimerFeuillesGites() {
-  if (!currentJournee) return;
+// imprimerFeuillesGites remplacé par imprimerFeuillesDepSejours
+function imprimerFeuillesGites(){
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
@@ -470,7 +519,7 @@ function imprimerFeuillesGites() {
     var giteName = GITE_NAMES[gite];
 
     var convoisAvecGite = [];
-    currentJournee.convois.forEach(function(c) {
+    (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
       var vacs = (c.depart||[]).filter(function(p) {
         return gites[(p.prenom||'')+' '+((p.nom||'').toUpperCase())] === gite;
       });
@@ -557,8 +606,7 @@ function imprimerFeuillesGites() {
 
 // ── FEUILLES D'ARRIVÉE PAR GÎTE ─────────────────────────────────
 // ── FEUILLES D'ARRIVÉE PAR GÎTE ─────────────────────────────────
-function imprimerFeuillesArrivee() {
-  if (!currentJournee) return;
+function imprimerFeuillesArrivee(){
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
@@ -587,7 +635,7 @@ function imprimerFeuillesArrivee() {
     var giteName = GITE_NAMES[gite];
 
     var seen = {}, vacanciers = [];
-    currentJournee.convois.forEach(function(c) {
+    (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
       (c.arrivee||[]).forEach(function(p) {
         var key = (p.prenom||'')+' '+((p.nom||'').toUpperCase());
         if (gites[key] === gite && !seen[key]) {
@@ -639,8 +687,11 @@ function imprimerFeuillesArrivee() {
 }
 
 // ── AFFICHES VÉHICULES (PAYSAGE) ────────────────────────────────
-function imprimerAffichesVehicules() {
-  if (!currentJournee) return;
+function imprimerAffichesVehicules(){
+  fermerModalImpression();
+  const _mSel=document.getElementById('modal-journee-select');
+  const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
+  if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
@@ -654,7 +705,7 @@ function imprimerAffichesVehicules() {
 
   var html = '';
 
-  currentJournee.convois.forEach(function(c, idx) {
+  (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c, idx) {
     var vehicule  = c.vehicule ? c.vehicule.label : 'Véhicule ' + (idx+1);
     var heure     = c.heureDepart || '';
     var conducteur = c.conducteur || '';
@@ -1248,5 +1299,30 @@ async function removeAnimateur(gaId, giteId, sejourId){
 
 init();
 </script>
+<!-- ═══ MODALE IMPRESSION ═══ -->
+<div class="modal-overlay" id="modal-impression" onclick="if(event.target===this)fermerModalImpression()">
+  <div class="modal-box">
+    <div class="modal-title">🖨️ Impression</div>
+    <div class="modal-sub">Feuilles départ/arrivée générées depuis les séjours · Fiches annotées depuis les convois</div>
+
+    <div class="modal-section-label">Feuilles par gîte (depuis les séjours)</div>
+    <div class="modal-btns" style="margin-bottom:16px">
+      <button class="modal-print-btn" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ</button>
+      <button class="modal-print-btn" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée</button>
+    </div>
+
+    <div class="modal-section-label" style="margin-top:8px">Fiches convois (nécessite une journée)</div>
+    <select class="modal-journee-sel" id="modal-journee-select">
+      <option value="">— Sélectionner une journée de transport —</option>
+    </select>
+    <div class="modal-btns">
+      <button class="modal-print-btn needs-convoi" onclick="imprimerFiches()">🖨️ Fiches annotées</button>
+      <button class="modal-print-btn needs-convoi" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
+    </div>
+
+    <button class="modal-close" onclick="fermerModalImpression()">Fermer</button>
+  </div>
+</div>
+
 </body>
 </html>
