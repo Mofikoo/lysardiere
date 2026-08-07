@@ -900,71 +900,38 @@ function openPrintWindow(html, options) {
   const title = options.title || 'La Lysardière — Impression';
 
   // Remove existing print iframe/bar if any
-  const oldIframe = document.getElementById('lys-print-iframe');
-  const oldBar = document.getElementById('lys-print-bar');
-  if(oldIframe) oldIframe.remove();
-  if(oldBar) oldBar.remove();
+  // Create full-screen overlay with iframe
+  const overlay = document.createElement('div');
+  overlay.id = 'lys-print-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#525659;display:flex;flex-direction:column;';
 
-  const fullHtml = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <style>
-    ${LYS_PRINT_CSS}
-    /* Force @page margin to 0 — on gère tout via padding body */
-    @page {
-      size: A4 portrait;
-      margin: 0;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: white;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    /* Aperçu écran : padding visible */
-    body {
-      padding: 18mm 16mm;
-      font-family: Arial, Helvetica, sans-serif;
-    }
-    /* Impression : même padding — c'est lui qui fait les marges */
-    @media print {
-      body {
-        padding: 18mm 16mm !important;
-      }
-    }
-    /* Page breaks */
-    .lp-page {
-      margin: 0;
-      padding: 0;
-    }
-    .lp-page + .lp-page {
-      padding-top: 18mm;
-    }
-  </style>
-</head>
-<body>${html}</body>
-</html>`;
+  const bar = document.createElement('div');
+  bar.style.cssText = 'height:52px;background:#323639;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;';
+  bar.innerHTML = `
+    <span style="color:white;font-size:14px;font-weight:600">${title}</span>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('lys-print-overlay').querySelector('iframe').contentWindow.print()"
+        style="padding:8px 18px;background:#18534F;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">
+        🖨️ Imprimer
+      </button>
+      <button onclick="document.getElementById('lys-print-overlay').remove()"
+        style="padding:8px 14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">
+        ✕ Fermer
+      </button>
+    </div>`;
 
-  // Open new window
-  const w = window.open('', '_blank', 'width=900,height=700');
-  if(!w) { alert('Autorisez les popups pour cette page.'); return; }
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'flex:1;border:none;background:white;';
+  iframe.id = 'lys-print-frame';
 
-  w.document.write(fullHtml);
-  w.document.close();
+  overlay.appendChild(bar);
+  overlay.appendChild(iframe);
+  document.body.appendChild(overlay);
 
-  // Print from parent after new window is loaded — avoids Chrome popup print block
-  const printWhenReady = setInterval(function() {
-    if(w.document.readyState === 'complete') {
-      clearInterval(printWhenReady);
-      setTimeout(function() {
-        w.focus();
-        w.print();
-      }, 300);
-    }
-  }, 50);
+  // Write content to iframe
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(fullHtml);
+  iframe.contentDocument.close();
 }
 
 // Expose globals explicitement pour être sûr
