@@ -263,11 +263,9 @@ function fermerModalImpression(){
 }
 
 function imprimerFeuillesDepSejours(){
-  fermerModalImpression();
   _imprimerFeuillesSejours('dep');
 }
 function imprimerFeuillesArrSejours(){
-  fermerModalImpression();
   _imprimerFeuillesSejours('arr');
 }
 
@@ -294,6 +292,7 @@ function _imprimerFeuillesSejours(mode){
   });
   if(!html){alert('Aucun vacancier assigné aux gîtes.');return;}
   if(typeof openPrintWindow!=='undefined') openPrintWindow(html,{title:mode==='dep'?'Feuilles départ':'Feuilles arrivée'});
+  fermerModalImpression();
 }
 
 async function chargerGiteAssignments(){
@@ -507,13 +506,13 @@ async function assignManuel(giteId, personId, pKey){
 
 // ── IMPRESSION ───────────────────────────────────────────────────
 function imprimerFiches(){
-  fermerModalImpression();
   const _mSel=document.getElementById('modal-journee-select');
   const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
   if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
   const dateLabel=fmtDateLong(_journee.date);
   const html=generateFichesAnnoteesHTML(_journee.convois||[], dateLabel);
   if(typeof openPrintWindow!=='undefined') openPrintWindow(html,{title:'Fiches annotées — '+dateLabel});
+  fermerModalImpression();
 }
 
 // imprimerFeuillesGites remplacé par imprimerFeuillesDepSejours
@@ -704,7 +703,6 @@ function imprimerFeuillesArrivee(){
 
 // ── AFFICHES VÉHICULES (PAYSAGE) ────────────────────────────────
 function imprimerAffichesVehicules(){
-  fermerModalImpression();
   const _mSel=document.getElementById('modal-journee-select');
   const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
   if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
