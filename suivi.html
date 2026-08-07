@@ -105,6 +105,22 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
 .person-chip:hover { border-color:var(--forest-mid); background:var(--mint); }
 .chip-name { font-size:13px; font-weight:600; color:var(--text); }
 .empty-state { text-align:center; padding:40px 20px; color:var(--text-light); font-size:14px; }
+/* ── MODALE IMPRESSION ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:white;border-radius:var(--radius);padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-title{font-family:'Fraunces',serif;font-size:18px;color:var(--forest);margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--text-mid);margin-bottom:20px;line-height:1.5}
+.modal-section-label{font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin:14px 0 8px}
+.modal-print-btn{width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px;margin-bottom:6px;text-align:left}
+.modal-print-btn:hover{background:var(--mint);border-color:var(--forest-mid);color:var(--forest)}
+.modal-print-btn.gold{background:var(--forest);color:white;border-color:var(--forest)}
+.modal-print-btn.gold:hover{background:var(--forest-mid)}
+.modal-journee-sel{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;color:var(--text);background:var(--bg)}
+.modal-journee-sel:focus{border-color:var(--forest-mid)}
+.modal-sep{height:1px;background:var(--border-light);margin:14px 0}
+.modal-close{width:100%;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--text-mid);margin-top:10px}
+.modal-close:hover{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -1303,26 +1319,25 @@ init();
 <div class="modal-overlay" id="modal-impression" onclick="if(event.target===this)fermerModalImpression()">
   <div class="modal-box">
     <div class="modal-title">🖨️ Impression</div>
-    <div class="modal-sub">Feuilles départ/arrivée générées depuis les séjours · Fiches annotées depuis les convois</div>
+    <div class="modal-sub">Feuilles depuis les séjours assignés · Fiches annotées depuis les convois</div>
 
-    <div class="modal-section-label">Feuilles par gîte (depuis les séjours)</div>
-    <div class="modal-btns" style="margin-bottom:16px">
-      <button class="modal-print-btn" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ</button>
-      <button class="modal-print-btn" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée</button>
-    </div>
+    <div class="modal-section-label">📋 Depuis les séjours (sans journée requise)</div>
+    <button class="modal-print-btn gold" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ par gîte</button>
+    <button class="modal-print-btn gold" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée par gîte</button>
 
-    <div class="modal-section-label" style="margin-top:8px">Fiches convois (nécessite une journée)</div>
+    <div class="modal-sep"></div>
+
+    <div class="modal-section-label">🚐 Depuis les convois (journée requise)</div>
     <select class="modal-journee-sel" id="modal-journee-select">
-      <option value="">— Sélectionner une journée de transport —</option>
+      <option value="">— Sélectionner une journée —</option>
     </select>
-    <div class="modal-btns">
-      <button class="modal-print-btn needs-convoi" onclick="imprimerFiches()">🖨️ Fiches annotées</button>
-      <button class="modal-print-btn needs-convoi" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
-    </div>
+    <button class="modal-print-btn" onclick="imprimerFiches()">🖨️ Fiches annotées conducteurs</button>
+    <button class="modal-print-btn" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
 
     <button class="modal-close" onclick="fermerModalImpression()">Fermer</button>
   </div>
 </div>
+
 
 </body>
 </html>
