@@ -3,194 +3,343 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Animateur — La Lysardière</title>
+<title>Animateurs — La Lysardière</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:wght@600;700;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --forest:#18534F;--forest-mid:#226D68;--gold:#D4AF6A;
-  --mint:#EEF7F5;--mint-deep:#d0ebe5;--bg:#F5F3EE;--card:#FFFFFF;
-  --text:#1a2e2c;--text-mid:#5C6B6A;--text-light:#8FA5A3;
-  --border:#E5E0D6;--border-light:#EDE8E0;
-  --red:#c0392b;--red-bg:#fdedec;--green:#1a7a4a;--green-bg:#eafaf1;
-  --orange:#d35400;--orange-bg:#fef5ec;--blue:#0369a1;--blue-bg:#e0f2fe;
-  --shadow:0 2px 12px rgba(24,83,79,0.10);--shadow-md:0 6px 24px rgba(24,83,79,0.14);
-  --radius:14px;--radius-sm:10px;
+:root {
+  --forest:#18534F; --forest-mid:#226D68; --forest-light:#2d8a7f;
+  --gold:#D4AF6A; --gold-deep:#B8943A; --gold-pale:#FBF5E6;
+  --mint:#EEF7F5; --mint-deep:#C8EAE4; --mint-mid:#A8D8D0;
+  --bg:#F7F4EE; --card:#FFFFFF; --card2:#FAFAF8;
+  --text:#1a2e2c; --text-mid:#4a6260; --text-light:#8FA5A3;
+  --border:#E2DDD4; --border-light:#EDE9E0;
+  --red:#c0392b; --red-bg:#fdf1f0; --red-mid:#e8877f;
+  --green:#1a7a4a; --green-bg:#edfbf2;
+  --orange:#d35400; --orange-bg:#fef5ec;
+  --shadow-sm:0 1px 4px rgba(24,83,79,0.07);
+  --shadow:0 3px 14px rgba(24,83,79,0.10);
+  --shadow-md:0 8px 32px rgba(24,83,79,0.14);
+  --radius:16px; --radius-sm:10px; --radius-xs:7px;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.header{background:linear-gradient(135deg,var(--forest),var(--forest-mid));height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(24,83,79,0.25)}
-.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-.header-brand img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
-.hd-title{font-family:'Fraunces',serif;font-size:16px;color:var(--gold);line-height:1}
-.hd-sub{font-size:8px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
-.header-right{display:flex;align-items:center;gap:8px}
-.hdr-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all 0.15s;text-decoration:none;white-space:nowrap}
-.hdr-btn-ghost{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85)}
-.hdr-btn-ghost:hover{background:rgba(255,255,255,0.22);color:white}
-.hdr-btn-gold{background:var(--gold);color:var(--forest);font-weight:700}
-.main{max-width:900px;margin:0 auto;padding:24px 16px 80px}
-/* PROFILE CARD */
-.profile-card{background:var(--card);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
-.avatar-big{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--forest),var(--forest-mid));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;flex-shrink:0}
-.profile-info{flex:1;min-width:200px}
-.profile-name{font-family:'Fraunces',serif;font-size:22px;color:var(--forest);margin-bottom:4px}
-.profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.field-group label{font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.7px;display:block;margin-bottom:4px}
-.field-input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border-color 0.2s}
-.field-input:focus{border-color:var(--forest-mid);background:white}
-.mail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}
-.mail-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--text);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;transition:all 0.15s}
-.mail-btn:hover{background:var(--mint);border-color:var(--forest-mid);color:var(--forest)}
-/* SECTION */
-.section-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--forest);margin:28px 0 12px;display:flex;align-items:center;gap:8px}
-.section-title .count{background:var(--mint);border:1px solid var(--mint-deep);border-radius:20px;padding:2px 10px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:700;color:var(--forest)}
-/* DOCS */
-.doc-list{background:var(--card);border-radius:var(--radius);border:1px solid var(--border-light);box-shadow:var(--shadow);overflow:hidden}
-.doc-type-section{border-bottom:1px solid var(--border-light)}
-.doc-type-section:last-child{border-bottom:none}
-.doc-type-header{padding:12px 16px;background:var(--mint);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
-.doc-type-label{font-size:12px;font-weight:700;color:var(--forest);text-transform:uppercase;letter-spacing:0.7px}
-.doc-rows{padding:8px 16px 12px}
-.doc-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)}
-.doc-row:last-child{border-bottom:none}
-.doc-filename{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.doc-date{font-size:11px;color:var(--text-light);white-space:nowrap}
-.btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:white;color:var(--text);font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.15s;white-space:nowrap}
-.btn:hover{background:var(--mint);border-color:var(--forest-mid)}
-.btn-danger{background:var(--red-bg);color:var(--red);border-color:var(--red-bg)}
-.btn-danger:hover{background:#fbd5d0}
-.btn-primary{background:var(--forest);color:white;border-color:var(--forest)}
-.btn-primary:hover{background:var(--forest-mid)}
-.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-top:8px;background:var(--bg)}
-.upload-zone:hover{border-color:var(--forest-mid);background:var(--mint)}
-.upload-zone input{display:none}
-.upload-zone p{font-size:13px;color:var(--text-mid);margin-top:6px}
-/* VIERGES */
-.vierge-card{background:var(--card);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
-.vierge-icon{font-size:24px;flex-shrink:0}
-.vierge-label{font-size:13px;font-weight:600;flex:1}
-/* TYPE PILLS */
-.type-pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px}
-.type-cv{background:#e0f2fe;color:#0369a1}
-.type-cni{background:#f0fdf4;color:#166534}
-.type-casier{background:#fef9c3;color:#854d0e}
-.type-rib{background:#fdf2f8;color:#9d174d}
-.type-contrat{background:#fef3c7;color:#92400e}
-.type-divers{background:#f3f4f6;color:#374151}
-.empty{text-align:center;padding:30px;color:var(--text-light);font-size:13px}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:white;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:none;box-shadow:var(--shadow-md)}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── HEADER ── */
+.header {
+  background:linear-gradient(135deg,var(--forest) 0%,var(--forest-mid) 100%);
+  height:56px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; position:sticky; top:0; z-index:200;
+  box-shadow:0 2px 20px rgba(0,0,0,0.18);
+}
+.header-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.header-brand img { width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid var(--gold); }
+.hd-title { font-family:'Fraunces',serif; font-size:15px; color:var(--gold); letter-spacing:0.2px; }
+.hd-sub { font-size:9px; color:rgba(255,255,255,0.35); letter-spacing:2.5px; text-transform:uppercase; margin-top:1px; }
+.header-right { display:flex; align-items:center; gap:8px; }
+.hdr-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:8px; border:none; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit; text-decoration:none; white-space:nowrap; transition:all 0.15s; }
+.hdr-ghost { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.8); }
+.hdr-ghost:hover { background:rgba(255,255,255,0.2); color:white; }
+.hdr-gold { background:var(--gold); color:var(--forest); }
+.hdr-gold:hover { background:var(--gold-deep); }
+
+/* ── MAIN ── */
+.main { max-width:860px; margin:0 auto; padding:28px 20px 100px; }
+
+/* ── LISTE MODE ── */
+.liste-search-bar {
+  background:var(--card); border-radius:var(--radius); padding:18px 22px;
+  margin-bottom:16px; box-shadow:var(--shadow); border:1px solid var(--border-light);
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.search-input {
+  flex:1; min-width:200px; padding:10px 16px;
+  border:1.5px solid var(--border); border-radius:9px;
+  font-size:14px; font-family:inherit; color:var(--text); background:var(--bg);
+  outline:none; transition:border-color 0.2s;
+}
+.search-input:focus { border-color:var(--forest-mid); background:white; }
+.btn-create {
+  padding:10px 20px; background:var(--forest); color:white;
+  border:none; border-radius:9px; font-size:13px; font-weight:700;
+  font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  transition:all 0.15s; white-space:nowrap;
+}
+.btn-create:hover { background:var(--forest-mid); }
+
+.form-creation {
+  display:none; background:var(--card); border-radius:var(--radius);
+  padding:22px 24px; margin-bottom:16px; box-shadow:var(--shadow-md);
+  border-top:3px solid var(--forest);
+}
+.form-title { font-family:'Fraunces',serif; font-size:16px; color:var(--forest); margin-bottom:16px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.field-group label { display:block; font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
+.field-input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:13px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border-color 0.2s; }
+.field-input:focus { border-color:var(--forest-mid); background:white; }
+.form-actions { display:flex; gap:8px; }
+.btn-sm { padding:8px 16px; border-radius:8px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.15s; border:1.5px solid; display:inline-flex; align-items:center; gap:4px; }
+.btn-primary { background:var(--forest); color:white; border-color:var(--forest); }
+.btn-primary:hover { background:var(--forest-mid); }
+.btn-ghost-sm { background:transparent; color:var(--text-mid); border-color:var(--border); }
+.btn-ghost-sm:hover { background:var(--mint); border-color:var(--mint-deep); }
+.btn-danger-sm { background:var(--red-bg); color:var(--red); border-color:var(--red-mid); }
+.btn-danger-sm:hover { background:#f9dbd9; }
+
+/* Animateur row */
+.anim-row {
+  background:var(--card); border-radius:var(--radius-sm); border:1px solid var(--border-light);
+  padding:14px 18px; margin-bottom:8px; display:flex; align-items:center; gap:14px;
+  cursor:pointer; transition:all 0.15s; box-shadow:var(--shadow-sm);
+}
+.anim-row:hover { background:var(--mint); border-color:var(--mint-deep); transform:translateY(-1px); box-shadow:var(--shadow); }
+.anim-avatar {
+  width:42px; height:42px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,var(--forest),var(--forest-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; color:white;
+}
+.anim-name { font-weight:700; font-size:14px; color:var(--text); }
+.anim-meta { font-size:12px; color:var(--text-mid); margin-top:2px; }
+.anim-arrow { color:var(--text-light); font-size:14px; margin-left:auto; }
+.empty { text-align:center; padding:40px 20px; color:var(--text-light); font-size:14px; }
+
+/* ── FICHE MODE ── */
+/* Bannière profil */
+.profile-banner {
+  background:linear-gradient(135deg,var(--forest) 0%,var(--forest-mid) 55%,#2d8a7f 100%);
+  border-radius:var(--radius); padding:28px 28px 24px; margin-bottom:20px;
+  box-shadow:var(--shadow-md); position:relative; overflow:hidden;
+}
+.profile-banner::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:200px; height:200px; border-radius:50%;
+  background:rgba(212,175,106,0.12); pointer-events:none;
+}
+.profile-banner::after {
+  content:''; position:absolute; bottom:-60px; left:40%;
+  width:160px; height:160px; border-radius:50%;
+  background:rgba(255,255,255,0.05); pointer-events:none;
+}
+.profile-top { display:flex; align-items:flex-start; gap:18px; margin-bottom:20px; }
+.profile-avatar {
+  width:68px; height:68px; border-radius:50%; flex-shrink:0;
+  background:rgba(255,255,255,0.15); border:2.5px solid rgba(212,175,106,0.6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:700; color:var(--gold); font-family:'Fraunces',serif;
+}
+.profile-title { flex:1; }
+.profile-name { font-family:'Fraunces',serif; font-size:26px; color:white; font-weight:700; line-height:1.1; }
+.profile-subtitle { font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; }
+.profile-fields {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+}
+.profile-field {
+  background:rgba(255,255,255,0.08); border-radius:var(--radius-xs);
+  padding:10px 14px; border:1px solid rgba(255,255,255,0.1);
+}
+.profile-field label { display:block; font-size:9px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.profile-field input { background:transparent; border:none; outline:none; font-family:inherit; font-size:13px; color:white; width:100%; font-weight:500; }
+.profile-field input::placeholder { color:rgba(255,255,255,0.3); }
+.profile-field.full { grid-column:1/-1; }
+
+/* Boutons mail */
+.mail-bar {
+  margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.12);
+  display:none; flex-wrap:wrap; gap:8px;
+}
+.mail-btn {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 14px;
+  background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.9);
+  border:1px solid rgba(255,255,255,0.2); border-radius:8px;
+  font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;
+  text-decoration:none; transition:all 0.15s;
+}
+.mail-btn:hover { background:rgba(255,255,255,0.22); color:white; }
+
+/* ── SECTIONS ── */
+.section {
+  background:var(--card); border-radius:var(--radius); margin-bottom:14px;
+  box-shadow:var(--shadow-sm); border:1px solid var(--border-light); overflow:hidden;
+}
+.section-head {
+  padding:14px 20px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border-light); background:var(--card2);
+}
+.section-head-title { font-family:'Fraunces',serif; font-size:14px; font-weight:700; color:var(--forest); display:flex; align-items:center; gap:8px; }
+.count-badge { background:var(--mint); border:1px solid var(--mint-deep); border-radius:20px; padding:1px 9px; font-size:11px; font-family:'DM Sans',sans-serif; font-weight:700; color:var(--forest); }
+.section-body { padding:14px 20px; }
+
+/* Upload bar */
+.upload-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.select-input { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; }
+.select-input:focus { border-color:var(--forest-mid); }
+.upload-label { cursor:pointer; }
+.upload-label input { display:none; }
+.upload-status { font-size:12px; color:var(--text-mid); }
+
+/* Doc rows */
+.doc-type-group { margin-bottom:12px; }
+.doc-type-label-row {
+  font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase;
+  letter-spacing:0.9px; margin-bottom:6px; display:flex; align-items:center; gap:6px;
+}
+.doc-type-label-row::after { content:''; flex:1; height:1px; background:var(--border-light); }
+.doc-item {
+  display:flex; align-items:center; gap:10px; padding:9px 12px;
+  background:var(--card2); border-radius:var(--radius-xs); border:1px solid var(--border-light);
+  margin-bottom:5px;
+}
+.doc-name { font-size:13px; font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.doc-date { font-size:11px; color:var(--text-light); white-space:nowrap; margin-right:4px; }
+.type-pill { display:inline-block; padding:2px 8px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; }
+.type-cv{background:#dbeafe;color:#1d4ed8} .type-cni{background:#d1fae5;color:#065f46}
+.type-casier{background:#fef9c3;color:#854d0e} .type-rib{background:#fce7f3;color:#9d174d}
+.type-contrat{background:#fef3c7;color:#92400e} .type-divers{background:#f3f4f6;color:#374151}
+
+/* Vierges */
+.vierge-item {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border:1px solid var(--border-light); border-radius:var(--radius-xs);
+  background:var(--card2); margin-bottom:6px;
+}
+.vierge-icon { font-size:22px; flex-shrink:0; }
+.vierge-label { font-size:13px; font-weight:600; flex:1; }
+
+/* Boutons */
+.btn-icon { background:var(--mint); border:1px solid var(--mint-deep); color:var(--forest); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.15s; }
+.btn-icon:hover { background:var(--mint-deep); }
+.btn-del { background:var(--red-bg); border:1px solid #f5c6c6; color:var(--red); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.15s; }
+.btn-del:hover { background:#f5c6c6; }
+
+/* Empty */
+.empty-mini { padding:16px; text-align:center; color:var(--text-light); font-size:12px; }
+
+/* Toast */
+.toast { position:fixed; bottom:28px; right:24px; background:var(--forest); color:white; padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:999; display:none; box-shadow:var(--shadow-md); }
+
+/* Responsive */
+@media(max-width:600px){ .profile-fields,.form-grid{grid-template-columns:1fr} .profile-banner{padding:20px 18px 18px} }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <a href="suivi.html" class="header-brand">
-    <img src="icon-192.png" alt="La Lysardière">
-    <div><div class="hd-title">La Lysardière</div><div class="hd-sub">Fiche animateur</div></div>
+  <a href="index.html" class="header-brand">
+    <img src="icon-192.png" alt="">
+    <div><div class="hd-title">La Lysardière</div><div class="hd-sub" id="hd-sub">Animateurs</div></div>
   </a>
   <div class="header-right">
-    <button class="hdr-btn hdr-btn-gold" onclick="sauvegarder()">💾 Enregistrer</button>
-    <a href="suivi.html" class="hdr-btn hdr-btn-ghost">← Suivi & Gîtes</a>
+    <button class="hdr-btn hdr-gold" id="btn-save" onclick="sauvegarder()" style="display:none">💾 Enregistrer</button>
+    <a href="index.html" class="hdr-btn hdr-ghost">← Accueil</a>
   </div>
 </div>
 
+<!-- ══ LISTE MODE ══ -->
 <div class="main" id="main-liste" style="display:none">
-  <div style="background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <input class="field-input" id="search-anim" type="text" placeholder="🔍 Rechercher un animateur…" oninput="filtrerListe()" style="flex:1;min-width:200px">
-    <button class="btn btn-primary" onclick="ouvrirCreation()">➕ Nouvel animateur</button>
+  <div class="liste-search-bar">
+    <input class="search-input" id="search-anim" type="text" placeholder="🔍 Rechercher un animateur…" oninput="filtrerListe()">
+    <button class="btn-create" onclick="ouvrirCreation()">➕ Nouvel animateur</button>
   </div>
-  <!-- Formulaire création -->
-  <div id="form-creation" style="display:none;background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);border:1.5px solid var(--forest-mid)">
-    <div style="font-family:'Fraunces',serif;font-size:15px;color:var(--forest);margin-bottom:14px">Nouvel animateur</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+
+  <div class="form-creation" id="form-creation">
+    <div class="form-title">Nouvel animateur</div>
+    <div class="form-grid">
       <div class="field-group"><label>Prénom *</label><input class="field-input" id="new-prenom" type="text" placeholder="Prénom"></div>
       <div class="field-group"><label>Nom *</label><input class="field-input" id="new-nom" type="text" placeholder="NOM"></div>
       <div class="field-group"><label>Email</label><input class="field-input" id="new-email" type="email" placeholder="email@exemple.com"></div>
       <div class="field-group"><label>Téléphone</label><input class="field-input" id="new-tel" type="tel" placeholder="06 XX XX XX XX"></div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" onclick="creerAnimateur()">Créer</button>
-      <button class="btn" onclick="document.getElementById('form-creation').style.display='none'">Annuler</button>
+    <div class="form-actions">
+      <button class="btn-sm btn-primary" onclick="creerAnimateur()">Créer</button>
+      <button class="btn-sm btn-ghost-sm" onclick="document.getElementById('form-creation').style.display='none'">Annuler</button>
     </div>
   </div>
+
   <div id="animateurs-liste"></div>
 </div>
 
-  <!-- PROFIL -->
-  <div class="profile-card" id="profile-card">
-    <div class="avatar-big" id="avatar">?</div>
-    <div class="profile-info">
-      <div class="profile-name" id="profile-name">Chargement…</div>
-      <div class="profile-fields">
-        <div class="field-group">
-          <label>Prénom</label>
-          <input class="field-input" id="f-prenom" type="text" placeholder="Prénom">
-        </div>
-        <div class="field-group">
-          <label>Nom</label>
-          <input class="field-input" id="f-nom" type="text" placeholder="NOM">
-        </div>
-        <div class="field-group">
-          <label>Email</label>
-          <input class="field-input" id="f-email" type="email" placeholder="email@exemple.com">
-        </div>
-        <div class="field-group">
-          <label>Téléphone</label>
-          <input class="field-input" id="f-tel" type="tel" placeholder="06 XX XX XX XX">
-        </div>
-        <div class="field-group" style="grid-column:1/-1">
-          <label>Notes</label>
-          <input class="field-input" id="f-notes" type="text" placeholder="Observations, remarques…">
-        </div>
+<!-- ══ FICHE MODE ══ -->
+<div class="main" id="main" style="display:none">
+
+  <!-- Bannière profil -->
+  <div class="profile-banner">
+    <div class="profile-top">
+      <div class="profile-avatar" id="avatar">?</div>
+      <div class="profile-title">
+        <div class="profile-name" id="profile-name">Chargement…</div>
+        <div class="profile-subtitle">Animateur · La Lysardière</div>
       </div>
-      <div class="mail-actions" id="mail-actions" style="display:none">
-        <a id="btn-mail-rib" class="mail-btn" href="#">📧 Demande RIB</a>
-        <a id="btn-mail-contrat" class="mail-btn" href="#">📄 Envoyer contrat</a>
-        <a id="btn-mail-docs" class="mail-btn" href="#">📋 Demande documents</a>
+    </div>
+    <div class="profile-fields">
+      <div class="profile-field">
+        <label>Prénom</label>
+        <input id="f-prenom" type="text" placeholder="Prénom">
       </div>
+      <div class="profile-field">
+        <label>Nom</label>
+        <input id="f-nom" type="text" placeholder="NOM">
+      </div>
+      <div class="profile-field">
+        <label>Email</label>
+        <input id="f-email" type="email" placeholder="email@exemple.com">
+      </div>
+      <div class="profile-field">
+        <label>Téléphone</label>
+        <input id="f-tel" type="tel" placeholder="06 XX XX XX XX">
+      </div>
+      <div class="profile-field full">
+        <label>Notes</label>
+        <input id="f-notes" type="text" placeholder="Observations…">
+      </div>
+    </div>
+    <div class="mail-bar" id="mail-bar">
+      <a id="btn-mail-rib" class="mail-btn" href="#">📧 Demande RIB</a>
+      <a id="btn-mail-contrat" class="mail-btn" href="#">📄 Envoyer contrat</a>
+      <a id="btn-mail-docs" class="mail-btn" href="#">📋 Demande documents</a>
     </div>
   </div>
 
-  <!-- DOCUMENTS REÇUS -->
-  <div class="section-title">📁 Documents reçus <span class="count" id="docs-count">0</span></div>
-  <div class="doc-list" id="docs-section"></div>
-
-  <!-- UPLOAD -->
-  <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-top:12px;box-shadow:var(--shadow);border:1px solid var(--border-light)">
-    <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">Ajouter un document</div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-      <select id="upload-type" class="field-input" style="max-width:200px">
-        <option value="cv">📄 CV</option>
-        <option value="cni">🪪 Carte d'identité</option>
-        <option value="casier">⚖️ Casier judiciaire</option>
-        <option value="rib">💳 RIB</option>
-        <option value="contrat">📝 Contrat signé</option>
-        <option value="divers">📎 Divers</option>
-      </select>
-      <label style="cursor:pointer">
-        <input type="file" id="upload-file" style="display:none" onchange="uploadDoc()">
-        <span class="btn btn-primary">📤 Choisir un fichier</span>
-      </label>
-      <span id="upload-status" style="font-size:12px;color:var(--text-mid)"></span>
+  <!-- Documents reçus -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-head-title">📁 Documents reçus <span class="count-badge" id="docs-count">0</span></div>
+      <div class="upload-bar">
+        <select id="upload-type" class="select-input">
+          <option value="cv">CV</option>
+          <option value="cni">Carte d'identité</option>
+          <option value="casier">Casier judiciaire</option>
+          <option value="rib">RIB</option>
+          <option value="contrat">Contrat signé</option>
+          <option value="divers">Divers</option>
+        </select>
+        <label class="upload-label">
+          <input type="file" id="upload-file" onchange="uploadDoc()">
+          <span class="btn-sm btn-primary">📤 Ajouter</span>
+        </label>
+        <span id="upload-status" class="upload-status"></span>
+      </div>
+    </div>
+    <div class="section-body" id="docs-section">
+      <div class="empty-mini">Aucun document reçu.</div>
     </div>
   </div>
 
-  <!-- DOCUMENTS VIERGES -->
-  <div class="section-title">📋 Documents vierges <span class="count" id="vierges-count">0</span></div>
-  <div id="vierges-section">
-    <div class="empty">Aucun document vierge enregistré.</div>
-  </div>
-  <!-- Upload document vierge (admin) -->
-  <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-top:12px;box-shadow:var(--shadow);border:1px solid var(--border-light)">
-    <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">Ajouter un document vierge</div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input class="field-input" id="vierge-label" type="text" placeholder="Nom du document (ex: Contrat CEE)" style="max-width:280px">
-      <label style="cursor:pointer">
-        <input type="file" id="vierge-file" style="display:none" onchange="uploadVierge()">
-        <span class="btn btn-primary">📤 Ajouter</span>
-      </label>
-      <span id="vierge-status" style="font-size:12px;color:var(--text-mid)"></span>
+  <!-- Documents vierges -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-head-title">📋 Documents vierges <span class="count-badge" id="vierges-count">0</span></div>
+      <div class="upload-bar">
+        <input class="field-input" id="vierge-label" type="text" placeholder="Nom du document…" style="max-width:220px;padding:7px 12px;font-size:12px">
+        <label class="upload-label">
+          <input type="file" id="vierge-file" onchange="uploadVierge()">
+          <span class="btn-sm btn-primary">📤 Ajouter</span>
+        </label>
+        <span id="vierge-status" class="upload-status"></span>
+      </div>
+    </div>
+    <div class="section-body" id="vierges-section">
+      <div class="empty-mini">Aucun document vierge.</div>
     </div>
   </div>
 
@@ -199,6 +348,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
 <div class="toast" id="toast"></div>
 
 <script>
+
 const SUPABASE_URL='https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 
@@ -231,6 +381,7 @@ async function init(){
     return;
   }
   document.getElementById('main').style.display='block';
+  document.getElementById('btn-save').style.display='inline-flex';
   await charger();
 }
 
@@ -313,9 +464,10 @@ function renderProfil(){
   document.getElementById('f-tel').value=p.telephone||'';
   document.getElementById('f-notes').value=p.notes||'';
   document.title=(p.prenom||'')+' '+(p.nom||'')+' — La Lysardière';
+  document.getElementById('hd-sub').textContent=(p.prenom||'')+' '+(p.nom||'').toUpperCase();
   // Boutons mail
   if(p.email){
-    document.getElementById('mail-actions').style.display='flex';
+    document.getElementById('mail-bar').style.display='flex';
     const nom=encodeURIComponent((p.prenom||'')+' '+(p.nom||''));
     document.getElementById('btn-mail-rib').href=`mailto:${p.email}?subject=Demande%20RIB%20%E2%80%94%20La%20Lysardi%C3%A8re&body=Bonjour%20${nom}%2C%0A%0ANous%20vous%20demandons%20de%20bien%20vouloir%20nous%20transmettre%20votre%20RIB%20afin%20de%20proc%C3%A9der%20%C3%A0%20votre%20paiement.%0A%0ACordialement%2C%0AL%27%C3%A9quipe%20La%20Lysardi%C3%A8re`;
     document.getElementById('btn-mail-contrat').href=`mailto:${p.email}?subject=Contrat%20%E2%80%94%20La%20Lysardi%C3%A8re&body=Bonjour%20${nom}%2C%0A%0AVeuillez%20trouver%20ci-joint%20votre%20contrat%20pour%20la%20prochaine%20session.%0A%0ACordialement%2C%0AL%27%C3%A9quipe%20La%20Lysardi%C3%A8re`;
@@ -326,21 +478,21 @@ function renderProfil(){
 function renderDocs(){
   document.getElementById('docs-count').textContent=allDocs.length;
   const section=document.getElementById('docs-section');
-  if(!allDocs.length){section.innerHTML='<div class="empty">Aucun document reçu.</div>';return;}
+  if(!allDocs.length){section.innerHTML='<div class="empty-mini">Aucun document reçu.</div>';return;}
   const byType={};
   TYPE_ORDER.forEach(t=>{byType[t]=allDocs.filter(d=>d.type===t);});
   section.innerHTML=TYPE_ORDER.filter(t=>byType[t].length).map(t=>{
     const rows=byType[t].map(doc=>`
-      <div class="doc-row">
+      <div class="doc-item">
         <span class="type-pill type-${doc.type}">${TYPE_LABELS[doc.type]||doc.type}</span>
-        <span class="doc-filename">${doc.filename}</span>
+        <span class="doc-name">${doc.filename}</span>
         <span class="doc-date">${fmtDate(doc.uploaded_at)}</span>
-        <button class="btn" onclick="openDoc('${doc.storage_path}','${esc(doc.filename)}')">👁 Voir</button>
-        <button class="btn btn-danger" onclick="deleteDoc('${doc.id}','${doc.storage_path}')">🗑</button>
+        <button class="btn-icon" onclick="openDoc('${doc.storage_path}','${esc(doc.filename)}')">👁 Voir</button>
+        <button class="btn-del" onclick="deleteDoc('${doc.id}','${doc.storage_path}')">🗑</button>
       </div>`).join('');
-    return `<div class="doc-type-section">
-      <div class="doc-type-header"><span class="doc-type-label">${TYPE_LABELS[t]||t} (${byType[t].length})</span></div>
-      <div class="doc-rows">${rows}</div>
+    return `<div class="doc-type-group">
+      <div class="doc-type-label-row">${TYPE_LABELS[t]||t} (${byType[t].length})</div>
+      ${rows}
     </div>`;
   }).join('');
 }
@@ -348,13 +500,13 @@ function renderDocs(){
 function renderVierges(){
   const section=document.getElementById('vierges-section');
   document.getElementById('vierges-count').textContent=allVierges.length;
-  if(!allVierges.length){section.innerHTML='<div class="empty">Aucun document vierge enregistré.</div>';return;}
+  if(!allVierges.length){section.innerHTML='<div class="empty-mini">Aucun document vierge.</div>';return;}
   section.innerHTML=allVierges.map(v=>`
-    <div class="vierge-card">
+    <div class="vierge-item">
       <span class="vierge-icon">📄</span>
       <span class="vierge-label">${v.label}</span>
-      <button class="btn" onclick="openDoc('${v.storage_path}','${esc(v.label)}')">⬇️ Télécharger</button>
-      <button class="btn btn-danger" onclick="deleteVierge('${v.id}','${v.storage_path}')">🗑</button>
+      <button class="btn-icon" onclick="openDoc('${v.storage_path}','${esc(v.label)}')">⬇️ Télécharger</button>
+      <button class="btn-del" onclick="deleteVierge('${v.id}','${v.storage_path}')">🗑</button>
     </div>`).join('');
 }
 
@@ -455,6 +607,7 @@ function esc(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.background=type==='error'?'#c0392b':'var(--forest)';setTimeout(()=>{el.style.display='none';},3000);}
 
 init();
+
 </script>
 </body>
 </html>
