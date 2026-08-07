@@ -179,7 +179,7 @@ const GITE_STYLE={hulotte:{color:'#2e7d32',bg:'#e8f5e9',border:'#2e7d32'},sixtie
 const _supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{auth:{persistSession:true,storageKey:'lys_session',storage:localStorage,autoRefreshToken:true}});
 let currentJournee=null,giteAssignments={},activeGite='hulotte';
 let allSejours=[],allVehicules=[],suiviData={},allFiches=[],allDocuments=[],allPersonnes=[];
-let allAnimateurs=[],giteAnimateurs=[];
+let allAnimateurs=[],giteAnimateurs=[],allVacancierGites=[];
 
 async function getJWT(){try{const{data:{session}}=await _supa.auth.getSession();if(session?.access_token)return session.access_token;}catch(e){}return SUPABASE_ANON;}
 async function supa(path,method,body){const jwt=await getJWT();const h={apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'};if(method&&method!=='GET')h.Prefer='return=minimal';const opts={method:method||'GET',headers:h};if(body)opts.body=JSON.stringify(body);const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);if(!method||method==='GET'){const t=await r.text();return t?JSON.parse(t):[]; }return r.ok;}
@@ -189,7 +189,7 @@ async function init(){
   const{data:{session}}=await _supa.auth.getSession();
   if(!session){window.location.href='index.html';return;}
   document.getElementById('main').style.display='block';
-  const[rows,archives,sejours,sejoursArchives,vehicules,suiviRows,animateursRows,giteAnimateursRows,fiches,docs,personnes]=await Promise.all([
+  const[rows,archives,sejours,sejoursArchives,vehicules,suiviRows,animateursRows,giteAnimateursRows,vacancierGitesRows,fiches,docs,personnes]=await Promise.all([
     supa('semaines?select=*&order=updated_at.desc'),
     supa('archives?select=*&order=updated_at.desc'),
     supa('sejours?archived=eq.false&select=*&order=date_debut.asc'),
@@ -198,6 +198,7 @@ async function init(){
     supa('suivi_gites?select=*'),
     supa('animateurs?select=*&order=nom.asc'),
     supa('gite_animateurs?select=*'),
+    supa('vacancier_gites?select=*'),
     supa('fiches_inscription?select=id,personne_id,mode_formulaire,html_rendu'),
     supa('documents?select=id,personne_id,type'),
     supa('personnes?select=id,data'),
@@ -209,6 +210,7 @@ async function init(){
   suiviData={};(suiviRows||[]).forEach(r=>{suiviData[r.gite_id]={sejour_id:r.sejour_id,animateurs:r.animateurs||'',vehicules:r.vehicules||[]};});
   allAnimateurs=animateursRows||[];
   giteAnimateurs=giteAnimateursRows||[];
+  allVacancierGites=vacancierGitesRows||[];
   const sel=document.getElementById('journee-select');
   const all=[...(rows||[]),...(archives||[])];
   all.forEach(row=>{const s=row.data||row;if(!s||!s.convois||!s.convois.length)return;const opt=document.createElement('option');opt.value=row.id;const isArch=(archives||[]).some(a=>a.id===row.id);opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');opt._data=s;sel.appendChild(opt);});
@@ -289,8 +291,9 @@ function renderGites(){
   grid.innerHTML=GITES.map(g=>{
     const gS=suiviData[g.id]||{sejour_id:null,animateurs:'',vehicules:[]};
     const sejour=allSejours.find(s=>s.id===gS.sejour_id)||null;
-    const allP=getAllPersonsInJournee();
-    const vacInGite=allP.filter(p=>giteAssignments[personKey(p)]===g.id);
+    // Vacanciers depuis la base (indépendant de la journée de transport)
+    const vacIds=allVacancierGites.filter(vg=>vg.gite_id===g.id&&(!gS.sejour_id||vg.sejour_id===gS.sejour_id)).map(vg=>vg.personne_id);
+    const vacInGite=allPersonnes.filter(p=>vacIds.includes(p.id));
     const gVehs=gS.vehicules||[];
     const availVehs=allVehicules.filter(v=>!gVehs.some(gv=>gv.id===v.id));
     const sejourOpts=sejoursActifs.map(s=>`<option value="${s.id}" ${gS.sejour_id===s.id?'selected':''}>${s.nom} (${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)})</option>`).join('');
@@ -300,8 +303,7 @@ function renderGites(){
       const st=getStatus(p.id);
       const stLabel=st==='complete'?'✅ Complet':st==='partial'?'📝 Partiel':'⚠️ Vide';
       const hasFiche=allFiches.some(f=>f.personne_id===p.id&&f.html_rendu);
-      const pKey=personKey(p);
-      return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-doc-btn" onclick="retirerVacancier('${pKey.replace(/'/g,"\\'")}')" title="Retirer du gîte" style="color:var(--red);border-color:var(--red-bg);background:var(--red-bg)">✕</button></div>`;
+      return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-doc-btn" onclick="retirerVacancierById('${p.id}','${g.id}','${gS.sejour_id||''}')" title="Retirer du gîte" style="color:var(--red);border-color:var(--red-bg);background:var(--red-bg)">✕</button></div>`;
     }).join('');
     return `<div class="gite-card ${g.cls}"><div class="gite-header"><div class="gite-name">${g.label}</div><span class="gite-count">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="info-row"><span class="info-label">Séjour</span><select class="info-input" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--text-light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div style="margin-top:4px"><span class="info-label" style="display:block;margin-bottom:5px">Animateurs</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${getAnimateurBubbles(g.id,gS.sejour_id)}</div><div style="position:relative"><input type="text" placeholder="+ Ajouter un animateur…" style="width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)" id="anim-search-${g.id}" oninput="filterAnimSearch('${g.id}',this.value)" onfocus="filterAnimSearch('${g.id}',this.value)" onblur="setTimeout(()=>hideAnimDrop('${g.id}'),150)" autocomplete="off"><div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div></div></div><div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="info-label">Véhicules</span><div class="vehicles-wrap">${chips||'<span style="font-size:12px;color:var(--text-light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacanciers-section"><div class="vacanciers-title">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
       <div style="padding:8px 16px 12px;border-top:1px solid var(--border-light)">
@@ -1110,6 +1112,19 @@ async function chargerArchives(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function retirerVacancierById(personId, giteId, sejourId){
+  if(!confirm('Retirer ce vacancier du gîte ?')) return;
+  const jwt=await getJWT();
+  let url=SUPABASE_URL+'/rest/v1/vacancier_gites?personne_id=eq.'+personId;
+  if(sejourId) url+='&sejour_id=eq.'+sejourId;
+  await fetch(url,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  // Mettre à jour localement
+  allVacancierGites=allVacancierGites.filter(vg=>!(vg.personne_id===personId&&(!sejourId||vg.sejour_id===sejourId)));
+  delete giteAssignments[allPersonnes.find(p=>p.id===personId)?.nom||personId];
+  renderGites();
+  renderUnassigned();
 }
 
 async function retirerVacancier(pKey){

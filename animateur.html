@@ -95,7 +95,27 @@ body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--tex
   </div>
 </div>
 
-<div class="main" id="main" style="display:none">
+<div class="main" id="main-liste" style="display:none">
+  <div style="background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <input class="field-input" id="search-anim" type="text" placeholder="🔍 Rechercher un animateur…" oninput="filtrerListe()" style="flex:1;min-width:200px">
+    <button class="btn btn-primary" onclick="ouvrirCreation()">➕ Nouvel animateur</button>
+  </div>
+  <!-- Formulaire création -->
+  <div id="form-creation" style="display:none;background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);border:1.5px solid var(--forest-mid)">
+    <div style="font-family:'Fraunces',serif;font-size:15px;color:var(--forest);margin-bottom:14px">Nouvel animateur</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="field-group"><label>Prénom *</label><input class="field-input" id="new-prenom" type="text" placeholder="Prénom"></div>
+      <div class="field-group"><label>Nom *</label><input class="field-input" id="new-nom" type="text" placeholder="NOM"></div>
+      <div class="field-group"><label>Email</label><input class="field-input" id="new-email" type="email" placeholder="email@exemple.com"></div>
+      <div class="field-group"><label>Téléphone</label><input class="field-input" id="new-tel" type="tel" placeholder="06 XX XX XX XX"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="creerAnimateur()">Créer</button>
+      <button class="btn" onclick="document.getElementById('form-creation').style.display='none'">Annuler</button>
+    </div>
+  </div>
+  <div id="animateurs-liste"></div>
+</div>
 
   <!-- PROFIL -->
   <div class="profile-card" id="profile-card">
@@ -205,9 +225,66 @@ async function init(){
   if(!session){window.location.href='index.html';return;}
   const params=new URLSearchParams(window.location.search);
   animateurId=params.get('id');
-  if(!animateurId){window.location.href='suivi.html';return;}
+  if(!animateurId){
+    // Mode liste — afficher tous les animateurs
+    await chargerListe();
+    return;
+  }
   document.getElementById('main').style.display='block';
   await charger();
+}
+
+async function chargerListe(){
+  document.getElementById('main-liste').style.display='block';
+  document.querySelector('.hd-sub').textContent='Liste animateurs';
+  const data=await api('animateurs?select=*&order=nom.asc,prenom.asc');
+  window._allAnimateurs=data||[];
+  filtrerListe();
+}
+
+function filtrerListe(){
+  const q=(document.getElementById('search-anim')?.value||'').toLowerCase();
+  const list=window._allAnimateurs||[];
+  const filtered=q?list.filter(a=>`${a.prenom} ${a.nom} ${a.email}`.toLowerCase().includes(q)):list;
+  const el=document.getElementById('animateurs-liste');
+  if(!filtered.length){
+    el.innerHTML='<div class="empty">Aucun animateur trouvé.</div>';
+    return;
+  }
+  el.innerHTML=filtered.map(a=>{
+    const initials=((a.prenom||'')[0]||'')+((a.nom||'')[0]||'');
+    return `<div style="background:var(--card);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:8px;border:1px solid var(--border-light);display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.15s;box-shadow:var(--shadow)"
+      onclick="window.location.href='animateur.html?id=${a.id}'"
+      onmouseover="this.style.background='var(--mint)'" onmouseout="this.style.background='var(--card)'">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--forest),var(--forest-mid));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0">${initials.toUpperCase()||'?'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px">${a.prenom} ${(a.nom||'').toUpperCase()}</div>
+        <div style="font-size:12px;color:var(--text-mid)">${[a.email,a.telephone].filter(Boolean).join(' · ')||'Aucune coordonnée'}</div>
+      </div>
+      <span style="font-size:12px;color:var(--text-light)">→</span>
+    </div>`;
+  }).join('');
+}
+
+function ouvrirCreation(){
+  document.getElementById('form-creation').style.display='block';
+  document.getElementById('new-prenom').focus();
+}
+
+async function creerAnimateur(){
+  const prenom=document.getElementById('new-prenom').value.trim();
+  const nom=document.getElementById('new-nom').value.trim().toUpperCase();
+  if(!prenom||!nom){alert('Prénom et nom requis.');return;}
+  const jwt=await getJWT();
+  const r=await fetch(SUPABASE_URL+'/rest/v1/animateurs',{
+    method:'POST',
+    headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=representation'},
+    body:JSON.stringify({prenom,nom,email:document.getElementById('new-email').value.trim(),telephone:document.getElementById('new-tel').value.trim(),notes:''})
+  });
+  const data=await r.json();
+  const newAnim=data&&data[0];
+  if(newAnim) window.location.href='animateur.html?id='+newAnim.id;
+  else alert('Erreur lors de la création.');
 }
 
 async function charger(){
