@@ -6,181 +6,292 @@
 <title>Suivi & Gîtes — La Lysardière</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="print.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,600;0,700;0,900;1,600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --forest:#18534F; --forest-mid:#226D68; --gold:#D4AF6A; --gold-deep:#B8943A;
-  --mint:#EEF7F5; --mint-deep:#d0ebe5; --bg:#F5F3EE; --card:#FFFFFF;
-  --text:#1a2e2c; --text-mid:#5C6B6A; --text-light:#8FA5A3;
-  --border:#E5E0D6; --border-light:#EDE8E0;
-  --red:#c0392b; --red-bg:#fdedec; --green:#1a7a4a; --green-bg:#eafaf1;
-  --orange:#d35400; --orange-bg:#fef5ec;
-  --shadow:0 2px 12px rgba(24,83,79,0.10);
-  --radius:14px; --radius-sm:10px;
-  --hulotte:#2e7d32; --hulotte-bg:#e8f5e9; --hulotte-border:#a5d6a7;
-  --sixties:#ad1457; --sixties-bg:#fce4ec; --sixties-border:#f48fb1;
-  --envolee:#e65100; --envolee-bg:#fff8e1; --envolee-border:#ffcc80;
-  --floridorlot:#6a1b9a; --floridorlot-bg:#f3e5f5; --floridorlot-border:#ce93d8;
-  --arces:#1565c0; --arces-bg:#e3f2fd; --arces-border:#90caf9;
+:root{
+  --f:#18534F;--fm:#226D68;--fl:#2d8a7f;
+  --gold:#C9A84C;--gold-l:#F0DFA0;
+  --bg:#F0EDE6;--card:#FFFFFF;--card2:#F8F6F2;
+  --text:#1C2B29;--mid:#5A7270;--light:#9AB0AE;
+  --border:#DDD8CE;--border-l:#EAE6DF;
+  --red:#B83232;--red-bg:#FDF0F0;
+  --green:#1a7a4a;--green-bg:#edfbf2;
+  --orange:#C05C1A;--orange-bg:#FEF3E8;
+  --sh:0 2px 8px rgba(28,43,41,.07);
+  --sh-md:0 8px 32px rgba(28,43,41,.12);
+  --sh-lg:0 20px 60px rgba(28,43,41,.18);
+  --r:16px;--rs:10px;--rx:7px;
+  /* Gîtes */
+  --hu:#2E7D32;--hu-l:#E8F5E9;--hu-m:#A5D6A7;
+  --si:#AD1457;--si-l:#FCE4EC;--si-m:#F48FB1;
+  --en:#E65100;--en-l:#FFF3E0;--en-m:#FFCC80;
+  --fl-c:#6A1B9A;--fl-l:#F3E5F5;--fl-m:#CE93D8;
+  --ar:#1565C0;--ar-l:#E3F2FD;--ar-m:#90CAF9;
 }
-*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-.header { background:linear-gradient(135deg,var(--forest),var(--forest-mid)); height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; position:sticky; top:0; z-index:200; box-shadow:0 2px 16px rgba(24,83,79,0.25); }
-.header-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
-.header-brand img { width:34px; height:34px; border-radius:50%; object-fit:cover; border:2px solid var(--gold); }
-.hd-title { font-family:'Fraunces',serif; font-size:16px; color:var(--gold); line-height:1; }
-.hd-sub { font-size:8px; color:rgba(255,255,255,0.4); letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
-.header-right { display:flex; align-items:center; gap:8px; }
-.hdr-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; border:none; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit; transition:all 0.15s; text-decoration:none; white-space:nowrap; }
-.hdr-btn-ghost { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.85); }
-.hdr-btn-ghost:hover { background:rgba(255,255,255,0.22); color:white; }
-.hdr-btn-gold { background:var(--gold); color:var(--forest); font-weight:700; }
-.hdr-btn-gold:hover { background:var(--gold-deep); }
-.main { max-width:1200px; margin:0 auto; padding:20px 16px 80px; }
-.selector-card { background:var(--card); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow); border:1px solid var(--border-light); }
-.selector-card h2 { font-family:'Fraunces',serif; font-size:15px; color:var(--forest); margin-bottom:12px; }
-.sel-input { flex:1; min-width:200px; padding:8px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:13px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border-color 0.2s; }
-.sel-input:focus { border-color:var(--forest-mid); }
-.sel-info { font-size:12px; color:var(--text-mid); margin-top:6px; }
-.section-title { font-family:'Fraunces',serif; font-size:16px; font-weight:700; color:var(--forest); margin:24px 0 12px; display:flex; align-items:center; gap:8px; }
-.section-title .count { background:var(--mint); border:1px solid var(--mint-deep); border-radius:20px; padding:2px 10px; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:700; color:var(--forest); }
-/* GITE CARDS */
-.gites-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-bottom:32px; }
-.gite-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--border-light); overflow:visible; display:flex; flex-direction:column; }
-.gite-header { padding:13px 18px; display:flex; align-items:center; justify-content:space-between; border-radius:var(--radius) var(--radius) 0 0; }
-.gite-name { font-family:'Fraunces',serif; font-size:17px; font-weight:700; }
-.gite-count { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,0.7); }
-.gite-card.hulotte .gite-header { background:var(--hulotte-bg); border-bottom:2px solid var(--hulotte-border); } .gite-card.hulotte .gite-name { color:var(--hulotte); } .gite-card.hulotte .gite-count { color:var(--hulotte); } .gite-card.hulotte .vac-avatar { background:var(--hulotte); }
-.gite-card.sixties .gite-header { background:var(--sixties-bg); border-bottom:2px solid var(--sixties-border); } .gite-card.sixties .gite-name { color:var(--sixties); } .gite-card.sixties .gite-count { color:var(--sixties); } .gite-card.sixties .vac-avatar { background:var(--sixties); }
-.gite-card.envolee .gite-header { background:var(--envolee-bg); border-bottom:2px solid var(--envolee-border); } .gite-card.envolee .gite-name { color:var(--envolee); } .gite-card.envolee .gite-count { color:var(--envolee); } .gite-card.envolee .vac-avatar { background:var(--envolee); }
-.gite-card.floridorlot .gite-header { background:var(--floridorlot-bg); border-bottom:2px solid var(--floridorlot-border); } .gite-card.floridorlot .gite-name { color:var(--floridorlot); } .gite-card.floridorlot .gite-count { color:var(--floridorlot); } .gite-card.floridorlot .vac-avatar { background:var(--floridorlot); }
-.gite-card.arces .gite-header { background:var(--arces-bg); border-bottom:2px solid var(--arces-border); } .gite-card.arces .gite-name { color:var(--arces); } .gite-card.arces .gite-count { color:var(--arces); } .gite-card.arces .vac-avatar { background:var(--arces); }
-.gite-body { padding:12px 16px; display:flex; flex-direction:column; gap:10px; }
-.info-row { display:flex; align-items:center; gap:8px; }
-.info-label { font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.6px; width:76px; flex-shrink:0; }
-.info-input { flex:1; min-width:0; padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12.5px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border-color 0.2s; overflow:hidden; text-overflow:ellipsis; }
-.info-input:focus { border-color:var(--forest-mid); background:white; }
-.vehicles-wrap { display:flex; flex-wrap:wrap; gap:5px; }
-.vehicle-chip { display:inline-flex; align-items:center; gap:5px; background:var(--mint); border:1px solid var(--mint-deep); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; color:var(--forest); }
-.vehicle-chip button { background:none; border:none; cursor:pointer; color:var(--text-light); font-size:12px; padding:0; }
-.vehicle-chip button:hover { color:var(--red); }
-.vehicle-add { display:flex; gap:6px; margin-top:4px; }
-.vehicle-add select { flex:1; padding:5px 8px; border:1.5px solid var(--border); border-radius:7px; font-size:12px; font-family:inherit; background:var(--bg); color:var(--text); outline:none; }
-.vehicle-add button { padding:5px 12px; background:var(--forest); color:white; border:none; border-radius:7px; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit; }
-.gite-divider { height:1px; background:var(--border-light); }
-.vacanciers-section { padding:10px 16px 14px; }
-.vacanciers-title { font-size:10px; font-weight:700; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:7px; }
-.vac-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border-light); }
-.vac-row:last-child { border-bottom:none; }
-.vac-avatar { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:white; flex-shrink:0; }
-.vac-name { font-size:12.5px; font-weight:600; flex:1; }
-.vac-foyer { font-size:10px; color:var(--text-light); }
-.status-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; white-space:nowrap; }
-.status-complete { background:var(--green-bg); color:var(--green); }
-.status-partial { background:var(--orange-bg); color:var(--orange); }
-.status-empty { background:var(--red-bg); color:var(--red); }
-.vac-doc-btn { background:var(--mint); border:1px solid var(--mint-deep); color:var(--forest); padding:2px 8px; border-radius:6px; font-size:10px; font-weight:600; cursor:pointer; }
-.gite-empty { text-align:center; padding:16px; color:var(--text-light); font-size:12px; }
-/* PALETTE */
-.palette-section { background:var(--card); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; box-shadow:var(--shadow); border:1px solid var(--border-light); display:none; }
-.palette-label { font-size:11px; font-weight:700; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px; }
-.palette-btns { display:flex; gap:8px; flex-wrap:wrap; }
-.gite-btn { padding:7px 16px; border-radius:20px; border:2px solid; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit; transition:all 0.15s; user-select:none; }
-.gite-btn.hulotte { background:var(--hulotte-bg); border-color:var(--hulotte); color:var(--hulotte); }
-.gite-btn.sixties { background:var(--sixties-bg); border-color:var(--sixties); color:var(--sixties); }
-.gite-btn.envolee { background:var(--envolee-bg); border-color:var(--envolee); color:var(--envolee); }
-.gite-btn.floridorlot { background:var(--floridorlot-bg); border-color:var(--floridorlot); color:var(--floridorlot); }
-.gite-btn.arces { background:var(--arces-bg); border-color:var(--arces); color:var(--arces); }
-.gite-btn.none { background:#f5f5f5; border-color:#bbb; color:#666; }
-.active-bar { display:none; padding:7px 14px; border-radius:9px; margin-bottom:12px; font-size:13px; font-weight:600; align-items:center; gap:8px; }
-.active-bar.hulotte { background:var(--hulotte-bg); color:var(--hulotte); border:1.5px solid var(--hulotte); }
-.active-bar.sixties { background:var(--sixties-bg); color:var(--sixties); border:1.5px solid var(--sixties); }
-.active-bar.envolee { background:var(--envolee-bg); color:var(--envolee); border:1.5px solid var(--envolee); }
-.active-bar.floridorlot { background:var(--floridorlot-bg); color:var(--floridorlot); border:1.5px solid var(--floridorlot); }
-.active-bar.arces { background:var(--arces-bg); color:var(--arces); border:1.5px solid var(--arces); }
-.active-bar.none { background:#f5f5f5; color:#666; border:1.5px solid #bbb; }
-/* NON ASSIGNES */
-.unassigned-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
-.person-chip { padding:8px 12px; border-radius:10px; border:2px solid var(--border); background:var(--bg); cursor:pointer; transition:all 0.15s; user-select:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.person-chip:hover { border-color:var(--forest-mid); background:var(--mint); }
-.chip-name { font-size:13px; font-weight:600; color:var(--text); }
-.empty-state { text-align:center; padding:40px 20px; color:var(--text-light); font-size:14px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── HEADER ── */
+.hdr{background:var(--f);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:300;box-shadow:0 1px 0 rgba(255,255,255,.08),0 4px 20px rgba(0,0,0,.2)}
+.hdr-brand{display:flex;align-items:center;gap:11px;text-decoration:none}
+.hdr-brand img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);opacity:.95}
+.hdr-brand-text .title{font-family:'Fraunces',serif;font-size:15px;color:var(--gold);letter-spacing:.3px;line-height:1}
+.hdr-brand-text .sub{font-size:9px;color:rgba(255,255,255,.35);letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.btn-hdr{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;text-decoration:none;transition:all .15s;white-space:nowrap}
+.btn-ghost{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.btn-ghost:hover{background:rgba(255,255,255,.18);color:#fff}
+.btn-gold{background:var(--gold);color:var(--f);font-weight:700}
+.btn-gold:hover{background:#B8943A}
+
+/* ── MAIN ── */
+.main{max-width:1200px;margin:0 auto;padding:28px 20px 100px}
+
+/* ── PAGE TITLE ── */
+.page-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--light);margin-bottom:6px}
+.page-heading{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--text);margin-bottom:24px;line-height:1.1}
+
+/* ── GITE CARDS GRID ── */
+.gites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:40px}
+
+.gite-card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--border-l);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s}
+.gite-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+
+/* Accent bar left */
+.gite-card-inner{display:flex;flex:1}
+.gite-accent{width:5px;flex-shrink:0;border-radius:0}
+.gite-content{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Gite header */
+.gite-hdr{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-l)}
+.gite-hdr-left{display:flex;align-items:center;gap:10px}
+.gite-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.gite-title{font-family:'Fraunces',serif;font-size:19px;font-weight:700;letter-spacing:.2px}
+.gite-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.3px}
+
+/* Gite colors */
+.hu .gite-accent,.hu .gite-dot{background:var(--hu)} .hu .gite-title{color:var(--hu)} .hu .gite-badge{background:var(--hu-l);color:var(--hu)}
+.si .gite-accent,.si .gite-dot{background:var(--si)} .si .gite-title{color:var(--si)} .si .gite-badge{background:var(--si-l);color:var(--si)}
+.en .gite-accent,.en .gite-dot{background:var(--en)} .en .gite-title{color:var(--en)} .en .gite-badge{background:var(--en-l);color:var(--en)}
+.fl .gite-accent,.fl .gite-dot{background:var(--fl-c)} .fl .gite-title{color:var(--fl-c)} .fl .gite-badge{background:var(--fl-l);color:var(--fl-c)}
+.ar .gite-accent,.ar .gite-dot{background:var(--ar)} .ar .gite-title{color:var(--ar)} .ar .gite-badge{background:var(--ar-l);color:var(--ar)}
+.hu .vac-av{background:var(--hu)} .si .vac-av{background:var(--si)} .en .vac-av{background:var(--en)} .fl .vac-av{background:var(--fl-c)} .ar .vac-av{background:var(--ar)}
+
+/* Gite body */
+.gite-body{padding:14px 20px;display:flex;flex-direction:column;gap:10px}
+.field-row{display:flex;align-items:center;gap:8px}
+.field-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--light);width:70px;flex-shrink:0}
+.field-in{flex:1;min-width:0;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s;overflow:hidden;text-overflow:ellipsis}
+.field-in:focus{border-color:var(--fm);background:#fff}
+.field-col{display:flex;flex-direction:column;gap:5px}
+
+/* Vehicles */
+.vehs{display:flex;flex-wrap:wrap;gap:5px}
+.veh-chip{display:inline-flex;align-items:center;gap:4px;background:#f0f5f4;border:1px solid #c8deda;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--f)}
+.veh-chip button{background:none;border:none;cursor:pointer;color:var(--light);font-size:11px;line-height:1;padding:0;display:flex;align-items:center}
+.veh-chip button:hover{color:var(--red)}
+.veh-add{display:flex;gap:6px;margin-top:2px}
+.veh-add select{flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+.veh-add button{padding:5px 12px;background:var(--f);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:background .15s}
+.veh-add button:hover{background:var(--fm)}
+
+/* Animateurs bulles */
+.anim-bubbles{display:flex;flex-wrap:wrap;gap:5px}
+.anim-bubble{display:inline-flex;align-items:center;gap:5px;background:#eef7f5;border:1.5px solid #c8e8e2;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--f);cursor:pointer;transition:all .15s}
+.anim-bubble:hover{background:#c8e8e2}
+.anim-bubble button{background:none;border:none;cursor:pointer;color:var(--light);font-size:11px;padding:0;display:flex;align-items:center}
+.anim-bubble button:hover{color:var(--red)}
+.anim-search-wrap{position:relative;margin-top:4px}
+.anim-search{width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--text);transition:border-color .2s}
+.anim-search:focus{border-color:var(--fm);border-style:solid;background:#fff}
+.anim-drop{display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);background:#fff;border:1.5px solid var(--border);border-radius:9px;box-shadow:var(--sh-md);max-height:180px;overflow-y:auto;z-index:200}
+.anim-drop-item{padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border-l);display:flex;justify-content:space-between;align-items:center}
+.anim-drop-item:last-child{border-bottom:none}
+.anim-drop-item:hover{background:#f0f5f4}
+
+/* Divider */
+.gite-divider{height:1px;background:var(--border-l);margin:0 20px}
+
+/* Vacanciers */
+.vacs-section{padding:12px 20px 16px}
+.vacs-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--light);margin-bottom:8px}
+.vac-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-l)}
+.vac-row:last-child{border-bottom:none}
+.vac-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.vac-name{font-size:13px;font-weight:600;flex:1;min-width:0}
+.vac-foyer{font-size:10px;color:var(--light)}
+.st-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.st-complete{background:var(--green-bg);color:var(--green)}
+.st-partial{background:var(--orange-bg);color:var(--orange)}
+.st-empty{background:var(--red-bg);color:var(--red)}
+.vac-btn{background:#f0f5f4;border:1px solid #c8deda;color:var(--f);padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:2px;transition:background .15s}
+.vac-btn:hover{background:#c8deda}
+.vac-btn-del{background:var(--red-bg);border-color:#f5c6c6;color:var(--red)}
+.vac-btn-del:hover{background:#f5c6c6}
+.gite-empty{text-align:center;padding:18px 16px;color:var(--light);font-size:12px}
+
+/* Manual add */
+.manual-add-wrap{padding:8px 20px 14px;border-top:1px solid var(--border-l)}
+
+/* ── SECTION NON ASSIGNÉS ── */
+.section-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;margin-top:32px}
+.section-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--text)}
+.section-badge{background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;color:var(--mid)}
+
+/* Palette */
+.palette{background:var(--card);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;border:1px solid var(--border-l);box-shadow:var(--sh);display:none}
+.palette-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--light);margin-bottom:10px}
+.palette-btns{display:flex;gap:7px;flex-wrap:wrap}
+.p-btn{padding:7px 16px;border-radius:20px;border:2px solid;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;transition:all .15s;user-select:none}
+.p-btn.hu{background:var(--hu-l);border-color:var(--hu);color:var(--hu)}
+.p-btn.si{background:var(--si-l);border-color:var(--si);color:var(--si)}
+.p-btn.en{background:var(--en-l);border-color:var(--en);color:var(--en)}
+.p-btn.fl{background:var(--fl-l);border-color:var(--fl-c);color:var(--fl-c)}
+.p-btn.ar{background:var(--ar-l);border-color:var(--ar);color:var(--ar)}
+.p-btn.none{background:#f3f4f6;border-color:#bbb;color:#666}
+
+.active-bar{display:none;padding:8px 16px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:600;align-items:center;gap:8px;border:1.5px solid}
+.active-bar.hu{background:var(--hu-l);color:var(--hu);border-color:var(--hu)}
+.active-bar.si{background:var(--si-l);color:var(--si);border-color:var(--si)}
+.active-bar.en{background:var(--en-l);color:var(--en);border-color:var(--en)}
+.active-bar.fl{background:var(--fl-l);color:var(--fl-c);border-color:var(--fl-c)}
+.active-bar.ar{background:var(--ar-l);color:var(--ar);border-color:var(--ar)}
+.active-bar.none{background:#f3f4f6;color:#666;border-color:#bbb}
+
+/* Non assignés grid */
+.unassigned-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px}
+.person-chip{padding:9px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;transition:all .15s;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.person-chip:hover{border-color:var(--fm);background:#eef7f5;transform:translateY(-1px)}
+.chip-name{font-size:13px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Empty */
+.empty-state{text-align:center;padding:40px 20px;color:var(--light);font-size:14px}
+
+/* ── ARCHIVES ── */
+.archives-section{margin-top:48px;border-top:2px solid var(--border);padding-top:28px}
+.archive-sel-card{background:linear-gradient(135deg,var(--f),var(--fm));border-radius:var(--r);padding:20px 24px;margin-bottom:20px;box-shadow:var(--sh-md)}
+.archive-sel-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.archive-sel{width:100%;padding:10px 14px;border:none;border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);background:#fff;outline:none;font-weight:600;cursor:pointer}
+.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.archive-card{background:var(--card);border-radius:var(--rs);border:1px solid var(--border-l);overflow:hidden;box-shadow:var(--sh)}
+.archive-card-hdr{padding:11px 14px;display:flex;justify-content:space-between;align-items:center}
+.archive-card-name{font-family:'Fraunces',serif;font-size:15px;font-weight:700}
+.archive-card-date{font-size:10px;opacity:.6}
+.archive-card-body{padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mid)}
+.archive-vac{font-size:12px;padding:3px 0;color:var(--text)}
+
 /* ── MODALE IMPRESSION ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal-box{background:white;border-radius:var(--radius);padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
-.modal-title{font-family:'Fraunces',serif;font-size:18px;color:var(--forest);margin-bottom:4px}
-.modal-sub{font-size:12px;color:var(--text-mid);margin-bottom:20px;line-height:1.5}
-.modal-section-label{font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin:14px 0 8px}
-.modal-print-btn{width:100%;padding:11px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px;margin-bottom:6px;text-align:left}
-.modal-print-btn:hover{background:var(--mint);border-color:var(--forest-mid);color:var(--forest)}
-.modal-print-btn.gold{background:var(--forest);color:white;border-color:var(--forest)}
-.modal-print-btn.gold:hover{background:var(--forest-mid)}
-.modal-journee-sel{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;color:var(--text);background:var(--bg)}
-.modal-journee-sel:focus{border-color:var(--forest-mid)}
-.modal-sep{height:1px;background:var(--border-light);margin:14px 0}
-.modal-close{width:100%;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--text-mid);margin-top:10px}
-.modal-close:hover{background:var(--bg)}
+.mi-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.mi-overlay.open{display:flex}
+.mi-box{background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:420px;box-shadow:var(--sh-lg)}
+.mi-title{font-family:'Fraunces',serif;font-size:20px;color:var(--text);margin-bottom:4px}
+.mi-sub{font-size:12px;color:var(--light);margin-bottom:22px}
+.mi-btn{width:100%;padding:13px 16px;border-radius:10px;border:none;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:8px;transition:all .15s;text-align:left}
+.mi-btn-green{background:var(--f);color:#fff}
+.mi-btn-green:hover{background:var(--fm)}
+.mi-btn-outline{background:var(--bg);border:1.5px solid var(--border);color:var(--text)}
+.mi-btn-outline:hover{background:#eef7f5;border-color:var(--fm)}
+.mi-sep{height:1px;background:var(--border-l);margin:14px 0 12px}
+.mi-sel{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;color:var(--text);background:var(--bg)}
+.mi-sel:focus{border-color:var(--fm)}
+.mi-close{width:100%;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--mid);margin-top:4px}
+.mi-close:hover{background:var(--bg)}
+.toast{position:fixed;bottom:24px;right:20px;background:var(--f);color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:none;box-shadow:var(--sh-md)}
 </style>
 </head>
 <body>
-<div class="header">
-  <a href="index.html" class="header-brand">
-    <img src="icon-192.png" alt="La Lysardière">
-    <div><div class="hd-title">La Lysardière</div><div class="hd-sub">Suivi & Gîtes</div></div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <a href="index.html" class="hdr-brand">
+    <img src="icon-192.png" alt="">
+    <div class="hdr-brand-text">
+      <div class="title">La Lysardière</div>
+      <div class="sub">Suivi & Gîtes</div>
+    </div>
   </a>
-  <div class="header-right">
-    <button class="hdr-btn hdr-btn-gold" onclick="ouvrirModalImpression()">🖨️ Impression</button>
-    <a href="index.html" class="hdr-btn hdr-btn-ghost">← Accueil</a>
+  <div class="hdr-right">
+    <button class="btn-hdr btn-gold" onclick="ouvrirModalImpression()">🖨️ Imprimer</button>
+    <a href="index.html" class="btn-hdr btn-ghost">← Accueil</a>
   </div>
 </div>
 
 <div class="main" id="main" style="display:none">
-  <div class="section-title">🏡 Gîtes</div>
-  <div class="gites-grid" id="gites-grid"><div class="empty-state">Chargement…</div></div>
 
-  <div class="selector-card">
-    <h2>🗓️ Journée de transport</h2>
+  <div class="page-eyebrow">La Lysardière · Saison 2026</div>
+  <div class="page-heading">Gîtes & Suivi</div>
 
+  <!-- ═══ CARTES GÎTES ═══ -->
+  <div class="gites-grid" id="gites-grid">
+    <div class="empty-state">Chargement…</div>
   </div>
 
-  <div id="assignation-section" style="display:none">    <div class="section-title">👥 Vacanciers non assignés <span class="count" id="unassigned-count">0</span></div>
-    <div class="palette-section" id="palette-section">
-      <div class="palette-label">Gîte actif — activez un gîte puis cliquez sur un vacancier</div>
+  <!-- ═══ SECTION ASSIGNATION ═══ -->
+  <div id="assignation-section" style="display:none">
+    <div class="section-hdr">
+      <div class="section-title">Vacanciers non assignés</div>
+      <span class="section-badge" id="unassigned-count">0</span>
+    </div>
+    <div class="palette" id="palette-section">
+      <div class="palette-lbl">Gîte actif — activez puis cliquez sur un vacancier</div>
       <div class="palette-btns">
-        <button class="gite-btn hulotte" id="gbtn-hulotte" onclick="setActiveGite('hulotte')">Hulotte</button>
-        <button class="gite-btn sixties" id="gbtn-sixties" onclick="setActiveGite('sixties')">Sixties</button>
-        <button class="gite-btn envolee" id="gbtn-envolee" onclick="setActiveGite('envolee')">Envolée</button>
-        <button class="gite-btn floridorlot" id="gbtn-floridorlot" onclick="setActiveGite('floridorlot')">Floridorlot</button>
-        <button class="gite-btn arces" id="gbtn-arces" onclick="setActiveGite('arces')">Arces</button>
-        <button class="gite-btn none" id="gbtn-none" onclick="setActiveGite('none')">✕ Effacer</button>
+        <button class="p-btn hu" id="gbtn-hulotte"     onclick="setActiveGite('hulotte')">Hulotte</button>
+        <button class="p-btn si" id="gbtn-sixties"     onclick="setActiveGite('sixties')">Sixties</button>
+        <button class="p-btn en" id="gbtn-envolee"     onclick="setActiveGite('envolee')">Envolée</button>
+        <button class="p-btn fl" id="gbtn-floridorlot" onclick="setActiveGite('floridorlot')">Floridorlot</button>
+        <button class="p-btn ar" id="gbtn-arces"       onclick="setActiveGite('arces')">Arces</button>
+        <button class="p-btn none" id="gbtn-none"      onclick="setActiveGite('none')">✕ Effacer</button>
       </div>
     </div>
     <div class="active-bar" id="active-bar"></div>
     <div class="unassigned-grid" id="unassigned-grid"></div>
   </div>
 
-  <!-- ═══════ SECTION ARCHIVES ═══════ -->
-  <div style="margin-top:40px;border-top:2px solid var(--border);padding-top:24px">
-    <div class="section-title">📦 Archives <span class="count" id="archives-count">—</span></div>
-
-    <div style="background:linear-gradient(135deg,var(--forest),var(--forest-mid));border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow-md)">
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Consulter les archives d'un séjour</div>
-      <select id="archive-sejour-select" onchange="chargerArchives()"
-        style="width:100%;padding:10px 14px;border:none;border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);background:white;outline:none;font-weight:600;cursor:pointer">
+  <!-- ═══ ARCHIVES ═══ -->
+  <div class="archives-section">
+    <div class="section-hdr">
+      <div class="section-title">Archives</div>
+      <span class="section-badge" id="archives-count">—</span>
+    </div>
+    <div class="archive-sel-card">
+      <div class="archive-sel-lbl">Consulter un séjour archivé</div>
+      <select class="archive-sel" id="archive-sejour-select" onchange="chargerArchives()">
         <option value="">— Sélectionner un séjour —</option>
       </select>
     </div>
-
-    <div id="archives-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    <div class="archive-grid" id="archives-grid"></div>
   </div>
-
 </div>
+
+<!-- ═══ MODALE IMPRESSION ═══ -->
+<div class="mi-overlay" id="modal-impression" onclick="if(event.target===this)fermerModalImpression()">
+  <div class="mi-box">
+    <div class="mi-title">🖨️ Impression</div>
+    <div class="mi-sub">Choisissez ce que vous souhaitez imprimer</div>
+
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesDepSejours()">📋 Feuilles de départ par gîte</button>
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles d'arrivée par gîte</button>
+
+    <div class="mi-sep"></div>
+
+    <select class="mi-sel" id="modal-journee-select">
+      <option value="">— Journée de transport —</option>
+    </select>
+    <button class="mi-btn mi-btn-outline" onclick="imprimerFiches()">🖨️ Fiches annotées conducteurs</button>
+    <button class="mi-btn mi-btn-outline" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
+
+    <button class="mi-close" onclick="fermerModalImpression()">Fermer</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
+
 const SUPABASE_URL='https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 const LOGO_URL='icon-192.png';
-const GITES=[{id:'hulotte',label:'Hulotte',cls:'hulotte'},{id:'sixties',label:'Sixties',cls:'sixties'},{id:'envolee',label:'Envolée',cls:'envolee'},{id:'floridorlot',label:'Floridorlot',cls:'floridorlot'},{id:'arces',label:'Arces',cls:'arces'}];
+const GITES=[{id:'hulotte',label:'Hulotte',cls:'hu'},{id:'sixties',label:'Sixties',cls:'si'},{id:'envolee',label:'Envolée',cls:'en'},{id:'floridorlot',label:'Floridorlot',cls:'fl'},{id:'arces',label:'Arces',cls:'ar'}];
 const GITE_COLORS={hulotte:{label:'Hulotte',letter:'H',color:'#2e7d32',bg:'rgba(76,175,80,0.35)',badge:'#2e7d32',badgeBg:'#e8f5e9'},sixties:{label:'Sixties',letter:'S',color:'#ad1457',bg:'rgba(240,98,146,0.35)',badge:'#ad1457',badgeBg:'#fce4ec'},envolee:{label:'Envolée',letter:'E',color:'#f57f17',bg:'rgba(255,193,7,0.45)',badge:'#e65100',badgeBg:'#fff8e1'},floridorlot:{label:'Floridorlot',letter:'F',color:'#6a1b9a',bg:'rgba(171,71,188,0.22)',badge:'#6a1b9a',badgeBg:'#f3e5f5'},arces:{label:'Arces',letter:'A',color:'#1565c0',bg:'rgba(66,165,245,0.28)',badge:'#1565c0',badgeBg:'#e3f2fd'}};
 const GITE_NAMES={hulotte:'Hulotte',sixties:'Sixties',envolee:'Envolée',floridorlot:'Floridorlot',arces:'Arces'};
 const GITE_ORDER=['hulotte','sixties','envolee','floridorlot','arces'];
@@ -373,16 +484,16 @@ function renderGites(){
     const gVehs=gS.vehicules||[];
     const availVehs=allVehicules.filter(v=>!gVehs.some(gv=>gv.id===v.id));
     const sejourOpts=sejoursActifs.map(s=>`<option value="${s.id}" ${gS.sejour_id===s.id?'selected':''}>${s.nom} (${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)})</option>`).join('');
-    const chips=gVehs.map(v=>`<span class="vehicle-chip">🚐 ${v.label}<button onclick="removeVehicle('${g.id}','${v.id}')">✕</button></span>`).join('');
-    const addVeh=availVehs.length?`<div class="vehicle-add"><select id="veh-${g.id}"><option value="">+ Ajouter…</option>${availVehs.map(v=>`<option value="${v.id}">${v.ico} ${v.label} (${v.cap}p.)</option>`).join('')}</select><button onclick="addVehicle('${g.id}')">+</button></div>`:'';
+    const chips=gVehs.map(v=>`<span class="veh-chip">🚐 ${v.label}<button onclick="removeVehicle('${g.id}','${v.id}')">✕</button></span>`).join('');
+    const addVeh=availVehs.length?`<div class="veh-add"><select id="veh-${g.id}"><option value="">+ Ajouter…</option>${availVehs.map(v=>`<option value="${v.id}">${v.ico} ${v.label} (${v.cap}p.)</option>`).join('')}</select><button onclick="addVehicle('${g.id}')">+</button></div>`:'';
     const vacRows=vacInGite.map(p=>{
       const st=getStatus(p.id);
       const stLabel=st==='complete'?'✅ Complet':st==='partial'?'📝 Partiel':'⚠️ Vide';
       const hasFiche=allFiches.some(f=>f.personne_id===p.id&&f.html_rendu);
-      return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-doc-btn" onclick="retirerVacancierById('${p.id}','${g.id}','${gS.sejour_id||''}')" title="Retirer du gîte" style="color:var(--red);border-color:var(--red-bg);background:var(--red-bg)">✕</button></div>`;
+      return `<div class="vac-row"><div class="vac-av">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="st-badge st-${st}">${stLabel}</span>${hasFiche?`<button class="vac-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-btn" onclick="retirerVacancierById('${p.id}','${g.id}','${gS.sejour_id||''}')" title="Retirer du gîte" class="vac-btn-del">✕</button></div>`;
     }).join('');
-    return `<div class="gite-card ${g.cls}"><div class="gite-header"><div class="gite-name">${g.label}</div><span class="gite-count">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="info-row"><span class="info-label">Séjour</span><select class="info-input" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--text-light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div style="margin-top:4px"><span class="info-label" style="display:block;margin-bottom:5px">Animateurs</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${getAnimateurBubbles(g.id,gS.sejour_id)}</div><div style="position:relative"><input type="text" placeholder="+ Ajouter un animateur…" style="width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)" id="anim-search-${g.id}" oninput="filterAnimSearch('${g.id}',this.value)" onfocus="filterAnimSearch('${g.id}',this.value)" onblur="setTimeout(()=>hideAnimDrop('${g.id}'),150)" autocomplete="off"><div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div></div></div><div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="info-label">Véhicules</span><div class="vehicles-wrap">${chips||'<span style="font-size:12px;color:var(--text-light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacanciers-section"><div class="vacanciers-title">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
-      <div style="padding:8px 16px 12px;border-top:1px solid var(--border-light)">
+    return `<div class="gite-card"><div class="gite-card-inner"><div class="gite-accent ${g.cls}"></div><div class="gite-content"><div class="gite-hdr"><div class="gite-hdr-left"><div class="gite-dot ${g.cls}"></div><div class="gite-title ${g.cls}">${g.label}</div></div><span class="gite-badge ${g.cls}">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="field-row"><span class="field-lbl">Séjour</span><select class="field-in" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div style="margin-top:4px"><span class="field-lbl" style="display:block;margin-bottom:5px">Animateurs</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${getAnimateurBubbles(g.id,gS.sejour_id)}</div><div style="position:relative"><input type="text" placeholder="+ Ajouter un animateur…" style="width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)" id="anim-search-${g.id}" oninput="filterAnimSearch('${g.id}',this.value)" onfocus="filterAnimSearch('${g.id}',this.value)" onblur="setTimeout(()=>hideAnimDrop('${g.id}'),150)" autocomplete="off"><div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div></div></div><div class="field-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="field-lbl">Véhicules</span><div class="vehs">${chips||'<span style="font-size:12px;color:var(--light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacs-section"><div class="vacs-label">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
+      <div class="manual-add-wrap">
         <div style="position:relative">
           <input type="text" placeholder="➕ Ajouter un vacancier manuellement…"
             style="width:100%;padding:6px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--text)"
@@ -394,7 +505,7 @@ function renderGites(){
           <div id="manual-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:200px;overflow-y:auto;z-index:1000"></div>
         </div>
       </div>
-    </div>`;
+    </div></div></div>`;
   }).join('');
 }
 
@@ -406,7 +517,7 @@ function renderUnassigned(){
   document.getElementById('unassigned-count').textContent=unassigned.length;
   const grid=document.getElementById('unassigned-grid');
   if(!unassigned.length){grid.innerHTML='<div style="color:var(--green);font-size:13px;font-weight:600;padding:8px">✅ Tous les vacanciers sont assignés</div>';return;}
-  grid.innerHTML=unassigned.map(p=>`<div class="person-chip" onclick="assignGite('${personKey(p).replace(/'/g,"\\'")}')"><span class="chip-name">${p.prenom} ${(p.nom||'').toUpperCase()}</span><span style="font-size:10px;color:var(--text-light)">—</span></div>`).join('');
+  grid.innerHTML=unassigned.map(p=>`<div class="person-chip" onclick="assignGite('${personKey(p).replace(/'/g,"\\'")}')"><span class="chip-name">${p.prenom} ${(p.nom||'').toUpperCase()}</span><span style="font-size:10px;color:var(--light)">—</span></div>`).join('');
 }
 
 function setActiveGite(g){
@@ -494,13 +605,13 @@ function filterManualSearch(giteId, query){
       !q || `${p.prenom} ${p.nom} ${p.foyer}`.toLowerCase().includes(q)
     );
   }).slice(0, 10);
-  if(!candidates.length){ drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--text-light)">Aucun résultat</div>'; drop.style.display='block'; return; }
+  if(!candidates.length){ drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--light)">Aucun résultat</div>'; drop.style.display='block'; return; }
   drop.innerHTML = candidates.map(p=>`
     <div onmousedown="assignManuel('${giteId}','${p.id}','${personKey(p).replace(/'/g,"\\'")}')"
       style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
       onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
       <strong>${p.prenom} ${(p.nom||'').toUpperCase()}</strong>
-      <span style="font-size:11px;color:var(--text-light)">${p.foyer||''}</span>
+      <span style="font-size:11px;color:var(--light)">${p.foyer||''}</span>
     </div>`).join('');
   drop.style.display='block';
 }
@@ -1172,9 +1283,9 @@ async function chargerArchives(){
   const grid = document.getElementById('archives-grid');
   const count = document.getElementById('archives-count');
   if(!sejourId){ grid.innerHTML=''; count.textContent='—'; return; }
-  grid.innerHTML='<div style="color:var(--text-light);font-size:13px;padding:16px">Chargement…</div>';
+  grid.innerHTML='<div style="color:var(--light);font-size:13px;padding:16px">Chargement…</div>';
   const rows = await supa('suivi_archives?sejour_id=eq.'+sejourId+'&select=*&order=gite_id.asc');
-  if(!rows||!rows.length){ grid.innerHTML='<div style="color:var(--text-light);font-size:13px;padding:16px">Aucune archive pour ce séjour.</div>'; count.textContent='0'; return; }
+  if(!rows||!rows.length){ grid.innerHTML='<div style="color:var(--light);font-size:13px;padding:16px">Aucune archive pour ce séjour.</div>'; count.textContent='0'; return; }
   count.textContent=rows.length+' gîte'+(rows.length>1?'s':'');
   const gc={hulotte:{c:'#2e7d32',bg:'#e8f5e9',b:'#a5d6a7'},sixties:{c:'#ad1457',bg:'#fce4ec',b:'#f48fb1'},envolee:{c:'#e65100',bg:'#fff8e1',b:'#ffcc80'},floridorlot:{c:'#6a1b9a',bg:'#f3e5f5',b:'#ce93d8'},arces:{c:'#1565c0',bg:'#e3f2fd',b:'#90caf9'}};
   const GITE_LABELS={hulotte:'Hulotte',sixties:'Sixties',envolee:'Envolée',floridorlot:'Floridorlot',arces:'Arces'};
@@ -1183,7 +1294,7 @@ async function chargerArchives(){
     const vacs=(r.vacanciers||[]);
     const vehs=(r.vehicules||[]);
     const archDate=new Date(r.archived_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div style="background:white;border-radius:12px;border:1px solid var(--border-light);overflow:hidden;box-shadow:0 2px 8px rgba(24,83,79,0.07)">
+    return `<div style="background:white;border-radius:12px;border:1px solid var(--border-l);overflow:hidden;box-shadow:0 2px 8px rgba(24,83,79,0.07)">
       <div style="background:${g.bg};border-bottom:2px solid ${g.b};padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
         <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:${g.c}">${GITE_LABELS[r.gite_id]||r.gite_id}</span>
         <span style="font-size:10px;color:${g.c};opacity:0.7">${archDate}</span>
@@ -1193,12 +1304,12 @@ async function chargerArchives(){
         <div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Dates : </span>${r.date_debut?fmtDate(r.date_debut)+' → '+fmtDate(r.date_fin):'—'}</div>
         ${r.animateurs?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Animateurs : </span>${r.animateurs}</div>`:''}
         ${vehs.length?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Véhicules : </span>${vehs.map(v=>v.label).join(', ')}</div>`:''}
-        <div style="border-top:1px solid var(--border-light);padding-top:8px">
+        <div style="border-top:1px solid var(--border-l);padding-top:8px">
           <div style="font-size:10px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">Vacanciers (${vacs.length})</div>
-          ${vacs.map(v=>`<div style="font-size:12px;padding:3px 0;color:var(--text)">${v.prenom} ${(v.nom||'').toUpperCase()}${v.foyer?` <span style="color:var(--text-light);font-size:10px">(${v.foyer})</span>`:''}</div>`).join('')||'<div style="font-size:12px;color:var(--text-light)">Aucun vacancier enregistré</div>'}
+          ${vacs.map(v=>`<div style="font-size:12px;padding:3px 0;color:var(--text)">${v.prenom} ${(v.nom||'').toUpperCase()}${v.foyer?` <span style="color:var(--light);font-size:10px">(${v.foyer})</span>`:''}</div>`).join('')||'<div style="font-size:12px;color:var(--light)">Aucun vacancier enregistré</div>'}
         </div>
       </div>
-    </div>`;
+    </div></div></div>`;
   }).join('');
 }
 
@@ -1234,19 +1345,19 @@ async function retirerVacancier(pKey){
 
 // ── ANIMATEURS — BULLES ──────────────────────────────────────────
 function getAnimateurBubbles(giteId, sejourId){
-  if(!sejourId) return '<span style="font-size:11px;color:var(--text-light)">Choisissez un séjour d\'abord</span>';
+  if(!sejourId) return '<span style="font-size:11px;color:var(--light)">Choisissez un séjour d\'abord</span>';
   const animsForGite = giteAnimateurs.filter(ga=>ga.gite_id===giteId&&ga.sejour_id===sejourId);
-  if(!animsForGite.length) return '<span style="font-size:11px;color:var(--text-light)">Aucun animateur</span>';
+  if(!animsForGite.length) return '<span style="font-size:11px;color:var(--light)">Aucun animateur</span>';
   return animsForGite.map(ga=>{
     const anim = allAnimateurs.find(a=>a.id===ga.animateur_id);
     if(!anim) return '';
     const nom = (anim.prenom||'')+' '+(anim.nom||'').toUpperCase();
     return `<span onclick="window.location.href='animateur.html?id=${anim.id}'"
-      style="display:inline-flex;align-items:center;gap:5px;background:var(--mint);border:1.5px solid var(--mint-deep);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--forest);cursor:pointer;transition:all 0.15s"
-      onmouseover="this.style.background='var(--mint-deep)'" onmouseout="this.style.background='var(--mint)'">
+      style="display:inline-flex;align-items:center;gap:5px;background:#eef7f5;border:1.5px solid var(--border-l);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--f);cursor:pointer;transition:all 0.15s"
+      onmouseover="this.style.background='var(--border-l)'" onmouseout="this.style.background='#eef7f5'">
       👤 ${nom}
       <button onmousedown="event.stopPropagation();removeAnimateur('${ga.id}','${giteId}','${sejourId}')"
-        style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0;line-height:1;display:flex;align-items:center">✕</button>
+        style="background:none;border:none;cursor:pointer;color:var(--light);font-size:12px;padding:0;line-height:1;display:flex;align-items:center">✕</button>
     </span>`;
   }).join('');
 }
@@ -1266,7 +1377,7 @@ function filterAnimSearch(giteId, query){
 
   // Ajouter option "Créer nouveau"
   const createOpt = q ? `<div onmousedown="creerEtAssignerAnimateur('${giteId}','${sejourId}','${q.replace(/'/g, "\\'")}')"
-    style="padding:8px 14px;cursor:pointer;font-size:12px;color:var(--forest);font-weight:700;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:6px"
+    style="padding:8px 14px;cursor:pointer;font-size:12px;color:var(--f);font-weight:700;border-top:1px solid var(--border-l);display:flex;align-items:center;gap:6px"
     onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
     ➕ Créer "${query}"
   </div>` : '';
@@ -1278,7 +1389,7 @@ function filterAnimSearch(giteId, query){
       style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
       onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
       <strong>${a.prenom} ${(a.nom||'').toUpperCase()}</strong>
-      <span style="font-size:10px;color:var(--text-light)">${a.email||''}</span>
+      <span style="font-size:10px;color:var(--light)">${a.email||''}</span>
     </div>`).join('')+createOpt;
   drop.style.display='block';
 }
@@ -1335,30 +1446,7 @@ async function removeAnimateur(gaId, giteId, sejourId){
 }
 
 init();
+
 </script>
-<!-- ═══ MODALE IMPRESSION ═══ -->
-<div class="modal-overlay" id="modal-impression" onclick="if(event.target===this)fermerModalImpression()">
-  <div class="modal-box">
-    <div class="modal-title">🖨️ Impression</div>
-    <div class="modal-sub">Feuilles depuis les séjours assignés · Fiches annotées depuis les convois</div>
-
-    <div class="modal-section-label">📋 Depuis les séjours (sans journée requise)</div>
-    <button class="modal-print-btn gold" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ par gîte</button>
-    <button class="modal-print-btn gold" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée par gîte</button>
-
-    <div class="modal-sep"></div>
-
-    <div class="modal-section-label">🚐 Depuis les convois (journée requise)</div>
-    <select class="modal-journee-sel" id="modal-journee-select">
-      <option value="">— Sélectionner une journée —</option>
-    </select>
-    <button class="modal-print-btn" onclick="imprimerFiches()">🖨️ Fiches annotées conducteurs</button>
-    <button class="modal-print-btn" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
-
-    <button class="modal-close" onclick="fermerModalImpression()">Fermer</button>
-  </div>
-</div>
-
-
 </body>
 </html>
