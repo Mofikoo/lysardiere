@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Animateur — La Lysardière</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --forest:#18534F;--forest-mid:#226D68;--gold:#D4AF6A;
+  --mint:#EEF7F5;--mint-deep:#d0ebe5;--bg:#F5F3EE;--card:#FFFFFF;
+  --text:#1a2e2c;--text-mid:#5C6B6A;--text-light:#8FA5A3;
+  --border:#E5E0D6;--border-light:#EDE8E0;
+  --red:#c0392b;--red-bg:#fdedec;--green:#1a7a4a;--green-bg:#eafaf1;
+  --orange:#d35400;--orange-bg:#fef5ec;--blue:#0369a1;--blue-bg:#e0f2fe;
+  --shadow:0 2px 12px rgba(24,83,79,0.10);--shadow-md:0 6px 24px rgba(24,83,79,0.14);
+  --radius:14px;--radius-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:linear-gradient(135deg,var(--forest),var(--forest-mid));height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(24,83,79,0.25)}
+.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.header-brand img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.hd-title{font-family:'Fraunces',serif;font-size:16px;color:var(--gold);line-height:1}
+.hd-sub{font-size:8px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.hdr-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all 0.15s;text-decoration:none;white-space:nowrap}
+.hdr-btn-ghost{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85)}
+.hdr-btn-ghost:hover{background:rgba(255,255,255,0.22);color:white}
+.hdr-btn-gold{background:var(--gold);color:var(--forest);font-weight:700}
+.main{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+/* PROFILE CARD */
+.profile-card{background:var(--card);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.avatar-big{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--forest),var(--forest-mid));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;flex-shrink:0}
+.profile-info{flex:1;min-width:200px}
+.profile-name{font-family:'Fraunces',serif;font-size:22px;color:var(--forest);margin-bottom:4px}
+.profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.field-group label{font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.7px;display:block;margin-bottom:4px}
+.field-input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border-color 0.2s}
+.field-input:focus{border-color:var(--forest-mid);background:white}
+.mail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light)}
+.mail-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--text);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;transition:all 0.15s}
+.mail-btn:hover{background:var(--mint);border-color:var(--forest-mid);color:var(--forest)}
+/* SECTION */
+.section-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--forest);margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+.section-title .count{background:var(--mint);border:1px solid var(--mint-deep);border-radius:20px;padding:2px 10px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:700;color:var(--forest)}
+/* DOCS */
+.doc-list{background:var(--card);border-radius:var(--radius);border:1px solid var(--border-light);box-shadow:var(--shadow);overflow:hidden}
+.doc-type-section{border-bottom:1px solid var(--border-light)}
+.doc-type-section:last-child{border-bottom:none}
+.doc-type-header{padding:12px 16px;background:var(--mint);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.doc-type-label{font-size:12px;font-weight:700;color:var(--forest);text-transform:uppercase;letter-spacing:0.7px}
+.doc-rows{padding:8px 16px 12px}
+.doc-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light)}
+.doc-row:last-child{border-bottom:none}
+.doc-filename{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-date{font-size:11px;color:var(--text-light);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:white;color:var(--text);font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--mint);border-color:var(--forest-mid)}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:var(--red-bg)}
+.btn-danger:hover{background:#fbd5d0}
+.btn-primary{background:var(--forest);color:white;border-color:var(--forest)}
+.btn-primary:hover{background:var(--forest-mid)}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-top:8px;background:var(--bg)}
+.upload-zone:hover{border-color:var(--forest-mid);background:var(--mint)}
+.upload-zone input{display:none}
+.upload-zone p{font-size:13px;color:var(--text-mid);margin-top:6px}
+/* VIERGES */
+.vierge-card{background:var(--card);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.vierge-icon{font-size:24px;flex-shrink:0}
+.vierge-label{font-size:13px;font-weight:600;flex:1}
+/* TYPE PILLS */
+.type-pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px}
+.type-cv{background:#e0f2fe;color:#0369a1}
+.type-cni{background:#f0fdf4;color:#166534}
+.type-casier{background:#fef9c3;color:#854d0e}
+.type-rib{background:#fdf2f8;color:#9d174d}
+.type-contrat{background:#fef3c7;color:#92400e}
+.type-divers{background:#f3f4f6;color:#374151}
+.empty{text-align:center;padding:30px;color:var(--text-light);font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:white;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:none;box-shadow:var(--shadow-md)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="suivi.html" class="header-brand">
+    <img src="icon-192.png" alt="La Lysardière">
+    <div><div class="hd-title">La Lysardière</div><div class="hd-sub">Fiche animateur</div></div>
+  </a>
+  <div class="header-right">
+    <button class="hdr-btn hdr-btn-gold" onclick="sauvegarder()">💾 Enregistrer</button>
+    <a href="suivi.html" class="hdr-btn hdr-btn-ghost">← Suivi & Gîtes</a>
+  </div>
+</div>
+
+<div class="main" id="main" style="display:none">
+
+  <!-- PROFIL -->
+  <div class="profile-card" id="profile-card">
+    <div class="avatar-big" id="avatar">?</div>
+    <div class="profile-info">
+      <div class="profile-name" id="profile-name">Chargement…</div>
+      <div class="profile-fields">
+        <div class="field-group">
+          <label>Prénom</label>
+          <input class="field-input" id="f-prenom" type="text" placeholder="Prénom">
+        </div>
+        <div class="field-group">
+          <label>Nom</label>
+          <input class="field-input" id="f-nom" type="text" placeholder="NOM">
+        </div>
+        <div class="field-group">
+          <label>Email</label>
+          <input class="field-input" id="f-email" type="email" placeholder="email@exemple.com">
+        </div>
+        <div class="field-group">
+          <label>Téléphone</label>
+          <input class="field-input" id="f-tel" type="tel" placeholder="06 XX XX XX XX">
+        </div>
+        <div class="field-group" style="grid-column:1/-1">
+          <label>Notes</label>
+          <input class="field-input" id="f-notes" type="text" placeholder="Observations, remarques…">
+        </div>
+      </div>
+      <div class="mail-actions" id="mail-actions" style="display:none">
+        <a id="btn-mail-rib" class="mail-btn" href="#">📧 Demande RIB</a>
+        <a id="btn-mail-contrat" class="mail-btn" href="#">📄 Envoyer contrat</a>
+        <a id="btn-mail-docs" class="mail-btn" href="#">📋 Demande documents</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS REÇUS -->
+  <div class="section-title">📁 Documents reçus <span class="count" id="docs-count">0</span></div>
+  <div class="doc-list" id="docs-section"></div>
+
+  <!-- UPLOAD -->
+  <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-top:12px;box-shadow:var(--shadow);border:1px solid var(--border-light)">
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">Ajouter un document</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <select id="upload-type" class="field-input" style="max-width:200px">
+        <option value="cv">📄 CV</option>
+        <option value="cni">🪪 Carte d'identité</option>
+        <option value="casier">⚖️ Casier judiciaire</option>
+        <option value="rib">💳 RIB</option>
+        <option value="contrat">📝 Contrat signé</option>
+        <option value="divers">📎 Divers</option>
+      </select>
+      <label style="cursor:pointer">
+        <input type="file" id="upload-file" style="display:none" onchange="uploadDoc()">
+        <span class="btn btn-primary">📤 Choisir un fichier</span>
+      </label>
+      <span id="upload-status" style="font-size:12px;color:var(--text-mid)"></span>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS VIERGES -->
+  <div class="section-title">📋 Documents vierges <span class="count" id="vierges-count">0</span></div>
+  <div id="vierges-section">
+    <div class="empty">Aucun document vierge enregistré.</div>
+  </div>
+  <!-- Upload document vierge (admin) -->
+  <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-top:12px;box-shadow:var(--shadow);border:1px solid var(--border-light)">
+    <div style="font-size:12px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">Ajouter un document vierge</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input class="field-input" id="vierge-label" type="text" placeholder="Nom du document (ex: Contrat CEE)" style="max-width:280px">
+      <label style="cursor:pointer">
+        <input type="file" id="vierge-file" style="display:none" onchange="uploadVierge()">
+        <span class="btn btn-primary">📤 Ajouter</span>
+      </label>
+      <span id="vierge-status" style="font-size:12px;color:var(--text-mid)"></span>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://lkqzifqeniblltniabai.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
+
+const _supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{auth:{persistSession:true,storageKey:'lys_session',storage:localStorage,autoRefreshToken:true}});
+let animateurId=null, animateur=null, allDocs=[], allVierges=[];
+
+const TYPE_LABELS={cv:'CV',cni:'Carte d\'identité',casier:'Casier judiciaire',rib:'RIB',contrat:'Contrat signé',divers:'Divers'};
+const TYPE_ORDER=['cv','cni','casier','rib','contrat','divers'];
+
+async function getJWT(){try{const{data:{session}}=await _supa.auth.getSession();if(session?.access_token)return session.access_token;}catch(e){}return SUPABASE_ANON;}
+async function api(path,method,body){
+  const jwt=await getJWT();
+  const h={apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'};
+  if(method&&method!=='GET')h.Prefer='return=representation';
+  const opts={method:method||'GET',headers:h};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
+  if(!method||method==='GET'){const t=await r.text();return t?JSON.parse(t):[];}
+  return r.ok;
+}
+
+async function init(){
+  const{data:{session}}=await _supa.auth.getSession();
+  if(!session){window.location.href='index.html';return;}
+  const params=new URLSearchParams(window.location.search);
+  animateurId=params.get('id');
+  if(!animateurId){window.location.href='suivi.html';return;}
+  document.getElementById('main').style.display='block';
+  await charger();
+}
+
+async function charger(){
+  const[anim,docs,vierges]=await Promise.all([
+    api('animateurs?id=eq.'+animateurId+'&select=*'),
+    api('animateur_documents?animateur_id=eq.'+animateurId+'&select=*&order=uploaded_at.desc'),
+    api('documents_vierges?select=*&order=uploaded_at.asc'),
+  ]);
+  animateur=(anim||[])[0]||null;
+  allDocs=docs||[];
+  allVierges=vierges||[];
+  if(!animateur){toast('Animateur introuvable','error');return;}
+  renderProfil();
+  renderDocs();
+  renderVierges();
+}
+
+function renderProfil(){
+  const p=animateur;
+  const initials=((p.prenom||'')[0]||'')+((p.nom||'')[0]||'');
+  document.getElementById('avatar').textContent=initials.toUpperCase()||'?';
+  document.getElementById('profile-name').textContent=(p.prenom||'')+' '+(p.nom||'').toUpperCase();
+  document.getElementById('f-prenom').value=p.prenom||'';
+  document.getElementById('f-nom').value=p.nom||'';
+  document.getElementById('f-email').value=p.email||'';
+  document.getElementById('f-tel').value=p.telephone||'';
+  document.getElementById('f-notes').value=p.notes||'';
+  document.title=(p.prenom||'')+' '+(p.nom||'')+' — La Lysardière';
+  // Boutons mail
+  if(p.email){
+    document.getElementById('mail-actions').style.display='flex';
+    const nom=encodeURIComponent((p.prenom||'')+' '+(p.nom||''));
+    document.getElementById('btn-mail-rib').href=`mailto:${p.email}?subject=Demande%20RIB%20%E2%80%94%20La%20Lysardi%C3%A8re&body=Bonjour%20${nom}%2C%0A%0ANous%20vous%20demandons%20de%20bien%20vouloir%20nous%20transmettre%20votre%20RIB%20afin%20de%20proc%C3%A9der%20%C3%A0%20votre%20paiement.%0A%0ACordialement%2C%0AL%27%C3%A9quipe%20La%20Lysardi%C3%A8re`;
+    document.getElementById('btn-mail-contrat').href=`mailto:${p.email}?subject=Contrat%20%E2%80%94%20La%20Lysardi%C3%A8re&body=Bonjour%20${nom}%2C%0A%0AVeuillez%20trouver%20ci-joint%20votre%20contrat%20pour%20la%20prochaine%20session.%0A%0ACordialement%2C%0AL%27%C3%A9quipe%20La%20Lysardi%C3%A8re`;
+    document.getElementById('btn-mail-docs').href=`mailto:${p.email}?subject=Documents%20requis%20%E2%80%94%20La%20Lysardi%C3%A8re&body=Bonjour%20${nom}%2C%0A%0ANous%20avons%20besoin%20des%20documents%20suivants%20%3A%20CV%2C%20carte%20d%27identit%C3%A9%2C%20casier%20judiciaire%20vierge%2C%20RIB.%0A%0ACordialement%2C%0AL%27%C3%A9quipe%20La%20Lysardi%C3%A8re`;
+  }
+}
+
+function renderDocs(){
+  document.getElementById('docs-count').textContent=allDocs.length;
+  const section=document.getElementById('docs-section');
+  if(!allDocs.length){section.innerHTML='<div class="empty">Aucun document reçu.</div>';return;}
+  const byType={};
+  TYPE_ORDER.forEach(t=>{byType[t]=allDocs.filter(d=>d.type===t);});
+  section.innerHTML=TYPE_ORDER.filter(t=>byType[t].length).map(t=>{
+    const rows=byType[t].map(doc=>`
+      <div class="doc-row">
+        <span class="type-pill type-${doc.type}">${TYPE_LABELS[doc.type]||doc.type}</span>
+        <span class="doc-filename">${doc.filename}</span>
+        <span class="doc-date">${fmtDate(doc.uploaded_at)}</span>
+        <button class="btn" onclick="openDoc('${doc.storage_path}','${esc(doc.filename)}')">👁 Voir</button>
+        <button class="btn btn-danger" onclick="deleteDoc('${doc.id}','${doc.storage_path}')">🗑</button>
+      </div>`).join('');
+    return `<div class="doc-type-section">
+      <div class="doc-type-header"><span class="doc-type-label">${TYPE_LABELS[t]||t} (${byType[t].length})</span></div>
+      <div class="doc-rows">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderVierges(){
+  const section=document.getElementById('vierges-section');
+  document.getElementById('vierges-count').textContent=allVierges.length;
+  if(!allVierges.length){section.innerHTML='<div class="empty">Aucun document vierge enregistré.</div>';return;}
+  section.innerHTML=allVierges.map(v=>`
+    <div class="vierge-card">
+      <span class="vierge-icon">📄</span>
+      <span class="vierge-label">${v.label}</span>
+      <button class="btn" onclick="openDoc('${v.storage_path}','${esc(v.label)}')">⬇️ Télécharger</button>
+      <button class="btn btn-danger" onclick="deleteVierge('${v.id}','${v.storage_path}')">🗑</button>
+    </div>`).join('');
+}
+
+// ── SAVE ─────────────────────────────────────────────────────────
+async function sauvegarder(){
+  const jwt=await getJWT();
+  const data={
+    prenom:document.getElementById('f-prenom').value.trim(),
+    nom:document.getElementById('f-nom').value.trim().toUpperCase(),
+    email:document.getElementById('f-email').value.trim(),
+    telephone:document.getElementById('f-tel').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    updated_at:new Date().toISOString()
+  };
+  const r=await fetch(SUPABASE_URL+'/rest/v1/animateurs?id=eq.'+animateurId,{
+    method:'PATCH',
+    headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify(data)
+  });
+  if(r.ok){animateur={...animateur,...data};renderProfil();toast('✅ Enregistré');}
+  else toast('Erreur lors de la sauvegarde','error');
+}
+
+// ── UPLOAD DOC ───────────────────────────────────────────────────
+async function uploadDoc(){
+  const file=document.getElementById('upload-file').files[0];
+  if(!file) return;
+  const type=document.getElementById('upload-type').value;
+  const status=document.getElementById('upload-status');
+  status.textContent='Envoi en cours…';
+  const jwt=await getJWT();
+  const path=`animateurs/${animateurId}/${Date.now()}_${file.name}`;
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{
+    method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':file.type},
+    body:file
+  });
+  if(!r.ok){status.textContent='❌ Erreur upload';return;}
+  await api('animateur_documents','POST',{animateur_id:animateurId,type,filename:file.name,storage_path:path});
+  status.textContent='✅ Ajouté';
+  document.getElementById('upload-file').value='';
+  setTimeout(()=>{status.textContent='';},2000);
+  await charger();
+}
+
+// ── UPLOAD VIERGE ────────────────────────────────────────────────
+async function uploadVierge(){
+  const file=document.getElementById('vierge-file').files[0];
+  const label=document.getElementById('vierge-label').value.trim();
+  if(!file||!label){alert('Nom et fichier requis.');return;}
+  const status=document.getElementById('vierge-status');
+  status.textContent='Envoi en cours…';
+  const jwt=await getJWT();
+  const path=`vierges/${Date.now()}_${file.name}`;
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{
+    method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':file.type},
+    body:file
+  });
+  if(!r.ok){status.textContent='❌ Erreur upload';return;}
+  await api('documents_vierges','POST',{label,storage_path:path});
+  status.textContent='✅ Ajouté';
+  document.getElementById('vierge-file').value='';
+  document.getElementById('vierge-label').value='';
+  setTimeout(()=>{status.textContent='';},2000);
+  await charger();
+}
+
+// ── OPEN / DELETE ─────────────────────────────────────────────────
+async function openDoc(path, filename){
+  const jwt=await getJWT();
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${path}`,{
+    method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'},
+    body:JSON.stringify({expiresIn:3600})
+  });
+  if(!r.ok){alert('Impossible d\'ouvrir le document.');return;}
+  const{signedURL}=await r.json();
+  window.open(signedURL,'_blank');
+}
+
+async function deleteDoc(id, path){
+  if(!confirm('Supprimer ce document ?')) return;
+  const jwt=await getJWT();
+  await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  await fetch(SUPABASE_URL+'/rest/v1/animateur_documents?id=eq.'+id,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  await charger();
+}
+
+async function deleteVierge(id, path){
+  if(!confirm('Supprimer ce document vierge ?')) return;
+  const jwt=await getJWT();
+  await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  await fetch(SUPABASE_URL+'/rest/v1/documents_vierges?id=eq.'+id,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  await charger();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function fmtDate(d){if(!d)return'';try{return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})}catch(e){return d}}
+function esc(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.background=type==='error'?'#c0392b':'var(--forest)';setTimeout(()=>{el.style.display='none';},3000);}
+
+init();
+</script>
+</body>
+</html>
