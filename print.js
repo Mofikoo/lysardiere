@@ -899,7 +899,28 @@ function openPrintWindow(html, options) {
   options = options || {};
   const title = options.title || 'La Lysardière — Impression';
 
-  // Remove existing print iframe/bar if any
+  // Remove existing overlay if any
+  const old = document.getElementById('lys-print-overlay');
+  if(old) old.remove();
+
+  const fullHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    ${LYS_PRINT_CSS}
+    @page { size: A4 portrait; margin: 0; }
+    html, body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { padding: 18mm 16mm; font-family: Arial, Helvetica, sans-serif; }
+    @media print { body { padding: 18mm 16mm !important; } }
+    .lp-page { margin: 0; padding: 0; }
+    .lp-page + .lp-page { padding-top: 18mm; }
+  </style>
+</head>
+<body>${html}</body>
+</html>`;
+
   // Create full-screen overlay with iframe
   const overlay = document.createElement('div');
   overlay.id = 'lys-print-overlay';
