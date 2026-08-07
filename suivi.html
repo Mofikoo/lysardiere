@@ -153,12 +153,15 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
   <!-- ═══════ SECTION ARCHIVES ═══════ -->
   <div style="margin-top:40px;border-top:2px solid var(--border);padding-top:24px">
     <div class="section-title">📦 Archives <span class="count" id="archives-count">—</span></div>
-    <div style="background:var(--card);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <label style="font-size:11px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px">Séjour</label>
-      <select class="sel-input" id="archive-sejour-select" onchange="chargerArchives()" style="max-width:400px">
-        <option value="">— Choisir un séjour —</option>
+
+    <div style="background:linear-gradient(135deg,var(--forest),var(--forest-mid));border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow-md)">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Consulter les archives d'un séjour</div>
+      <select id="archive-sejour-select" onchange="chargerArchives()"
+        style="width:100%;padding:10px 14px;border:none;border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);background:white;outline:none;font-weight:600;cursor:pointer">
+        <option value="">— Sélectionner un séjour —</option>
       </select>
     </div>
+
     <div id="archives-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
   </div>
 
@@ -185,17 +188,18 @@ async function init(){
   const{data:{session}}=await _supa.auth.getSession();
   if(!session){window.location.href='index.html';return;}
   document.getElementById('main').style.display='block';
-  const[rows,archives,sejours,vehicules,suiviRows,fiches,docs,personnes]=await Promise.all([
+  const[rows,archives,sejours,sejoursArchives,vehicules,suiviRows,fiches,docs,personnes]=await Promise.all([
     supa('semaines?select=*&order=updated_at.desc'),
     supa('archives?select=*&order=updated_at.desc'),
     supa('sejours?archived=eq.false&select=*&order=date_debut.asc'),
+    supa('sejours?archived=eq.true&select=*&order=date_debut.desc'),
     supa('vehicules?select=*'),
     supa('suivi_gites?select=*'),
     supa('fiches_inscription?select=id,personne_id,mode_formulaire,html_rendu'),
     supa('documents?select=id,personne_id,type'),
     supa('personnes?select=id,data'),
   ]);
-  allSejours=sejours||[];
+  allSejours=[...(sejours||[]),...(sejoursArchives||[])];
   allVehicules=(vehicules||[]).map(v=>({id:v.id,label:v.data?.label||v.label||'?',cap:v.data?.cap||v.cap||'?',ico:v.data?.ico||v.ico||'🚐'}));
   allFiches=fiches||[];allDocuments=docs||[];
   allPersonnes=(personnes||[]).map(p=>({id:p.id,prenom:p.data?.prenom||'',nom:p.data?.nom||'',foyer:p.data?.foyer||''}));
@@ -204,9 +208,18 @@ async function init(){
   const all=[...(rows||[]),...(archives||[])];
   all.forEach(row=>{const s=row.data||row;if(!s||!s.convois||!s.convois.length)return;const opt=document.createElement('option');opt.value=row.id;const isArch=(archives||[]).some(a=>a.id===row.id);opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');opt._data=s;sel.appendChild(opt);});
   if(sel.options.length>1){sel.selectedIndex=1;chargerJournee();}
-  // Populate archives sejour selector
+  // Populate archives sejour selector — actifs + archivés
   const archSel = document.getElementById('archive-sejour-select');
-  allSejours.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';archSel.appendChild(opt);});
+  if(sejours?.length){
+    const grp=document.createElement('optgroup');grp.label='Séjours actifs';
+    sejours.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';grp.appendChild(opt);});
+    archSel.appendChild(grp);
+  }
+  if(sejoursArchives?.length){
+    const grp=document.createElement('optgroup');grp.label='Séjours archivés';
+    sejoursArchives.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';grp.appendChild(opt);});
+    archSel.appendChild(grp);
+  }
 }
 
 async function chargerJournee(){
