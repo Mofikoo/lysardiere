@@ -134,8 +134,7 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
     <div class="sel-info" id="journee-info"></div>
   </div>
 
-  <div id="assignation-section" style="display:none">
-    <div class="section-title">👥 Vacanciers non assignés <span class="count" id="unassigned-count">0</span></div>
+  <div id="assignation-section" style="display:none">    <div class="section-title">👥 Vacanciers non assignés <span class="count" id="unassigned-count">0</span></div>
     <div class="palette-section" id="palette-section">
       <div class="palette-label">Gîte actif — activez un gîte puis cliquez sur un vacancier</div>
       <div class="palette-btns">
@@ -150,6 +149,19 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
     <div class="active-bar" id="active-bar"></div>
     <div class="unassigned-grid" id="unassigned-grid"></div>
   </div>
+
+  <!-- ═══════ SECTION ARCHIVES ═══════ -->
+  <div style="margin-top:40px;border-top:2px solid var(--border);padding-top:24px">
+    <div class="section-title">📦 Archives <span class="count" id="archives-count">—</span></div>
+    <div style="background:var(--card);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border-light);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px">Séjour</label>
+      <select class="sel-input" id="archive-sejour-select" onchange="chargerArchives()" style="max-width:400px">
+        <option value="">— Choisir un séjour —</option>
+      </select>
+    </div>
+    <div id="archives-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+  </div>
+
 </div>
 <script>
 const SUPABASE_URL='https://lkqzifqeniblltniabai.supabase.co';
@@ -192,6 +204,9 @@ async function init(){
   const all=[...(rows||[]),...(archives||[])];
   all.forEach(row=>{const s=row.data||row;if(!s||!s.convois||!s.convois.length)return;const opt=document.createElement('option');opt.value=row.id;const isArch=(archives||[]).some(a=>a.id===row.id);opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');opt._data=s;sel.appendChild(opt);});
   if(sel.options.length>1){sel.selectedIndex=1;chargerJournee();}
+  // Populate archives sejour selector
+  const archSel = document.getElementById('archive-sejour-select');
+  allSejours.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';archSel.appendChild(opt);});
 }
 
 async function chargerJournee(){
@@ -313,7 +328,40 @@ async function assignGite(pKey){
   renderGites();renderUnassigned();
 }
 
-async function assignSejour(giteId,sejourId){if(!suiviData[giteId])suiviData[giteId]={sejour_id:null,animateurs:'',vehicules:[]};suiviData[giteId].sejour_id=sejourId||null;await saveGite(giteId);renderGites();}
+async function assignSejour(giteId, sejourId){
+  if(!suiviData[giteId]) suiviData[giteId]={sejour_id:null,animateurs:'',vehicules:[]};
+  const oldSejourId = suiviData[giteId].sejour_id;
+  // Archiver l'ancien séjour si il y en avait un et qu'il change
+  if(oldSejourId && oldSejourId !== sejourId){
+    await archiverGite(giteId, oldSejourId);
+  }
+  suiviData[giteId].sejour_id = sejourId||null;
+  await saveGite(giteId);
+  renderGites();
+}
+
+async function archiverGite(giteId, sejourId){
+  const sejour = allSejours.find(s=>s.id===sejourId);
+  if(!sejour) return;
+  const gS = suiviData[giteId]||{};
+  // Récupérer les vacanciers assignés à ce gîte/séjour
+  const rows = await supa('vacancier_gites?gite_id=eq.'+giteId+'&sejour_id=eq.'+sejourId+'&select=personne_id');
+  const vacanciers = (rows||[]).map(r=>{
+    const p = allPersonnes.find(x=>x.id===r.personne_id);
+    return p ? {prenom:p.prenom, nom:p.nom, foyer:p.foyer} : null;
+  }).filter(Boolean);
+  await supaUpsert('suivi_archives', {
+    gite_id: giteId,
+    sejour_id: sejourId,
+    sejour_nom: sejour.nom,
+    date_debut: sejour.date_debut,
+    date_fin: sejour.date_fin,
+    animateurs: gS.animateurs||'',
+    vehicules: gS.vehicules||[],
+    vacanciers: vacanciers,
+    archived_at: new Date().toISOString()
+  });
+}
 async function saveAnimateur(giteId,value){if(!suiviData[giteId])suiviData[giteId]={sejour_id:null,animateurs:'',vehicules:[]};suiviData[giteId].animateurs=value;await saveGite(giteId);}
 async function addVehicle(giteId){const sel=document.getElementById('veh-'+giteId);if(!sel?.value)return;const veh=allVehicules.find(v=>v.id===sel.value);if(!veh)return;if(!suiviData[giteId])suiviData[giteId]={sejour_id:null,animateurs:'',vehicules:[]};suiviData[giteId].vehicules.push({id:veh.id,label:veh.label,ico:veh.ico||'🚐'});await saveGite(giteId);renderGites();}
 async function removeVehicle(giteId,vehicleId){if(!suiviData[giteId])return;suiviData[giteId].vehicules=(suiviData[giteId].vehicules||[]).filter(v=>v.id!==vehicleId);await saveGite(giteId);renderGites();}
@@ -1004,6 +1052,43 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
       html += qrHtml + '</div>';
     }
   return html;
+}
+
+// ── ARCHIVES ─────────────────────────────────────────────────────
+async function chargerArchives(){
+  const sel = document.getElementById('archive-sejour-select');
+  const sejourId = sel.value;
+  const grid = document.getElementById('archives-grid');
+  const count = document.getElementById('archives-count');
+  if(!sejourId){ grid.innerHTML=''; count.textContent='—'; return; }
+  grid.innerHTML='<div style="color:var(--text-light);font-size:13px;padding:16px">Chargement…</div>';
+  const rows = await supa('suivi_archives?sejour_id=eq.'+sejourId+'&select=*&order=gite_id.asc');
+  if(!rows||!rows.length){ grid.innerHTML='<div style="color:var(--text-light);font-size:13px;padding:16px">Aucune archive pour ce séjour.</div>'; count.textContent='0'; return; }
+  count.textContent=rows.length+' gîte'+(rows.length>1?'s':'');
+  const gc={hulotte:{c:'#2e7d32',bg:'#e8f5e9',b:'#a5d6a7'},sixties:{c:'#ad1457',bg:'#fce4ec',b:'#f48fb1'},envolee:{c:'#e65100',bg:'#fff8e1',b:'#ffcc80'},floridorlot:{c:'#6a1b9a',bg:'#f3e5f5',b:'#ce93d8'},arces:{c:'#1565c0',bg:'#e3f2fd',b:'#90caf9'}};
+  const GITE_LABELS={hulotte:'Hulotte',sixties:'Sixties',envolee:'Envolée',floridorlot:'Floridorlot',arces:'Arces'};
+  grid.innerHTML = rows.map(r=>{
+    const g=gc[r.gite_id]||{c:'#666',bg:'#f5f5f5',b:'#ddd'};
+    const vacs=(r.vacanciers||[]);
+    const vehs=(r.vehicules||[]);
+    const archDate=new Date(r.archived_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div style="background:white;border-radius:12px;border:1px solid var(--border-light);overflow:hidden;box-shadow:0 2px 8px rgba(24,83,79,0.07)">
+      <div style="background:${g.bg};border-bottom:2px solid ${g.b};padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:${g.c}">${GITE_LABELS[r.gite_id]||r.gite_id}</span>
+        <span style="font-size:10px;color:${g.c};opacity:0.7">${archDate}</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Séjour : </span>${r.sejour_nom||'—'}</div>
+        <div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Dates : </span>${r.date_debut?fmtDate(r.date_debut)+' → '+fmtDate(r.date_fin):'—'}</div>
+        ${r.animateurs?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Animateurs : </span>${r.animateurs}</div>`:''}
+        ${vehs.length?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Véhicules : </span>${vehs.map(v=>v.label).join(', ')}</div>`:''}
+        <div style="border-top:1px solid var(--border-light);padding-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">Vacanciers (${vacs.length})</div>
+          ${vacs.map(v=>`<div style="font-size:12px;padding:3px 0;color:var(--text)">${v.prenom} ${(v.nom||'').toUpperCase()}${v.foyer?` <span style="color:var(--text-light);font-size:10px">(${v.foyer})</span>`:''}</div>`).join('')||'<div style="font-size:12px;color:var(--text-light)">Aucun vacancier enregistré</div>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 init();
