@@ -1505,8 +1505,8 @@ async function dbLoadAll(table){
     var rows=await supaFetch(table+'?select=*&order=updated_at.desc');
     return rows.map(function(r){
       var d=r.data||{};
-      // Pour vehicules : inclure le champ ordre de la colonne SQL
-      if(r.ordre!==undefined) d.ordre=r.ordre;
+      // Fusionner la colonne SQL ordre si présente et pas déjà dans data
+      if(r.ordre!==undefined&&d.ordre===undefined) d.ordre=r.ordre;
       return d;
     });
   }catch(e){return[]}
@@ -1598,6 +1598,13 @@ async function loadData(){
     gazoleHistorique=(gz||[]).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
     if(veh&&veh.length>0) vehicles=veh;
     else{vehicles=DEFAULT_VEHICLES;await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v)}))}
+    // Initialiser ordre si manquant (premier chargement après ajout colonne SQL)
+    var needsOrdre=vehicles.some(function(v){return v.ordre==null;});
+    if(needsOrdre){
+      vehicles.sort(function(a,b){return a.label.localeCompare(b.label);});
+      vehicles.forEach(function(v,i){if(v.ordre==null) v.ordre=i;});
+      await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v);}));
+    }
     initSelV();updatePersistBadge();
     // Refresh LYS selects now that lieux are loaded
     refreshLysSelects();
@@ -2110,20 +2117,27 @@ function renderFlotte(){
   window.scrollTo({top:scrollY,behavior:'instant'});
 }
 async function moveVehicle(id, dir){
-  // Trier la liste actuelle par ordre
-  var sorted=vehicles.slice().sort(function(a,b){return (a.ordre!=null?a.ordre:99)-(b.ordre!=null?b.ordre:99)||a.label.localeCompare(b.label);});
+  var sorted=vehicles.slice().sort(function(a,b){
+    return (a.ordre!=null?a.ordre:99)-(b.ordre!=null?b.ordre:99)||a.label.localeCompare(b.label);
+  });
   var idx=sorted.findIndex(function(v){return v.id===id});
   if(idx<0) return;
   var swapIdx=idx+dir;
   if(swapIdx<0||swapIdx>=sorted.length) return;
-  // Échanger les ordres
-  var oA=sorted[idx].ordre!=null?sorted[idx].ordre:idx;
-  var oB=sorted[swapIdx].ordre!=null?sorted[swapIdx].ordre:swapIdx;
-  sorted[idx].ordre=oB; sorted[swapIdx].ordre=oA;
-  // Normaliser les ordres (0,1,2,...)
+  // Réassigner les ordres (0,1,2,...)
   sorted.forEach(function(v,i){v.ordre=i;});
-  // Sauvegarder en base
-  await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v);}));
+  // Échanger
+  var tmp=sorted[idx].ordre; sorted[idx].ordre=sorted[swapIdx].ordre; sorted[swapIdx].ordre=tmp;
+  // Renormaliser
+  sorted.forEach(function(v,i){v.ordre=i;});
+  // Sauvegarder : ordre dans data ET dans la colonne SQL
+  await Promise.all(vehicles.map(function(v){
+    // dbUpsert écrit dans data
+    return dbUpsert('vehicules',v.id,v).then(function(){
+      // Patch aussi la colonne SQL ordre
+      return supaFetch('vehicules?id=eq.'+v.id,'PATCH',{ordre:v.ordre||0});
+    });
+  }));
   renderFlotte();
 }
 
