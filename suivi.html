@@ -222,6 +222,7 @@ async function init(){
   allAnimateurs=animateursRows||[];
   giteAnimateurs=giteAnimateursRows||[];
   allVacancierGites=vacancierGitesRows||[];
+  await chargerGiteAssignments(); // Construire l'index giteAssignments depuis la mémoire
   // Populate modal journée selector + stocker globalement
   const modalSel=document.getElementById('modal-journee-select');
   window._allJourneesData=[];
@@ -311,12 +312,16 @@ function _imprimerFeuillesSejours(mode){
 }
 
 async function chargerGiteAssignments(){
-  // Séjours actuellement assignés aux gîtes
-  const activeSejourIds = Object.values(suiviData).map(s=>s.sejour_id).filter(Boolean);
-  if(!activeSejourIds.length){ giteAssignments={}; return; }
-  const rows = await supa('vacancier_gites?sejour_id=in.('+activeSejourIds.join(',')+')'+'&select=personne_id,gite_id,sejour_id');
+  // Reconstruire depuis allVacancierGites (déjà en mémoire)
+  // Double index : par personne_id ET par "Prénom NOM" pour les deux usages
   giteAssignments={};
-  (rows||[]).forEach(r=>{const p=allPersonnes.find(x=>x.id===r.personne_id);if(p)giteAssignments[personKey(p)]=r.gite_id;});
+  allVacancierGites.forEach(vg=>{
+    // Index par personne_id (pour les fiches annotées convois)
+    giteAssignments[vg.personne_id]=vg.gite_id;
+    // Index par nom (pour renderGites et sections non assignés)
+    const p=allPersonnes.find(x=>x.id===vg.personne_id);
+    if(p) giteAssignments[personKey(p)]=vg.gite_id;
+  });
 }
 
 function personKey(p){return((p.prenom||'')+' '+((p.nom||'').toUpperCase())).trim();}
@@ -906,7 +911,8 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
   // withAnnotation=false → stops timeline, aucune annotation
   function renderPerson(p, isDep, withAnnotation) {
     var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-    var g = withAnnotation ? (giteAssignments[key] || null) : null;
+    // Chercher par id d'abord (convois), puis par nom (assignation manuelle)
+    var g = withAnnotation ? (giteAssignments[p.id] || giteAssignments[key] || null) : null;
     var gc = g ? GITE_COLORS[g] : null;
 
     var nameStyle = 'font-weight:700;';
