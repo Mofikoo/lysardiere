@@ -449,7 +449,10 @@ async function loadPhoto(){
       body:JSON.stringify({expiresIn:3600})
     });
     if(!r.ok) return;
-    const{signedURL}=await r.json();
+    const data=await r.json();
+    const signedURL = data.signedURL?.startsWith('http')
+      ? data.signedURL
+      : `${SUPABASE_URL}/storage/v1${data.signedURL}`;
     showPhoto(signedURL);
   }catch(e){}
 }
@@ -637,7 +640,10 @@ async function openDoc(path, filename){
     body:JSON.stringify({expiresIn:3600})
   });
   if(!r.ok){alert('Impossible d\'ouvrir le document.');return;}
-  const{signedURL}=await r.json();
+  const data=await r.json();
+  const signedURL = data.signedURL?.startsWith('http')
+    ? data.signedURL
+    : `${SUPABASE_URL}/storage/v1${data.signedURL}`;
   window.open(signedURL,'_blank');
 }
 
