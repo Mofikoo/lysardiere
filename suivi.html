@@ -137,7 +137,7 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
 
 <div class="main" id="main" style="display:none">
   <div class="section-title">🏡 Gîtes</div>
-  <div class="gites-grid" id="gites-grid"><div class="empty-state">Sélectionnez une journée de transport</div></div>
+  <div class="gites-grid" id="gites-grid"><div class="empty-state">Chargement…</div></div>
 
   <div class="selector-card">
     <h2>🗓️ Journée de transport</h2>
@@ -552,7 +552,7 @@ function imprimerFeuillesGites(){
     var convoisAvecGite = [];
     (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
       var vacs = (c.depart||[]).filter(function(p) {
-        return gites[(p.prenom||'')+' '+((p.nom||'').toUpperCase())] === gite;
+        return giteAssignments[(p.prenom||'')+' '+((p.nom||'').toUpperCase())] === gite;
       });
       if (vacs.length) convoisAvecGite.push({ convoi:c, vacanciers:vacs });
     });
@@ -669,7 +669,7 @@ function imprimerFeuillesArrivee(){
     (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
       (c.arrivee||[]).forEach(function(p) {
         var key = (p.prenom||'')+' '+((p.nom||'').toUpperCase());
-        if (gites[key] === gite && !seen[key]) {
+        if (giteAssignments[key] === gite && !seen[key]) {
           seen[key] = true;
           vacanciers.push({ prenom: p.prenom, nom: (p.nom||'').toUpperCase() });
         }
@@ -748,7 +748,7 @@ function imprimerAffichesVehicules(){
 
     (c.depart||[]).forEach(function(p) {
       var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-      var g = gites[key] || null;
+      var g = giteAssignments[key] || null;
       if (g && byGite[g]) byGite[g].push(p);
       else sansGite.push(p);
     });
@@ -906,7 +906,7 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
   // withAnnotation=false → stops timeline, aucune annotation
   function renderPerson(p, isDep, withAnnotation) {
     var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-    var g = withAnnotation ? (gites[key] || null) : null;
+    var g = withAnnotation ? (giteAssignments[key] || null) : null;
     var gc = g ? GITE_COLORS[g] : null;
 
     var nameStyle = 'font-weight:700;';
