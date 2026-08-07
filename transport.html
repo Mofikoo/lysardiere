@@ -2117,6 +2117,7 @@ function renderFlotte(){
   window.scrollTo({top:scrollY,behavior:'instant'});
 }
 async function moveVehicle(id, dir){
+  // Trier par ordre actuel
   var sorted=vehicles.slice().sort(function(a,b){
     return (a.ordre!=null?a.ordre:99)-(b.ordre!=null?b.ordre:99)||a.label.localeCompare(b.label);
   });
@@ -2124,21 +2125,16 @@ async function moveVehicle(id, dir){
   if(idx<0) return;
   var swapIdx=idx+dir;
   if(swapIdx<0||swapIdx>=sorted.length) return;
-  // Réassigner les ordres (0,1,2,...)
-  sorted.forEach(function(v,i){v.ordre=i;});
-  // Échanger
-  var tmp=sorted[idx].ordre; sorted[idx].ordre=sorted[swapIdx].ordre; sorted[swapIdx].ordre=tmp;
-  // Renormaliser
-  sorted.forEach(function(v,i){v.ordre=i;});
-  // Sauvegarder : ordre dans data ET dans la colonne SQL
-  await Promise.all(vehicles.map(function(v){
-    // dbUpsert écrit dans data
-    return dbUpsert('vehicules',v.id,v).then(function(){
-      // Patch aussi la colonne SQL ordre
-      return supaFetch('vehicules?id=eq.'+v.id,'PATCH',{ordre:v.ordre||0});
-    });
-  }));
+  // Échanger les deux véhicules dans le tableau trié
+  var tmp=sorted[idx]; sorted[idx]=sorted[swapIdx]; sorted[swapIdx]=tmp;
+  // Réassigner les ordres proprement (0,1,2,...)
+  sorted.forEach(function(v,i){ v.ordre=i; });
+  // Render immédiatement (sans attendre la sauvegarde)
   renderFlotte();
+  // Sauvegarder en base en arrière-plan
+  vehicles.forEach(function(v){
+    dbUpsert('vehicules',v.id,v);
+  });
 }
 
 async function addVehicle(){
