@@ -212,6 +212,7 @@ async function init(){
   const sel=document.getElementById('journee-select');
   const all=[...(rows||[]),...(archives||[])];
   all.forEach(row=>{const s=row.data||row;if(!s||!s.convois||!s.convois.length)return;const opt=document.createElement('option');opt.value=row.id;const isArch=(archives||[]).some(a=>a.id===row.id);opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');opt._data=s;sel.appendChild(opt);});
+  renderGites(); // Afficher les cartes gîtes même sans journée
   if(sel.options.length>1){sel.selectedIndex=1;chargerJournee();}
   // Populate archives sejour selector — actifs + archivés
   const archSel = document.getElementById('archive-sejour-select');
@@ -267,6 +268,7 @@ function getAllPersonsInJournee(){
       if(!seen[key]){seen[key]=true;const found=allPersonnes.find(x=>x.prenom?.toLowerCase()===p.prenom?.toLowerCase()&&x.nom?.toUpperCase()===p.nom?.toUpperCase());result.push({...p,id:found?.id||null,foyer:found?.foyer||p.foyer||''});}
     });
   });
+  result.sort((a,b)=>((a.nom||'').localeCompare(b.nom||''))||((a.prenom||'').localeCompare(b.prenom||'')));
   return result;
 }
 
@@ -298,7 +300,8 @@ function renderGites(){
       const st=getStatus(p.id);
       const stLabel=st==='complete'?'✅ Complet':st==='partial'?'📝 Partiel':'⚠️ Vide';
       const hasFiche=allFiches.some(f=>f.personne_id===p.id&&f.html_rendu);
-      return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}</div>`;
+      const pKey=personKey(p);
+      return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-doc-btn" onclick="retirerVacancier('${pKey.replace(/'/g,"\\'")}')" title="Retirer du gîte" style="color:var(--red);border-color:var(--red-bg);background:var(--red-bg)">✕</button></div>`;
     }).join('');
     return `<div class="gite-card ${g.cls}"><div class="gite-header"><div class="gite-name">${g.label}</div><span class="gite-count">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="info-row"><span class="info-label">Séjour</span><select class="info-input" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--text-light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div style="margin-top:4px"><span class="info-label" style="display:block;margin-bottom:5px">Animateurs</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${getAnimateurBubbles(g.id,gS.sejour_id)}</div><div style="position:relative"><input type="text" placeholder="+ Ajouter un animateur…" style="width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)" id="anim-search-${g.id}" oninput="filterAnimSearch('${g.id}',this.value)" onfocus="filterAnimSearch('${g.id}',this.value)" onblur="setTimeout(()=>hideAnimDrop('${g.id}'),150)" autocomplete="off"><div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div></div></div><div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="info-label">Véhicules</span><div class="vehicles-wrap">${chips||'<span style="font-size:12px;color:var(--text-light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacanciers-section"><div class="vacanciers-title">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
       <div style="padding:8px 16px 12px;border-top:1px solid var(--border-light)">
@@ -1107,6 +1110,23 @@ async function chargerArchives(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function retirerVacancier(pKey){
+  if(!confirm('Retirer ce vacancier du gîte ?')) return;
+  delete giteAssignments[pKey];
+  // Supprimer en base
+  const p = getAllPersonsInJournee().find(x=>personKey(x)===pKey);
+  if(p?.id){
+    const sejourId = Object.values(suiviData).find(s=>s.sejour_id)?.sejour_id||null;
+    const jwt=await getJWT();
+    // Chercher la ligne exacte
+    await fetch(SUPABASE_URL+'/rest/v1/vacancier_gites?personne_id=eq.'+p.id,{
+      method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}
+    });
+  }
+  renderGites();
+  renderUnassigned();
 }
 
 // ── ANIMATEURS — BULLES ──────────────────────────────────────────
