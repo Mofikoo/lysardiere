@@ -216,6 +216,17 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
 .empty-mini { padding:16px; text-align:center; color:var(--text-light); font-size:12px; }
 
 /* Toast */
+.profile-avatar:hover::after {
+  content: '📷';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
 .toast { position:fixed; bottom:28px; right:24px; background:var(--forest); color:white; padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:999; display:none; box-shadow:var(--shadow-md); }
 
 /* Responsive */
@@ -265,7 +276,11 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
   <!-- Bannière profil -->
   <div class="profile-banner">
     <div class="profile-top">
-      <div class="profile-avatar" id="avatar">?</div>
+      <label class="profile-avatar" id="avatar" title="Changer la photo" style="cursor:pointer;overflow:hidden;position:relative">
+        <span id="avatar-initials">?</span>
+        <img id="avatar-img" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%">
+        <input type="file" id="avatar-file" accept="image/*" style="display:none" onchange="uploadPhoto()">
+      </label>
       <div class="profile-title">
         <div class="profile-name" id="profile-name">Chargement…</div>
         <div class="profile-subtitle">Animateur · La Lysardière</div>
@@ -325,23 +340,7 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
     </div>
   </div>
 
-  <!-- Documents vierges -->
-  <div class="section">
-    <div class="section-head">
-      <div class="section-head-title">📋 Documents vierges <span class="count-badge" id="vierges-count">0</span></div>
-      <div class="upload-bar">
-        <input class="field-input" id="vierge-label" type="text" placeholder="Nom du document…" style="max-width:220px;padding:7px 12px;font-size:12px">
-        <label class="upload-label">
-          <input type="file" id="vierge-file" onchange="uploadVierge()">
-          <span class="btn-sm btn-primary">📤 Ajouter</span>
-        </label>
-        <span id="vierge-status" class="upload-status"></span>
-      </div>
-    </div>
-    <div class="section-body" id="vierges-section">
-      <div class="empty-mini">Aucun document vierge.</div>
-    </div>
-  </div>
+
 
 </div>
 
@@ -399,7 +398,7 @@ function filtrerListe(){
   const filtered=q?list.filter(a=>`${a.prenom} ${a.nom} ${a.email}`.toLowerCase().includes(q)):list;
   const el=document.getElementById('animateurs-liste');
   if(!filtered.length){
-    el.innerHTML='<div class="empty">Aucun animateur trouvé.</div>';
+    el.innerHTML='<div class="empty-mini">Aucun animateur trouvé.</div>';
     return;
   }
   el.innerHTML=filtered.map(a=>{
@@ -438,25 +437,62 @@ async function creerAnimateur(){
   else alert('Erreur lors de la création.');
 }
 
+async function loadPhoto(){
+  try{
+    const jwt=await getJWT();
+    const path=`photos/${animateurId}`;
+    const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${path}`,{
+      method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'},
+      body:JSON.stringify({expiresIn:3600})
+    });
+    if(!r.ok) return;
+    const{signedURL}=await r.json();
+    const img=document.getElementById('avatar-img');
+    const initEl=document.getElementById('avatar-initials');
+    if(img&&signedURL){img.src=signedURL;img.style.display='block';if(initEl)initEl.style.display='none';}
+  }catch(e){}
+}
+
+async function uploadPhoto(){
+  const file=document.getElementById('avatar-file').files[0];
+  if(!file) return;
+  const jwt=await getJWT();
+  const path=`photos/${animateurId}`;
+  // Supprimer l'ancienne photo
+  await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
+  // Uploader la nouvelle
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{
+    method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':file.type},
+    body:file
+  });
+  if(r.ok){
+    const url=URL.createObjectURL(file);
+    const img=document.getElementById('avatar-img');
+    const initEl=document.getElementById('avatar-initials');
+    if(img){img.src=url;img.style.display='block';}
+    if(initEl)initEl.style.display='none';
+    toast('✅ Photo mise à jour');
+  } else toast('❌ Erreur upload photo','error');
+}
+
 async function charger(){
-  const[anim,docs,vierges]=await Promise.all([
+  const[anim,docs]=await Promise.all([
     api('animateurs?id=eq.'+animateurId+'&select=*'),
     api('animateur_documents?animateur_id=eq.'+animateurId+'&select=*&order=uploaded_at.desc'),
-    api('documents_vierges?select=*&order=uploaded_at.asc'),
   ]);
   animateur=(anim||[])[0]||null;
   allDocs=docs||[];
-  allVierges=vierges||[];
   if(!animateur){toast('Animateur introuvable','error');return;}
   renderProfil();
   renderDocs();
-  renderVierges();
 }
 
 function renderProfil(){
   const p=animateur;
   const initials=((p.prenom||'')[0]||'')+((p.nom||'')[0]||'');
-  document.getElementById('avatar').textContent=initials.toUpperCase()||'?';
+  document.getElementById('avatar-initials').textContent=initials.toUpperCase()||'?';
+  // Charger la photo si elle existe
+  loadPhoto();
   document.getElementById('profile-name').textContent=(p.prenom||'')+' '+(p.nom||'').toUpperCase();
   document.getElementById('f-prenom').value=p.prenom||'';
   document.getElementById('f-nom').value=p.nom||'';
