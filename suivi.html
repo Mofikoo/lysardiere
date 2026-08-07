@@ -58,7 +58,7 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
 .gite-body { padding:12px 16px; display:flex; flex-direction:column; gap:10px; }
 .info-row { display:flex; align-items:center; gap:8px; }
 .info-label { font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.6px; width:76px; flex-shrink:0; }
-.info-input { flex:1; padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12.5px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border-color 0.2s; }
+.info-input { flex:1; min-width:0; padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12.5px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border-color 0.2s; overflow:hidden; text-overflow:ellipsis; }
 .info-input:focus { border-color:var(--forest-mid); background:white; }
 .vehicles-wrap { display:flex; flex-wrap:wrap; gap:5px; }
 .vehicle-chip { display:inline-flex; align-items:center; gap:5px; background:var(--mint); border:1px solid var(--mint-deep); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; color:var(--forest); }
@@ -123,6 +123,9 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
 </div>
 
 <div class="main" id="main" style="display:none">
+  <div class="section-title">🏡 Gîtes</div>
+  <div class="gites-grid" id="gites-grid"><div class="empty-state">Sélectionnez une journée de transport</div></div>
+
   <div class="selector-card">
     <h2>🗓️ Journée de transport</h2>
     <select class="sel-input" id="journee-select" onchange="chargerJournee()">
@@ -130,9 +133,6 @@ body { font-family:'DM Sans',Arial,sans-serif; background:var(--bg); color:var(-
     </select>
     <div class="sel-info" id="journee-info"></div>
   </div>
-
-  <div class="section-title">🏡 Gîtes</div>
-  <div class="gites-grid" id="gites-grid"><div class="empty-state">Sélectionnez une journée de transport</div></div>
 
   <div id="assignation-section" style="display:none">
     <div class="section-title">👥 Vacanciers non assignés <span class="count" id="unassigned-count">0</span></div>
