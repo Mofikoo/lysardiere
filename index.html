@@ -24,7 +24,8 @@
   .btn:hover { background:#144742; }
   .btn:disabled { opacity:0.6;cursor:not-allowed; }
   .error { font-size:13px;color:var(--red);margin-bottom:12px;display:none; }
-  .apps-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px; }
+  .apps-grid { display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; justify-content:center; }
+  .app-card { flex:0 0 calc(50% - 8px); max-width:220px; }
   .app-card { background:var(--mint);border:2px solid var(--border);border-radius:var(--radius-xs);padding:28px 16px;text-decoration:none;color:var(--text-dark);text-align:center;transition:all 0.2s;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px; }
   .app-card:hover { border-color:var(--forest);background:white;transform:translateY(-2px);box-shadow:0 4px 12px rgba(24,83,79,0.1); }
   .app-icon { font-size:40px; }
