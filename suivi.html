@@ -222,18 +222,21 @@ async function init(){
   allAnimateurs=animateursRows||[];
   giteAnimateurs=giteAnimateursRows||[];
   allVacancierGites=vacancierGitesRows||[];
-  // Populate modal journée selector
+  // Populate modal journée selector + stocker globalement
   const modalSel=document.getElementById('modal-journee-select');
+  window._allJourneesData=[];
   const all=[...(rows||[]),...(archives||[])];
   all.forEach(row=>{
     const s=row.data||row;
     if(!s||!s.convois||!s.convois.length)return;
+    const isArch=(archives||[]).some(a=>a.id===row.id);
+    const label=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');
     const opt=document.createElement('option');
     opt.value=row.id;
-    const isArch=(archives||[]).some(a=>a.id===row.id);
-    opt.textContent=(isArch?'📦 ':'')+fmtDateShort(s.date)+' — '+s.convois.length+' convoi(s)'+(s.label?' · '+s.label:'');
+    opt.textContent=label;
     opt._data=s;
     modalSel.appendChild(opt);
+    window._allJourneesData.push({id:row.id,label,data:s});
   });
   if(modalSel.options.length>1) modalSel.selectedIndex=1;
   renderGites();
@@ -256,6 +259,18 @@ async function init(){
 
 // ── MODALE IMPRESSION ────────────────────────────────────────────
 function ouvrirModalImpression(){
+  // Repeupler le select à chaque ouverture (les _data sont perdus si DOM recréé)
+  const sel=document.getElementById('modal-journee-select');
+  if(sel && sel.options.length <= 1 && window._allJourneesData?.length){
+    window._allJourneesData.forEach(row=>{
+      const opt=document.createElement('option');
+      opt.value=row.id;
+      opt.textContent=row.label;
+      opt._data=row.data;
+      sel.appendChild(opt);
+    });
+    if(sel.options.length>1) sel.selectedIndex=1;
+  }
   document.getElementById('modal-impression').classList.add('open');
 }
 function fermerModalImpression(){
@@ -507,8 +522,9 @@ async function assignManuel(giteId, personId, pKey){
 // ── IMPRESSION ───────────────────────────────────────────────────
 function imprimerFiches(){
   const _mSel=document.getElementById('modal-journee-select');
-  const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
-  if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
+  const _jid=_mSel?.value;
+  const _journee=window._allJourneesData?.find(j=>j.id===_jid)?.data;
+  if(!_journee||!_journee.convois?.length){alert('Sélectionnez une journée dans la modale.');return;}
   const dateLabel=fmtDateLong(_journee.date);
   const html=generateFichesAnnoteesHTML(_journee.convois||[], dateLabel);
   if(typeof openPrintWindow!=='undefined') openPrintWindow(html,{title:'Fiches annotées — '+dateLabel});
@@ -704,8 +720,9 @@ function imprimerFeuillesArrivee(){
 // ── AFFICHES VÉHICULES (PAYSAGE) ────────────────────────────────
 function imprimerAffichesVehicules(){
   const _mSel=document.getElementById('modal-journee-select');
-  const _journee=_mSel?.options[_mSel?.selectedIndex]?._data;
-  if(!_journee){alert('Sélectionnez une journée de transport dans la modale.');return;}
+  const _jid=_mSel?.value;
+  const _journee=window._allJourneesData?.find(j=>j.id===_jid)?.data;
+  if(!_journee||!_journee.convois?.length){alert('Sélectionnez une journée dans la modale.');return;}
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {

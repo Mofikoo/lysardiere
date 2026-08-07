@@ -924,10 +924,14 @@ function openPrintWindow(html, options) {
   // Create full-screen overlay with iframe
   const overlay = document.createElement('div');
   overlay.id = 'lys-print-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#525659;display:flex;flex-direction:column;';
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:white;border-radius:14px;width:90vw;max-width:900px;height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
 
   const bar = document.createElement('div');
-  bar.style.cssText = 'height:52px;background:#323639;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;';
+  bar.style.cssText = 'height:52px;background:#18534F;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;border-radius:14px 14px 0 0;';
   bar.innerHTML = `
     <span style="color:white;font-size:14px;font-weight:600">${title}</span>
     <div style="display:flex;gap:10px">
@@ -945,8 +949,9 @@ function openPrintWindow(html, options) {
   iframe.style.cssText = 'flex:1;border:none;background:white;';
   iframe.id = 'lys-print-frame';
 
-  overlay.appendChild(bar);
-  overlay.appendChild(iframe);
+  modal.appendChild(bar);
+  modal.appendChild(iframe);
+  overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
   // Write content to iframe
