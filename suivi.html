@@ -208,10 +208,11 @@ async function chargerJournee(){
 }
 
 async function chargerGiteAssignments(){
-  if(!currentJournee)return;
-  const persIds=getAllPersonsInJournee().map(p=>p.id).filter(Boolean);
-  if(!persIds.length){giteAssignments={};return;}
-  const rows=await supa('vacancier_gites?personne_id=in.('+persIds.join(',')+')'+'&select=personne_id,gite_id');
+  if(!currentJournee) return;
+  // Séjours actuellement assignés aux gîtes — seules ces assignations sont pertinentes
+  const activeSejourIds = Object.values(suiviData).map(s=>s.sejour_id).filter(Boolean);
+  if(!activeSejourIds.length){ giteAssignments={}; return; }
+  const rows = await supa('vacancier_gites?sejour_id=in.('+activeSejourIds.join(',')+')'+'&select=personne_id,gite_id,sejour_id');
   giteAssignments={};
   (rows||[]).forEach(r=>{const p=allPersonnes.find(x=>x.id===r.personne_id);if(p)giteAssignments[personKey(p)]=r.gite_id;});
 }
@@ -266,7 +267,20 @@ function renderGites(){
       const hasFiche=allFiches.some(f=>f.personne_id===p.id&&f.html_rendu);
       return `<div class="vac-row"><div class="vac-avatar">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="status-badge status-${st}">${stLabel}</span>${hasFiche?`<button class="vac-doc-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}</div>`;
     }).join('');
-    return `<div class="gite-card ${g.cls}"><div class="gite-header"><div class="gite-name">${g.label}</div><span class="gite-count">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="info-row"><span class="info-label">Séjour</span><select class="info-input" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--text-light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div class="info-row"><span class="info-label">Animateurs</span><input class="info-input" type="text" value="${gS.animateurs||''}" placeholder="Prénom Nom, …" onblur="saveAnimateur('${g.id}',this.value)"></div><div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="info-label">Véhicules</span><div class="vehicles-wrap">${chips||'<span style="font-size:12px;color:var(--text-light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacanciers-section"><div class="vacanciers-title">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}</div>`;
+    return `<div class="gite-card ${g.cls}"><div class="gite-header"><div class="gite-name">${g.label}</div><span class="gite-count">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="info-row"><span class="info-label">Séjour</span><select class="info-input" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--text-light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div class="info-row"><span class="info-label">Animateurs</span><input class="info-input" type="text" value="${gS.animateurs||''}" placeholder="Prénom Nom, …" onblur="saveAnimateur('${g.id}',this.value)"></div><div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="info-label">Véhicules</span><div class="vehicles-wrap">${chips||'<span style="font-size:12px;color:var(--text-light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacanciers-section"><div class="vacanciers-title">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
+      <div style="padding:8px 16px 12px;border-top:1px solid var(--border-light)">
+        <div style="position:relative">
+          <input type="text" placeholder="➕ Ajouter un vacancier manuellement…"
+            style="width:100%;padding:6px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--text)"
+            id="manual-search-${g.id}"
+            oninput="filterManualSearch('${g.id}',this.value)"
+            onfocus="filterManualSearch('${g.id}',this.value)"
+            onblur="setTimeout(()=>hideManualDrop('${g.id}'),150)"
+            autocomplete="off">
+          <div id="manual-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:200px;overflow-y:auto;z-index:1000"></div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -309,6 +323,51 @@ async function saveGite(giteId,override){
   if(res.headers.get('content-range')==='*/0'){await fetch(SUPABASE_URL+'/rest/v1/suivi_gites',{method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({gite_id:giteId,sejour_id:d.sejour_id||null,animateurs:d.animateurs||'',vehicules:d.vehicules||[],updated_at:new Date().toISOString()})});}
 }
 function ouvrirFiche(personId){const f=allFiches.find(x=>x.personne_id===personId&&x.html_rendu);if(!f||typeof openPrintWindow==='undefined')return;const p=allPersonnes.find(x=>x.id===personId);openPrintWindow(f.html_rendu,{title:`Dossier ${p?.prenom||''} ${p?.nom||''}`});}
+
+// ── AJOUT MANUEL (vacancier sans convoi) ─────────────────────────
+function filterManualSearch(giteId, query){
+  const drop = document.getElementById('manual-drop-'+giteId);
+  if(!drop) return;
+  const q = (query||'').toLowerCase().trim();
+  // Exclure tous les vacanciers déjà assignés à N'IMPORTE QUEL gîte
+  const alreadyAssigned = new Set(Object.keys(giteAssignments));
+  // Exclure aussi ceux déjà dans les convois de la journée
+  const inConvois = new Set(getAllPersonsInJournee().map(p=>personKey(p)));
+  const candidates = allPersonnes.filter(p=>{
+    const key = personKey(p);
+    return !alreadyAssigned.has(key) && !inConvois.has(key) && (
+      !q || `${p.prenom} ${p.nom} ${p.foyer}`.toLowerCase().includes(q)
+    );
+  }).slice(0, 10);
+  if(!candidates.length){ drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--text-light)">Aucun résultat</div>'; drop.style.display='block'; return; }
+  drop.innerHTML = candidates.map(p=>`
+    <div onmousedown="assignManuel('${giteId}','${p.id}','${personKey(p).replace(/'/g,"\\'")}')"
+      style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
+      onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
+      <strong>${p.prenom} ${(p.nom||'').toUpperCase()}</strong>
+      <span style="font-size:11px;color:var(--text-light)">${p.foyer||''}</span>
+    </div>`).join('');
+  drop.style.display='block';
+}
+
+function hideManualDrop(giteId){
+  const drop = document.getElementById('manual-drop-'+giteId);
+  if(drop) drop.style.display='none';
+}
+
+async function assignManuel(giteId, personId, pKey){
+  hideManualDrop(giteId);
+  const inp = document.getElementById('manual-search-'+giteId);
+  if(inp) inp.value='';
+  // Assigner ce vacancier au gîte
+  giteAssignments[pKey] = giteId;
+  const sejourId = suiviData[giteId]?.sejour_id||null;
+  if(sejourId){
+    await supaUpsert('vacancier_gites',{personne_id:personId,sejour_id:sejourId,gite_id:giteId,updated_at:new Date().toISOString()});
+  }
+  renderGites();
+  renderUnassigned();
+}
 
 // ── IMPRESSION ───────────────────────────────────────────────────
 function imprimerFiches() {
