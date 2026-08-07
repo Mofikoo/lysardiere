@@ -409,7 +409,10 @@ function filtrerListe(){
     return `<div style="background:var(--card);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:8px;border:1px solid var(--border-light);display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.15s;box-shadow:var(--shadow)"
       onclick="window.location.href='animateur.html?id=${a.id}'"
       onmouseover="this.style.background='var(--mint)'" onmouseout="this.style.background='var(--card)'">
-      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--forest),var(--forest-mid));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0">${initials.toUpperCase()||'?'}</div>
+      <div id="list-av-${a.id}" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--forest),var(--forest-mid));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;position:relative">
+        <span>${initials.toUpperCase()||'?'}</span>
+        <img id="list-img-${a.id}" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+      </div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:14px">${a.prenom} ${(a.nom||'').toUpperCase()}</div>
         <div style="font-size:12px;color:var(--text-mid)">${[a.email,a.telephone].filter(Boolean).join(' · ')||'Aucune coordonnée'}</div>
@@ -417,6 +420,23 @@ function filtrerListe(){
       <span style="font-size:12px;color:var(--text-light)">→</span>
     </div>`;
   }).join('');
+  // Charger les photos en arrière-plan
+  filtered.filter(a=>a.photo_path).forEach(a=>chargerPhotoListe(a));
+}
+
+async function chargerPhotoListe(a){
+  try{
+    const jwt=await getJWT();
+    const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${a.photo_path}`,{
+      method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'},
+      body:JSON.stringify({expiresIn:3600})
+    });
+    if(!r.ok) return;
+    const data=await r.json();
+    const url=data.signedURL?.startsWith('http')?data.signedURL:`${SUPABASE_URL}/storage/v1${data.signedURL}`;
+    const img=document.getElementById('list-img-'+a.id);
+    if(img){img.src=url;img.style.display='block';}
+  }catch(e){}
 }
 
 function ouvrirCreation(){
