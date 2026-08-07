@@ -242,6 +242,7 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
   </a>
   <div class="header-right">
     <button class="hdr-btn hdr-gold" id="btn-save" onclick="sauvegarder()" style="display:none">💾 Enregistrer</button>
+    <a href="animateur.html" class="hdr-btn hdr-ghost" id="btn-back-list" style="display:none">← Animateurs</a>
     <a href="index.html" class="hdr-btn hdr-ghost">← Accueil</a>
   </div>
 </div>
@@ -381,6 +382,7 @@ async function init(){
   }
   document.getElementById('main').style.display='block';
   document.getElementById('btn-save').style.display='inline-flex';
+  document.getElementById('btn-back-list').style.display='inline-flex';
   await charger();
 }
 
