@@ -2070,14 +2070,66 @@ function show(t){
 // ── FLOTTE ────────────────────────────────────
 function renderFlotte(){
   var scrollY=window.scrollY;
-  var sorted=vehicles.slice().sort(function(a,b){if(a.type===b.type) return a.label.localeCompare(b.label);return a.type==='trafic'?-1:1});
+  // Trier par ordre (champ), puis par label si ordre identique
+  var sorted=vehicles.slice().sort(function(a,b){
+    var oa=(a.ordre!=null?a.ordre:99), ob=(b.ordre!=null?b.ordre:99);
+    if(oa!==ob) return oa-ob;
+    return a.label.localeCompare(b.label);
+  });
   document.getElementById('v-count').textContent=vehicles.length;
   var el=document.getElementById('v-list');
   if(!vehicles.length){el.innerHTML='<div class="empty">Aucun véhicule.</div>';return}
-  el.innerHTML=sorted.map(function(v){var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';var f=getVehicleFlags(v);var tags='';if(v.manuel_only) tags+='<span class="badge" style="background:#fef3c7;color:#92400e;margin-left:4px">🚫 Manuel</span>';if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de péage</span>';if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div><div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+(v.manuel_only?' — jamais utilisé en auto':'')+' </div></div><button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>'}).join('');
+  el.innerHTML=sorted.map(function(v,idx){
+    var typeLabel=v.type==='trafic'?'Trafic / Minibus':v.type==='trafic5'?'Trafic 5 places':'Voiture';
+    var f=getVehicleFlags(v);var tags='';
+    if(v.manuel_only) tags+='<span class="badge" style="background:#fef3c7;color:#92400e;margin-left:4px">🚫 Manuel</span>';
+    if(f.pmr) tags+='<span class="badge" style="background:var(--blue-bg);color:var(--blue);margin-left:4px">PMR</span>';
+    if(f.noPeage) tags+='<span class="badge" style="background:var(--red-bg);color:var(--red);margin-left:4px">Pas de péage</span>';
+    if(f.lastResort) tags+='<span class="badge" style="background:#FFF8E8;color:var(--copper-deep);margin-left:4px">Dernier recours</span>';
+    if(f.smallGroup) tags+='<span class="badge" style="background:var(--green-bg);color:var(--green);margin-left:4px">Petit groupe</span>';
+    var isFirst=idx===0, isLast=idx===sorted.length-1;
+    return '<div class="item-row"><span style="font-size:22px">'+v.ico+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+v.label+tags+'</div>'
+      +'<div style="font-size:11px;color:var(--text-light)">'+v.cap+' places  -  '+typeLabel+(v.manuel_only?' — jamais utilisé en auto':'')+' </div></div>'
+      +'<div style="display:flex;flex-direction:column;gap:2px;margin-right:6px">'
+      +(isFirst?'<span style="width:24px;height:24px"></span>':'<button class="btn btn-sm" style="padding:2px 6px;font-size:11px" onclick="moveVehicle(\''+v.id+'\',-1)">▲</button>')
+      +(isLast?'<span style="width:24px;height:24px"></span>':'<button class="btn btn-sm" style="padding:2px 6px;font-size:11px" onclick="moveVehicle(\''+v.id+'\',1)">▼</button>')
+      +'</div>'
+      +'<button class="btn btn-danger btn-sm" onclick="delVehicle(\''+v.id+'\')">Supprimer</button></div>';
+  }).join('');
   window.scrollTo({top:scrollY,behavior:'instant'});
 }
-async function addVehicle(){var nom=document.getElementById('v-nom').value.trim();var type=document.getElementById('v-type').value;var manuelOnly=document.getElementById('v-manuel').checked;if(!nom){await lyAlert('Nom requis.','error');return}var capMap={trafic:8,trafic5:5,voiture:4};var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97',manuel_only:manuelOnly};await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;document.getElementById('v-nom').value='';document.getElementById('v-manuel').checked=false;renderFlotte();renderVGrid()}
+async function moveVehicle(id, dir){
+  // Trier la liste actuelle par ordre
+  var sorted=vehicles.slice().sort(function(a,b){return (a.ordre!=null?a.ordre:99)-(b.ordre!=null?b.ordre:99)||a.label.localeCompare(b.label);});
+  var idx=sorted.findIndex(function(v){return v.id===id});
+  if(idx<0) return;
+  var swapIdx=idx+dir;
+  if(swapIdx<0||swapIdx>=sorted.length) return;
+  // Échanger les ordres
+  var oA=sorted[idx].ordre!=null?sorted[idx].ordre:idx;
+  var oB=sorted[swapIdx].ordre!=null?sorted[swapIdx].ordre:swapIdx;
+  sorted[idx].ordre=oB; sorted[swapIdx].ordre=oA;
+  // Normaliser les ordres (0,1,2,...)
+  sorted.forEach(function(v,i){v.ordre=i;});
+  // Sauvegarder en base
+  await Promise.all(vehicles.map(function(v){return dbUpsert('vehicules',v.id,v);}));
+  renderFlotte();
+}
+
+async function addVehicle(){
+  var nom=document.getElementById('v-nom').value.trim();
+  var type=document.getElementById('v-type').value;
+  var manuelOnly=document.getElementById('v-manuel').checked;
+  if(!nom){await lyAlert('Nom requis.','error');return}
+  var capMap={trafic:8,trafic5:5,voiture:4};
+  var icoMap={trafic:'\uD83D\uDE90',trafic5:'\uD83D\uDE90',voiture:'\uD83D\uDE97'};
+  var maxOrdre=vehicles.reduce(function(m,v){return Math.max(m,v.ordre!=null?v.ordre:0);},0);
+  var v={id:'veh'+Date.now(),label:nom,type:type,cap:capMap[type]||4,ico:icoMap[type]||'\uD83D\uDE97',manuel_only:manuelOnly,ordre:maxOrdre+1};
+  await dbUpsert('vehicules',v.id,v);vehicles.push(v);selV[v.id]=true;
+  document.getElementById('v-nom').value='';document.getElementById('v-manuel').checked=false;
+  renderFlotte();renderVGrid();
+}
 async function delVehicle(id){if(!await lyConfirm('Supprimer ce véhicule ?')) return;await dbDelete('vehicules',id);vehicles=vehicles.filter(function(v){return v.id!==id});delete selV[id];renderFlotte();renderVGrid()}
 
 // ── HEURES UTILITIES ──────────────────────────

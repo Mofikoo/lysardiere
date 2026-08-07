@@ -200,7 +200,7 @@ async function init(){
     supa('personnes?select=id,data'),
   ]);
   allSejours=[...(sejours||[]),...(sejoursArchives||[])];
-  allVehicules=(vehicules||[]).map(v=>({id:v.id,label:v.data?.label||v.label||'?',cap:v.data?.cap||v.cap||'?',ico:v.data?.ico||v.ico||'🚐'}));
+  allVehicules=(vehicules||[]).map(v=>({id:v.id,label:v.data?.label||v.label||'?',cap:v.data?.cap||v.cap||'?',ico:v.data?.ico||v.ico||'🚐',ordre:v.data?.ordre??v.ordre??99})).sort((a,b)=>a.ordre-b.ordre||a.label.localeCompare(b.label));
   allFiches=fiches||[];allDocuments=docs||[];
   allPersonnes=(personnes||[]).map(p=>({id:p.id,prenom:p.data?.prenom||'',nom:p.data?.nom||'',foyer:p.data?.foyer||''}));
   suiviData={};(suiviRows||[]).forEach(r=>{suiviData[r.gite_id]={sejour_id:r.sejour_id,animateurs:r.animateurs||'',vehicules:r.vehicules||[]};});
