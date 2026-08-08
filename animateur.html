@@ -250,9 +250,15 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
 
 <!-- ══ LISTE MODE ══ -->
 <div class="main" id="main-liste" style="display:none">
+  <div id="sort-mode" data-sort="prenom"></div>
   <div class="liste-search-bar">
     <input class="search-input" id="search-anim" type="text" placeholder="🔍 Rechercher un animateur…" oninput="filtrerListe()">
     <button class="btn-create" onclick="ouvrirCreation()">➕ Nouvel animateur</button>
+    <button id="btn-sort" onclick="toggleSort()"
+      style="padding:9px 14px;border-radius:9px;border:1.5px solid var(--border);background:white;color:var(--text-mid);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s"
+      onmouseover="this.style.background='var(--mint)'" onmouseout="this.style.background='white'">
+      🔤 Prénom ↑
+    </button>
   </div>
 
   <div class="form-creation" id="form-creation">
@@ -428,10 +434,25 @@ async function chargerListe(){
   filtrerListe();
 }
 
+function toggleSort(){
+  const el=document.getElementById('sort-mode');
+  const btn=document.getElementById('btn-sort');
+  const current=el?.dataset?.sort||'prenom';
+  const next=current==='prenom'?'nom':'prenom';
+  if(el) el.dataset.sort=next;
+  if(btn) btn.textContent=next==='prenom'?'🔤 Prénom ↑':'🔤 Nom ↑';
+  filtrerListe();
+}
+
 function filtrerListe(){
   const q=(document.getElementById('search-anim')?.value||'').toLowerCase();
   const list=window._allAnimateurs||[];
-  const filtered=q?list.filter(a=>`${a.prenom} ${a.nom} ${a.email}`.toLowerCase().includes(q)):list;
+  const sortMode=document.getElementById('sort-mode')?.dataset?.sort||'prenom';
+  let filtered=(q?list.filter(a=>`${a.prenom} ${a.nom} ${a.email}`.toLowerCase().includes(q)):list).slice();
+  filtered.sort((a,b)=>{
+    if(sortMode==='prenom') return (a.prenom||'').localeCompare(b.prenom||'')||(a.nom||'').localeCompare(b.nom||'');
+    return (a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||'');
+  });
   const el=document.getElementById('animateurs-liste');
   const stats=document.getElementById('anim-stats');
   if(stats){stats.style.display='block';stats.textContent=filtered.length+' animateur'+(filtered.length>1?'s':'')+' · '+(window._allAnimateurs||[]).length+' au total';}
@@ -451,6 +472,7 @@ function filtrerListe(){
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:14px">${a.prenom} ${(a.nom||'').toUpperCase()}</div>
         <div style="font-size:12px;color:var(--text-mid)">${[a.email,a.telephone].filter(Boolean).join(' · ')||'Aucune coordonnée'}</div>
+        ${(window._sejours_by_anim?.[a.id]?.size||0)>0?`<span style="background:#eef7f5;border:1px solid #c8e8e2;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;color:var(--forest-mid);margin-top:2px;display:inline-block">${window._sejours_by_anim[a.id].size} séjour${window._sejours_by_anim[a.id].size>1?'s':''}</span>`:''}
       </div>
       <span style="font-size:12px;color:var(--text-light)">→</span>
     </div>`;
