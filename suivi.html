@@ -727,12 +727,11 @@ function imprimerFiches(){
 
 // Feuilles départ avec véhicules et horaires (depuis les convois)
 function imprimerFeuillesGites(){
-  fermerModalImpression();
-
   const _mSel=document.getElementById('modal-journee-select');
   const _jid=_mSel?.value;
   const _journee=window._allJourneesData?.find(j=>j.id===_jid)?.data;
   if(!_journee||!_journee.convois?.length){alert('Sélectionnez une journée de transport dans la modale.');return;}
+  fermerModalImpression();
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
@@ -840,6 +839,10 @@ function imprimerFeuillesGites(){
 // ── FEUILLES D'ARRIVÉE PAR GÎTE ─────────────────────────────────
 // ── FEUILLES D'ARRIVÉE PAR GÎTE ─────────────────────────────────
 function imprimerFeuillesArrivee(){
+  const _mSelA=document.getElementById('modal-journee-select');
+  const _journeeA=window._allJourneesData?.find(j=>j.id===_mSelA?.value)?.data;
+  if(!_journeeA||!_journeeA.convois?.length){alert('Sélectionnez une journée de transport dans la modale.');return;}
+  fermerModalImpression();
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
