@@ -627,6 +627,8 @@ async function assignSejour(giteId, sejourId){
   // Archiver l'ancien séjour si il y en avait un et qu'il change
   if(oldSejourId && oldSejourId !== sejourId){
     await archiverGite(giteId, oldSejourId);
+    // Réinitialiser les véhicules (comme les animateurs et vacanciers)
+    suiviData[giteId].vehicules = [];
   }
   suiviData[giteId].sejour_id = sejourId||null;
   await saveGite(giteId);
