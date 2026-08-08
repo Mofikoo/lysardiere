@@ -754,6 +754,19 @@ async function uploadVierge(){
 }
 
 // ── OPEN / DELETE ─────────────────────────────────────────────────
+async function telechargerBlob(url, filename){
+  try{
+    const r=await fetch(url);
+    const blob=await r.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename||'document';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  }catch(e){alert('Erreur lors du téléchargement.');}
+}
+
 async function openDoc(path, filename){
   const jwt=await getJWT();
   const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${path}`,{
@@ -776,7 +789,7 @@ async function openDoc(path, filename){
   bar.style.cssText='height:48px;background:#18534F;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;border-radius:14px 14px 0 0';
   bar.innerHTML=`<span style="color:white;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${filename||path}</span>
     <div style="display:flex;gap:8px;margin-left:12px">
-      <a href="${url}" download="${filename||'document'}" style="padding:6px 14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none">⬇️ Télécharger</a>
+      <button onclick="telechargerBlob('${url}','${(filename||'document').replace(/'/g,"\'")}')" style="padding:6px 14px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">⬇️ Télécharger</button>
       <button onclick="document.getElementById('doc-viewer-overlay').remove()" style="padding:6px 12px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">✕ Fermer</button>
     </div>`;
   const iframe=document.createElement('iframe');
