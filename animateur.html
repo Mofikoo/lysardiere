@@ -706,7 +706,15 @@ async function sauvegarder(){
     headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify(data)
   });
-  if(r.ok){animateur={...animateur,...data};renderProfil();showAutosaved();}
+  if(r.ok){
+    animateur={...animateur,...data};
+    // Ne pas appeler renderProfil() — ça écraserait les champs en cours de saisie
+    // Juste mettre à jour le nom affiché si prénom/nom a changé
+    document.getElementById('profile-name').textContent=(animateur.prenom||'')+' '+(animateur.nom||'').toUpperCase();
+    document.getElementById('avatar-initials').textContent=(((animateur.prenom||'')[0]||'')+((animateur.nom||'')[0]||'')).toUpperCase()||'?';
+    document.getElementById('hd-sub').textContent=(animateur.prenom||'')+' '+(animateur.nom||'').toUpperCase();
+    showAutosaved();
+  }
   else toast('Erreur lors de la sauvegarde','error');
 }
 
