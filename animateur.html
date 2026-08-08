@@ -718,7 +718,7 @@ async function uploadDoc(){
   const status=document.getElementById('upload-status');
   status.textContent='Envoi en cours…';
   const jwt=await getJWT();
-  const path=`animateurs/${animateurId}/${Date.now()}_${file.name}`;
+  const path=`${animateurId}/${Date.now()}_${file.name}`;
   const r=await fetch(`${SUPABASE_URL}/storage/v1/object/animateurs/${path}`,{
     method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':file.type},
     body:file
@@ -756,7 +756,9 @@ async function uploadVierge(){
 // ── OPEN / DELETE ─────────────────────────────────────────────────
 async function openDoc(path, filename){
   const jwt=await getJWT();
-  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${path}`,{
+  // Normaliser le path : supprimer le préfixe "animateurs/" si présent (anciens docs)
+  const cleanPath=path.startsWith('animateurs/')?path.slice('animateurs/'.length):path;
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/animateurs/${cleanPath}`,{
     method:'POST',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json'},
     body:JSON.stringify({expiresIn:3600})
   });
