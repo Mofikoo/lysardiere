@@ -52,7 +52,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .page-heading{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--text);margin-bottom:24px;line-height:1.1}
 
 /* ── GITE CARDS GRID ── */
-.gites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:40px}
+.gites-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:40px}
+@media(max-width:720px){.gites-grid{grid-template-columns:1fr}}
 
 .gite-card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--border-l);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s}
 .gite-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
@@ -70,11 +71,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .gite-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.3px}
 
 /* Gite colors */
-.hu .gite-accent,.hu .gite-dot{background:var(--hu)} .hu .gite-title{color:var(--hu)} .hu .gite-badge{background:var(--hu-l);color:var(--hu)}
-.si .gite-accent,.si .gite-dot{background:var(--si)} .si .gite-title{color:var(--si)} .si .gite-badge{background:var(--si-l);color:var(--si)}
-.en .gite-accent,.en .gite-dot{background:var(--en)} .en .gite-title{color:var(--en)} .en .gite-badge{background:var(--en-l);color:var(--en)}
-.fl .gite-accent,.fl .gite-dot{background:var(--fl-c)} .fl .gite-title{color:var(--fl-c)} .fl .gite-badge{background:var(--fl-l);color:var(--fl-c)}
-.ar .gite-accent,.ar .gite-dot{background:var(--ar)} .ar .gite-title{color:var(--ar)} .ar .gite-badge{background:var(--ar-l);color:var(--ar)}
+.hu .gite-accent{background:var(--hu);width:6px} .hu .gite-dot{background:var(--hu)} .hu .gite-hdr{background:var(--hu-l)} .hu .gite-title{color:var(--hu)} .hu .gite-badge{background:var(--hu);color:#fff}
+.si .gite-accent{background:var(--si);width:6px} .si .gite-dot{background:var(--si)} .si .gite-hdr{background:var(--si-l)} .si .gite-title{color:var(--si)} .si .gite-badge{background:var(--si);color:#fff}
+.en .gite-accent{background:var(--en);width:6px} .en .gite-dot{background:var(--en)} .en .gite-hdr{background:var(--en-l)} .en .gite-title{color:var(--en)} .en .gite-badge{background:var(--en);color:#fff}
+.fl .gite-accent{background:var(--fl-c);width:6px} .fl .gite-dot{background:var(--fl-c)} .fl .gite-hdr{background:var(--fl-l)} .fl .gite-title{color:var(--fl-c)} .fl .gite-badge{background:var(--fl-c);color:#fff}
+.ar .gite-accent{background:var(--ar);width:6px} .ar .gite-dot{background:var(--ar)} .ar .gite-hdr{background:var(--ar-l)} .ar .gite-title{color:var(--ar)} .ar .gite-badge{background:var(--ar);color:#fff}
 .hu .vac-av{background:var(--hu)} .si .vac-av{background:var(--si)} .en .vac-av{background:var(--en)} .fl .vac-av{background:var(--fl-c)} .ar .vac-av{background:var(--ar)}
 
 /* Gite body */
@@ -219,7 +220,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <div class="main" id="main" style="display:none">
 
   <div class="page-eyebrow">La Lysardière · Saison 2026</div>
-  <div class="page-heading">Gîtes & Suivi</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div class="page-heading" style="margin-bottom:0">Gîtes & Suivi</div>
+    <button id="btn-floridorlot" onclick="toggleFloridorlot()"
+      style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:20px;border:2px solid var(--fl-c);background:var(--fl-l);color:var(--fl-c);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s">
+      <span id="fl-icon">＋</span> Floridorlot
+    </button>
+  </div>
 
   <!-- ═══ CARTES GÎTES ═══ -->
   <div class="gites-grid" id="gites-grid">
@@ -291,7 +298,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 const SUPABASE_URL='https://lkqzifqeniblltniabai.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 const LOGO_URL='icon-192.png';
-const GITES=[{id:'hulotte',label:'Hulotte',cls:'hu'},{id:'sixties',label:'Sixties',cls:'si'},{id:'envolee',label:'Envolée',cls:'en'},{id:'floridorlot',label:'Floridorlot',cls:'fl'},{id:'arces',label:'Arces',cls:'ar'}];
+const GITES=[{id:'hulotte',label:'Hulotte',cls:'hu'},{id:'sixties',label:'Sixties',cls:'si'},{id:'envolee',label:'Envolée',cls:'en'},{id:'arces',label:'Arces',cls:'ar'}];
+const GITES_ALL=[{id:'hulotte',label:'Hulotte',cls:'hu'},{id:'sixties',label:'Sixties',cls:'si'},{id:'envolee',label:'Envolée',cls:'en'},{id:'arces',label:'Arces',cls:'ar'},{id:'floridorlot',label:'Floridorlot',cls:'fl'}];
+let showFloridorlot=false;
 const GITE_COLORS={hulotte:{label:'Hulotte',letter:'H',color:'#2e7d32',bg:'rgba(76,175,80,0.35)',badge:'#2e7d32',badgeBg:'#e8f5e9'},sixties:{label:'Sixties',letter:'S',color:'#ad1457',bg:'rgba(240,98,146,0.35)',badge:'#ad1457',badgeBg:'#fce4ec'},envolee:{label:'Envolée',letter:'E',color:'#f57f17',bg:'rgba(255,193,7,0.45)',badge:'#e65100',badgeBg:'#fff8e1'},floridorlot:{label:'Floridorlot',letter:'F',color:'#6a1b9a',bg:'rgba(171,71,188,0.22)',badge:'#6a1b9a',badgeBg:'#f3e5f5'},arces:{label:'Arces',letter:'A',color:'#1565c0',bg:'rgba(66,165,245,0.28)',badge:'#1565c0',badgeBg:'#e3f2fd'}};
 const GITE_NAMES={hulotte:'Hulotte',sixties:'Sixties',envolee:'Envolée',floridorlot:'Floridorlot',arces:'Arces'};
 const GITE_ORDER=['hulotte','sixties','envolee','floridorlot','arces'];
@@ -422,6 +431,18 @@ function _imprimerFeuillesSejours(mode){
   fermerModalImpression();
 }
 
+function toggleFloridorlot(){
+  showFloridorlot=!showFloridorlot;
+  const btn=document.getElementById('btn-floridorlot');
+  const icon=document.getElementById('fl-icon');
+  if(showFloridorlot){
+    btn.style.background='var(--fl-c)';btn.style.color='#fff';icon.textContent='✕';
+  } else {
+    btn.style.background='var(--fl-l)';btn.style.color='var(--fl-c)';icon.textContent='＋';
+  }
+  renderGites();
+}
+
 async function chargerGiteAssignments(){
   // Reconstruire depuis allVacancierGites (déjà en mémoire)
   // Double index : par personne_id ET par "Prénom NOM" pour les deux usages
@@ -475,7 +496,8 @@ function renderGites(){
   // Cartes gîtes toujours affichées
   const today=new Date().toISOString().slice(0,10);
   const sejoursActifs=allSejours.filter(s=>s.date_fin>=today);
-  grid.innerHTML=GITES.map(g=>{
+  const gitesToRender=showFloridorlot?GITES_ALL:GITES;
+  grid.innerHTML=gitesToRender.map(g=>{
     const gS=suiviData[g.id]||{sejour_id:null,animateurs:'',vehicules:[]};
     const sejour=allSejours.find(s=>s.id===gS.sejour_id)||null;
     // Vacanciers depuis la base (indépendant de la journée de transport)
