@@ -340,6 +340,19 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
       <div class="section-head-title">📁 Documents reçus <span class="count-badge" id="docs-count">0</span></div>
     </div>
     <div class="section-body">
+      <!-- Type selector au-dessus -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.7px">Type :</label>
+        <select id="upload-type" class="select-input">
+          <option value="cv">CV</option>
+          <option value="cni">Carte d'identité</option>
+          <option value="casier">Casier judiciaire</option>
+          <option value="rib">RIB</option>
+          <option value="contrat">Contrat signé</option>
+          <option value="divers">Divers</option>
+        </select>
+        <span id="upload-status" class="upload-status"></span>
+      </div>
       <!-- Zone drag & drop -->
       <div id="drop-zone"
         style="border:2px dashed var(--border);border-radius:10px;padding:18px 16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;background:var(--card2)"
@@ -351,19 +364,6 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
         <div style="font-size:13px;font-weight:600;color:var(--text-mid)">Glisser un fichier ici</div>
         <div style="font-size:11px;color:var(--text-light);margin-top:3px">ou cliquer pour sélectionner</div>
         <input type="file" id="upload-file" style="display:none" onchange="uploadDoc()">
-      </div>
-      <!-- Type + status -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-        <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.7px">Type :</label>
-        <select id="upload-type" class="select-input">
-          <option value="cv">CV</option>
-          <option value="cni">Carte d'identité</option>
-          <option value="casier">Casier judiciaire</option>
-          <option value="rib">RIB</option>
-          <option value="contrat">Contrat signé</option>
-          <option value="divers">Divers</option>
-        </select>
-        <span id="upload-status" class="upload-status"></span>
       </div>
     </div>
     <div class="section-body" id="docs-section" style="padding-top:0">
