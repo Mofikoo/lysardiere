@@ -276,8 +276,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="mi-title">🖨️ Impression</div>
     <div class="mi-sub">Choisissez ce que vous souhaitez imprimer</div>
 
-    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesDepSejours()">📋 Feuilles de départ par gîte</button>
-    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles d'arrivée par gîte</button>
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ — liste simple par gîte</button>
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée — liste simple par gîte</button>
+    <button class="mi-btn mi-btn-outline" onclick="imprimerFeuillesGites()">🚐 Feuilles départ — par véhicule & horaire</button>
+    <button class="mi-btn mi-btn-outline" onclick="imprimerFeuillesArrivee()">🏡 Feuilles arrivée — liste complète par gîte</button>
 
     <div class="mi-sep"></div>
 
@@ -728,8 +730,9 @@ function imprimerFiches(){
   fermerModalImpression();
 }
 
-// imprimerFeuillesGites remplacé par imprimerFeuillesDepSejours
+// Feuilles départ avec véhicules et horaires (depuis les convois)
 function imprimerFeuillesGites(){
+  fermerModalImpression();
 
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
@@ -747,9 +750,15 @@ function imprimerFeuillesGites(){
     var giteName = GITE_NAMES[gite];
 
     var convoisAvecGite = [];
-    (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
+    const _mSel2=document.getElementById('modal-journee-select');
+    const _jid2=_mSel2?.value;
+    const _journee2=window._allJourneesData?.find(j=>j.id===_jid2)?.data;
+    if(!_journee2){alert('Sélectionnez une journée de transport dans la modale.');return;}
+    (_journee2.convois||[]).forEach(function(c) {
       var vacs = (c.depart||[]).filter(function(p) {
-        return giteAssignments[(p.prenom||'')+' '+((p.nom||'').toUpperCase())] === gite;
+        var key=(p.prenom||'')+' '+((p.nom||'').toUpperCase());
+        var keyN=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return giteAssignments[key]===gite||giteAssignments[keyN]===gite;
       });
       if (vacs.length) convoisAvecGite.push({ convoi:c, vacanciers:vacs });
     });
