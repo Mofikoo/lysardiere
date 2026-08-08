@@ -624,13 +624,24 @@ async function assignGite(pKey){
 async function assignSejour(giteId, sejourId){
   if(!suiviData[giteId]) suiviData[giteId]={sejour_id:null,animateurs:'',vehicules:[]};
   const oldSejourId = suiviData[giteId].sejour_id;
-  // Archiver l'ancien séjour si il y en avait un et qu'il change
+
   if(oldSejourId && oldSejourId !== sejourId){
+    // Archiver l'ancien séjour
     await archiverGite(giteId, oldSejourId);
-    // Réinitialiser les véhicules (comme les animateurs et vacanciers)
+    // Réinitialiser les véhicules
     suiviData[giteId].vehicules = [];
   }
+
   suiviData[giteId].sejour_id = sejourId||null;
+
+  // Si on revient sur un séjour déjà archivé, restaurer ses véhicules
+  if(sejourId && sejourId !== oldSejourId){
+    const archives = await supa('suivi_archives?gite_id=eq.'+giteId+'&sejour_id=eq.'+sejourId+'&select=vehicules&order=archived_at.desc&limit=1');
+    if(archives?.length && archives[0].vehicules?.length){
+      suiviData[giteId].vehicules = archives[0].vehicules;
+    }
+  }
+
   await saveGite(giteId);
   renderGites();
 }
