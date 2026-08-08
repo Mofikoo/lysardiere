@@ -276,16 +276,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="mi-title">🖨️ Impression</div>
     <div class="mi-sub">Choisissez ce que vous souhaitez imprimer</div>
 
-    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesDepSejours()">📋 Feuilles départ — liste simple par gîte</button>
-    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesArrSejours()">🏡 Feuilles arrivée — liste simple par gîte</button>
-    <button class="mi-btn mi-btn-outline" onclick="imprimerFeuillesGites()">🚐 Feuilles départ — par véhicule & horaire</button>
-    <button class="mi-btn mi-btn-outline" onclick="imprimerFeuillesArrivee()">🏡 Feuilles arrivée — liste complète par gîte</button>
-
-    <div class="mi-sep"></div>
-
     <select class="mi-sel" id="modal-journee-select">
       <option value="">— Journée de transport —</option>
     </select>
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesGites()">📋 Feuilles de départ par gîte</button>
+    <button class="mi-btn mi-btn-green" onclick="imprimerFeuillesArrivee()">🏡 Feuilles d'arrivée par gîte</button>
     <button class="mi-btn mi-btn-outline" onclick="imprimerFiches()">🖨️ Fiches annotées conducteurs</button>
     <button class="mi-btn mi-btn-outline" onclick="imprimerAffichesVehicules()">🚐 Affiches véhicules</button>
 
@@ -477,7 +472,7 @@ function getAllPersonsInJournee(){
   // Legacy - now uses giteAssignments from vacancier_gites
   if(!getConvois().length)return[];
   const seen={},result=[];
-  ((document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[])||[]).forEach(c=>{
+  ((()=>{const _s=document.getElementById('modal-journee-select');return window._allJourneesData?.find(j=>j.id===_s?.value)?.data?.convois||[];})()||[]).forEach(c=>{
     [...(c.depart||[]),...(c.arrivee||[])].forEach(p=>{
       const key=personKey(p);
       if(!seen[key]){seen[key]=true;const found=allPersonnes.find(x=>x.prenom?.toLowerCase()===p.prenom?.toLowerCase()&&x.nom?.toUpperCase()===p.nom?.toUpperCase());result.push({...p,id:found?.id||null,foyer:found?.foyer||p.foyer||''});}
@@ -734,6 +729,11 @@ function imprimerFiches(){
 function imprimerFeuillesGites(){
   fermerModalImpression();
 
+  const _mSel=document.getElementById('modal-journee-select');
+  const _jid=_mSel?.value;
+  const _journee=window._allJourneesData?.find(j=>j.id===_jid)?.data;
+  if(!_journee||!_journee.convois?.length){alert('Sélectionnez une journée de transport dans la modale.');return;}
+
   var GITE_NAMES = { hulotte:'Hulotte', sixties:'Sixties', envolee:'Envolée', floridorlot:'Floridorlot', arces:'Arces' };
   var GITE_STYLE = {
     hulotte:     { color:'#2e7d32', bg:'#e8f5e9', border:'#2e7d32' },
@@ -750,11 +750,7 @@ function imprimerFeuillesGites(){
     var giteName = GITE_NAMES[gite];
 
     var convoisAvecGite = [];
-    const _mSel2=document.getElementById('modal-journee-select');
-    const _jid2=_mSel2?.value;
-    const _journee2=window._allJourneesData?.find(j=>j.id===_jid2)?.data;
-    if(!_journee2){alert('Sélectionnez une journée de transport dans la modale.');return;}
-    (_journee2.convois||[]).forEach(function(c) {
+    (_journee.convois||[]).forEach(function(c) {
       var vacs = (c.depart||[]).filter(function(p) {
         var key=(p.prenom||'')+' '+((p.nom||'').toUpperCase());
         var keyN=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -872,7 +868,7 @@ function imprimerFeuillesArrivee(){
     var giteName = GITE_NAMES[gite];
 
     var seen = {}, vacanciers = [];
-    (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
+    (()=>{const _s=document.getElementById('modal-journee-select');return window._allJourneesData?.find(j=>j.id===_s?.value)?.data?.convois||[];})().forEach(function(c) {
       (c.arrivee||[]).forEach(function(p) {
         var key = (p.prenom||'')+' '+((p.nom||'').toUpperCase());
         var keyNorm=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -943,7 +939,7 @@ function imprimerAffichesVehicules(){
 
   var html = '';
 
-  (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c, idx) {
+  (()=>{const _s=document.getElementById('modal-journee-select');return window._allJourneesData?.find(j=>j.id===_s?.value)?.data?.convois||[];})().forEach(function(c, idx) {
     var vehicule  = c.vehicule ? c.vehicule.label : 'Véhicule ' + (idx+1);
     var heure     = c.heureDepart || '';
     var conducteur = c.conducteur || '';
