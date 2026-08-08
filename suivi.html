@@ -445,15 +445,22 @@ function toggleFloridorlot(){
 
 async function chargerGiteAssignments(){
   // Reconstruire depuis allVacancierGites (déjà en mémoire)
-  // Double index : par personne_id ET par "Prénom NOM" pour les deux usages
+  // Double index : par personne_id ET par "Prénom NOM" normalisé
   giteAssignments={};
   allVacancierGites.forEach(vg=>{
-    // Index par personne_id (pour les fiches annotées convois)
     giteAssignments[vg.personne_id]=vg.gite_id;
-    // Index par nom (pour renderGites et sections non assignés)
     const p=allPersonnes.find(x=>x.id===vg.personne_id);
-    if(p) giteAssignments[personKey(p)]=vg.gite_id;
+    if(p){
+      giteAssignments[personKey(p)]=vg.gite_id;
+      // Clé normalisée sans accents pour correspondance avec convois
+      giteAssignments[normalizeKey(p)]=vg.gite_id;
+    }
   });
+}
+
+function normalizeKey(p){
+  return ((p.prenom||'')+' '+((p.nom||'').toUpperCase()))
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
 
 function personKey(p){return((p.prenom||'')+' '+((p.nom||'').toUpperCase())).trim();}
@@ -859,7 +866,8 @@ function imprimerFeuillesArrivee(){
     (document.getElementById('modal-journee-select')?.options[document.getElementById('modal-journee-select')?.selectedIndex]?._data?.convois||[]).forEach(function(c) {
       (c.arrivee||[]).forEach(function(p) {
         var key = (p.prenom||'')+' '+((p.nom||'').toUpperCase());
-        if (giteAssignments[key] === gite && !seen[key]) {
+        var keyNorm=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if ((giteAssignments[key]===gite||giteAssignments[keyNorm]===gite) && !seen[key]) {
           seen[key] = true;
           vacanciers.push({ prenom: p.prenom, nom: (p.nom||'').toUpperCase() });
         }
@@ -938,7 +946,8 @@ function imprimerAffichesVehicules(){
 
     (c.depart||[]).forEach(function(p) {
       var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-      var g = giteAssignments[key] || null;
+      var keyNorm=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      var g = giteAssignments[key] || giteAssignments[keyNorm] || null;
       if (g && byGite[g]) byGite[g].push(p);
       else sansGite.push(p);
     });
@@ -1096,8 +1105,9 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
   // withAnnotation=false → stops timeline, aucune annotation
   function renderPerson(p, isDep, withAnnotation) {
     var key = (p.prenom||'') + ' ' + ((p.nom||'').toUpperCase());
-    // Chercher par id d'abord (convois), puis par nom (assignation manuelle)
-    var g = withAnnotation ? (giteAssignments[p.id] || giteAssignments[key] || null) : null;
+    var keyNorm = key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    // Chercher par id Supabase → par nom exact → par nom normalisé (sans accents)
+    var g = withAnnotation ? (giteAssignments[p.id] || giteAssignments[key] || giteAssignments[keyNorm] || null) : null;
     var gc = g ? GITE_COLORS[g] : null;
 
     var nameStyle = 'font-weight:700;';
