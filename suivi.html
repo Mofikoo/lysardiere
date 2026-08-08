@@ -532,14 +532,14 @@ function renderGites(){
 }
 
 function renderUnassigned(){
-  // Vacanciers des séjours actifs non assignés à un gîte
-  const activeSejourIds=Object.values(suiviData).map(s=>s.sejour_id).filter(Boolean);
-  const assignedPids=new Set(allVacancierGites.filter(vg=>activeSejourIds.includes(vg.sejour_id)).map(vg=>vg.personne_id));
-  const unassigned=allPersonnes.filter(p=>!assignedPids.has(p.id)).sort((a,b)=>a.nom?.localeCompare(b.nom||'')||a.prenom?.localeCompare(b.prenom||''));
+  // Tous les vacanciers de la base non encore assignés à un gîte
+  const assignedIds=new Set(allVacancierGites.map(vg=>vg.personne_id));
+  const unassigned=allPersonnes.filter(p=>!assignedIds.has(p.id))
+    .sort((a,b)=>(a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||''));
   document.getElementById('unassigned-count').textContent=unassigned.length;
   const grid=document.getElementById('unassigned-grid');
   if(!unassigned.length){grid.innerHTML='<div style="color:var(--green);font-size:13px;font-weight:600;padding:8px">✅ Tous les vacanciers sont assignés</div>';return;}
-  grid.innerHTML=unassigned.map(p=>`<div class="person-chip" onclick="assignGite('${personKey(p).replace(/'/g,"\\'")}')"><span class="chip-name">${p.prenom} ${(p.nom||'').toUpperCase()}</span><span style="font-size:10px;color:var(--light)">—</span></div>`).join('');
+  grid.innerHTML=unassigned.map(p=>`<div class="person-chip" onclick="assignGiteById('${p.id}')"><span class="chip-name">${p.prenom} ${(p.nom||'').toUpperCase()}</span><span style="font-size:10px;color:var(--light)">${p.foyer||''}</span></div>`).join('');
 }
 
 function setActiveGite(g){
@@ -617,17 +617,20 @@ function filterManualSearch(giteId, query){
   const drop = document.getElementById('manual-drop-'+giteId);
   if(!drop) return;
   const q = (query||'').toLowerCase().trim();
-  // Exclure tous les vacanciers déjà assignés à N'IMPORTE QUEL gîte
-  const alreadyAssigned = new Set(Object.keys(giteAssignments));
-  // Exclure aussi ceux déjà dans les convois de la journée
-  const inConvois = new Set(getAllPersonsInJournee().map(p=>personKey(p)));
+  // Exclure les vacanciers déjà assignés (par personne_id)
+  const assignedIds = new Set(allVacancierGites.map(vg=>vg.personne_id));
   const candidates = allPersonnes.filter(p=>{
-    const key = personKey(p);
-    return !alreadyAssigned.has(key) && !inConvois.has(key) && (
-      !q || `${p.prenom} ${p.nom} ${p.foyer}`.toLowerCase().includes(q)
-    );
+    if(assignedIds.has(p.id)) return false;
+    return !q || `${p.prenom} ${p.nom} ${p.foyer||''}`.toLowerCase().includes(q);
   }).slice(0, 10);
-  if(!candidates.length){ drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--light)">Aucun résultat</div>'; drop.style.display='block'; return; }
+  if(!allPersonnes.length){
+    drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--light)">Aucun vacancier en base</div>';
+    drop.style.display='block'; return;
+  }
+  if(!candidates.length){
+    drop.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--light)">Aucun résultat</div>';
+    drop.style.display='block'; return;
+  }
   drop.innerHTML = candidates.map(p=>`
     <div onmousedown="assignManuel('${giteId}','${p.id}','${personKey(p).replace(/'/g,"\\'")}')"
       style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
