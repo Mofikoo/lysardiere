@@ -514,7 +514,56 @@ function renderGites(){
       const hasFiche=allFiches.some(f=>f.personne_id===p.id&&f.html_rendu);
       return `<div class="vac-row"><div class="vac-av">${initials(p.prenom,p.nom)}</div><div style="flex:1;min-width:0"><div class="vac-name">${p.prenom} ${(p.nom||'').toUpperCase()}</div>${p.foyer?`<div class="vac-foyer">${p.foyer}</div>`:''}</div><span class="st-badge st-${st}">${stLabel}</span>${hasFiche?`<button class="vac-btn" onclick="ouvrirFiche('${p.id}')">📋</button>`:''}<button class="vac-btn" onclick="retirerVacancierById('${p.id}','${g.id}','${gS.sejour_id||''}')" title="Retirer du gîte" class="vac-btn-del">✕</button></div>`;
     }).join('');
-    return `<div class="gite-card ${g.cls}"><div class="gite-card-inner"><div class="gite-accent ${g.cls}"></div><div class="gite-content"><div class="gite-hdr"><div class="gite-hdr-left"><div class="gite-dot ${g.cls}"></div><div class="gite-title ${g.cls}">${g.label}</div></div><span class="gite-badge ${g.cls}">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body"><div class="field-row"><span class="field-lbl">Séjour</span><select class="field-in" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select></div>${sejour?`<div style="font-size:11px;color:var(--light);margin-left:84px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}<div style="margin-top:4px"><span class="field-lbl" style="display:block;margin-bottom:5px">Animateurs</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${getAnimateurBubbles(g.id,gS.sejour_id)}</div><div style="position:relative"><input type="text" placeholder="+ Ajouter un animateur…" style="width:100%;padding:5px 10px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)" id="anim-search-${g.id}" oninput="filterAnimSearch('${g.id}',this.value)" onfocus="filterAnimSearch('${g.id}',this.value)" onblur="setTimeout(()=>hideAnimDrop('${g.id}'),150)" autocomplete="off"><div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div></div></div><div class="field-row" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="field-lbl">Véhicules</span><div class="vehs">${chips||'<span style="font-size:12px;color:var(--light)">Aucun</span>'}</div>${addVeh}</div></div><div class="gite-divider"></div>${vacRows?`<div class="vacs-section"><div class="vacs-label">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
+    return `<div class="gite-card ${g.cls}"><div class="gite-card-inner"><div class="gite-accent ${g.cls}"></div><div class="gite-content"><div class="gite-hdr"><div class="gite-hdr-left"><div class="gite-dot ${g.cls}"></div><div class="gite-title ${g.cls}">${g.label}</div></div><span class="gite-badge ${g.cls}">${vacInGite.length} vacancier${vacInGite.length!==1?'s':''}</span></div><div class="gite-body">
+
+      <!-- SÉJOUR : sélecteur + dates sur une ligne -->
+      <div class="field-row">
+        <span class="field-lbl">Séjour</span>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+          <select class="field-in" style="width:100%" onchange="assignSejour('${g.id}',this.value)"><option value="">— Choisir —</option>${sejourOpts}</select>
+          ${sejour?`<div style="font-size:10px;color:var(--light);padding-left:2px">${fmtDate(sejour.date_debut)} → ${fmtDate(sejour.date_fin)}</div>`:''}
+        </div>
+      </div>
+
+      <!-- ANIMATEURS : label + bulles + bouton + sur même ligne, input caché -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:28px">
+          <span class="field-lbl" style="flex-shrink:0">Animateurs</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;flex:1;align-items:center">
+            ${getAnimateurBubbles(g.id,gS.sejour_id)}
+          </div>
+          <button onclick="toggleAnimSearch('${g.id}')"
+            style="width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg);color:var(--mid);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;transition:all .15s"
+            onmouseover="this.style.background='#eef7f5';this.style.borderColor='var(--fm)'"
+            onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)'">+</button>
+        </div>
+        <div id="anim-search-wrap-${g.id}" style="display:none;position:relative;margin-top:5px">
+          <input type="text" placeholder="Rechercher un animateur…"
+            style="width:100%;padding:6px 10px;border:1.5px solid var(--fm);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:#fff"
+            id="anim-search-${g.id}"
+            oninput="filterAnimSearch('${g.id}',this.value)"
+            onfocus="filterAnimSearch('${g.id}',this.value)"
+            onblur="setTimeout(()=>{hideAnimDrop('${g.id}');document.getElementById('anim-search-wrap-${g.id}').style.display='none'},150)"
+            autocomplete="off">
+          <div id="anim-drop-${g.id}" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:1000"></div>
+        </div>
+      </div>
+
+      <!-- VÉHICULES : chips + select + OK sur même ligne -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:28px">
+          <span class="field-lbl" style="flex-shrink:0">Véhicules</span>
+          <div class="vehs" style="flex:1">
+            ${chips||'<span style="font-size:11px;color:var(--light)">Aucun</span>'}
+          </div>
+        </div>
+        ${availVehs.length?`<div style="display:flex;gap:6px;margin-top:5px">
+          <select id="veh-${g.id}" style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);outline:none"><option value="">+ Ajouter un véhicule…</option>${availVehs.map(v=>`<option value="${v.id}">${v.ico} ${v.label} (${v.cap}p.)</option>`).join('')}</select>
+          <button onclick="addVehicle('${g.id}')" style="padding:5px 14px;background:var(--f);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:background .15s" onmouseover="this.style.background='var(--fm)'" onmouseout="this.style.background='var(--f)'">OK</button>
+        </div>`:''}
+      </div>
+
+    </div><div class="gite-divider"></div>${vacRows?`<div class="vacs-section"><div class="vacs-label">Vacanciers (${vacInGite.length})</div>${vacRows}</div>`:`<div class="gite-empty">Aucun vacancier assigné</div>`}
       <div class="manual-add-wrap">
         <div style="position:relative">
           <input type="text" placeholder="➕ Ajouter un vacancier manuellement…"
@@ -1417,6 +1466,17 @@ function filterAnimSearch(giteId, query){
       <span style="font-size:10px;color:var(--light)">${a.email||''}</span>
     </div>`).join('')+createOpt;
   drop.style.display='block';
+}
+
+function toggleAnimSearch(giteId){
+  const wrap=document.getElementById('anim-search-wrap-'+giteId);
+  if(!wrap) return;
+  const isHidden=wrap.style.display==='none';
+  wrap.style.display=isHidden?'block':'none';
+  if(isHidden){
+    const inp=document.getElementById('anim-search-'+giteId);
+    if(inp){inp.value='';inp.focus();filterAnimSearch(giteId,'');}
+  }
 }
 
 function hideAnimDrop(giteId){
