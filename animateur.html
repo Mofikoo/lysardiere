@@ -241,8 +241,9 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
     <div><div class="hd-title">La Lysardière</div><div class="hd-sub" id="hd-sub">Animateurs</div></div>
   </a>
   <div class="header-right">
-    <button class="hdr-btn hdr-gold" id="btn-save" onclick="sauvegarder()" style="display:none">💾 Enregistrer</button>
+    <span id="autosave-indicator" style="display:none;font-size:12px;color:rgba(255,255,255,0.7);align-items:center;gap:5px">✓ Sauvegardé</span>
     <a href="animateur.html" class="hdr-btn hdr-ghost" id="btn-back-list" style="display:none">← Animateurs</a>
+    <a href="documents_vierges.html" class="hdr-btn hdr-ghost" id="btn-vierges" style="display:none">📋 Documents vierges</a>
     <a href="index.html" class="hdr-btn hdr-ghost" id="btn-accueil" style="display:none">← Accueil</a>
   </div>
 </div>
@@ -268,6 +269,7 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
     </div>
   </div>
 
+  <div id="anim-stats" style="font-size:12px;color:var(--text-mid);margin-bottom:12px;display:none"></div>
   <div id="animateurs-liste"></div>
 </div>
 
@@ -290,23 +292,39 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
     <div class="profile-fields">
       <div class="profile-field">
         <label>Prénom</label>
-        <input id="f-prenom" type="text" placeholder="Prénom">
+        <input id="f-prenom" type="text" placeholder="Prénom" onblur="autosave()">
       </div>
       <div class="profile-field">
         <label>Nom</label>
-        <input id="f-nom" type="text" placeholder="NOM">
+        <input id="f-nom" type="text" placeholder="NOM" onblur="autosave()">
       </div>
       <div class="profile-field">
         <label>Email</label>
-        <input id="f-email" type="email" placeholder="email@exemple.com">
+        <input id="f-email" type="email" placeholder="email@exemple.com" onblur="autosave()">
       </div>
       <div class="profile-field">
         <label>Téléphone</label>
-        <input id="f-tel" type="tel" placeholder="06 XX XX XX XX">
+        <input id="f-tel" type="tel" placeholder="06 XX XX XX XX" onblur="autosave()">
+      </div>
+      <div class="profile-field">
+        <label>Date de naissance</label>
+        <input id="f-ddn" type="date" onblur="autosave()">
+      </div>
+      <div class="profile-field">
+        <label>Lieu de naissance</label>
+        <input id="f-lbn" type="text" placeholder="Ville, Pays" onblur="autosave()">
+      </div>
+      <div class="profile-field full">
+        <label>N° Sécurité sociale</label>
+        <input id="f-nss" type="text" placeholder="1 85 06 75 123 456 78" onblur="autosave()">
+      </div>
+      <div class="profile-field full">
+        <label>Adresse postale</label>
+        <input id="f-adresse" type="text" placeholder="Rue, code postal, ville" onblur="autosave()">
       </div>
       <div class="profile-field full">
         <label>Notes</label>
-        <input id="f-notes" type="text" placeholder="Observations…">
+        <input id="f-notes" type="text" placeholder="Observations…" onblur="autosave()">
       </div>
     </div>
     <div class="mail-bar" id="mail-bar">
@@ -320,7 +338,23 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
   <div class="section">
     <div class="section-head">
       <div class="section-head-title">📁 Documents reçus <span class="count-badge" id="docs-count">0</span></div>
-      <div class="upload-bar">
+    </div>
+    <div class="section-body">
+      <!-- Zone drag & drop -->
+      <div id="drop-zone"
+        style="border:2px dashed var(--border);border-radius:10px;padding:18px 16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;background:var(--card2)"
+        ondragover="event.preventDefault();this.style.background='#eef7f5';this.style.borderColor='var(--forest-mid)'"
+        ondragleave="this.style.background='var(--card2)';this.style.borderColor='var(--border)'"
+        ondrop="handleDrop(event)"
+        onclick="document.getElementById('upload-file').click()">
+        <div style="font-size:24px;margin-bottom:6px">📂</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-mid)">Glisser un fichier ici</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:3px">ou cliquer pour sélectionner</div>
+        <input type="file" id="upload-file" style="display:none" onchange="uploadDoc()">
+      </div>
+      <!-- Type + status -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <label style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.7px">Type :</label>
         <select id="upload-type" class="select-input">
           <option value="cv">CV</option>
           <option value="cni">Carte d'identité</option>
@@ -329,14 +363,10 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:v
           <option value="contrat">Contrat signé</option>
           <option value="divers">Divers</option>
         </select>
-        <label class="upload-label">
-          <input type="file" id="upload-file" onchange="uploadDoc()">
-          <span class="btn-sm btn-primary">📤 Ajouter</span>
-        </label>
         <span id="upload-status" class="upload-status"></span>
       </div>
     </div>
-    <div class="section-body" id="docs-section">
+    <div class="section-body" id="docs-section" style="padding-top:0">
       <div class="empty-mini">Aucun document reçu.</div>
     </div>
   </div>
@@ -357,6 +387,8 @@ let animateurId=null, animateur=null, allDocs=[], allVierges=[];
 
 const TYPE_LABELS={cv:'CV',cni:'Carte d\'identité',casier:'Casier judiciaire',rib:'RIB',contrat:'Contrat signé',divers:'Divers'};
 const TYPE_ORDER=['cv','cni','casier','rib','contrat','divers'];
+const TYPE_BG={cv:'#dbeafe',cni:'#d1fae5',casier:'#fef9c3',rib:'#fce7f3',contrat:'#fef3c7',divers:'#f3f4f6'};
+const TYPE_COLOR={cv:'#1d4ed8',cni:'#065f46',casier:'#854d0e',rib:'#9d174d',contrat:'#92400e',divers:'#374151'};
 
 async function getJWT(){try{const{data:{session}}=await _supa.auth.getSession();if(session?.access_token)return session.access_token;}catch(e){}return SUPABASE_ANON;}
 async function api(path,method,body){
@@ -381,7 +413,7 @@ async function init(){
     return;
   }
   document.getElementById('main').style.display='block';
-  document.getElementById('btn-save').style.display='inline-flex';
+  document.getElementById('autosave-indicator').style.display='none'; // ready
   document.getElementById('btn-back-list').style.display='inline-flex';
   await charger();
 }
@@ -389,6 +421,7 @@ async function init(){
 async function chargerListe(){
   document.getElementById('main-liste').style.display='block';
   document.getElementById('btn-accueil').style.display='inline-flex';
+  document.getElementById('btn-vierges').style.display='inline-flex';
   document.querySelector('.hd-sub').textContent='Liste animateurs';
   const data=await api('animateurs?select=*&order=nom.asc,prenom.asc');
   window._allAnimateurs=data||[];
@@ -400,6 +433,8 @@ function filtrerListe(){
   const list=window._allAnimateurs||[];
   const filtered=q?list.filter(a=>`${a.prenom} ${a.nom} ${a.email}`.toLowerCase().includes(q)):list;
   const el=document.getElementById('animateurs-liste');
+  const stats=document.getElementById('anim-stats');
+  if(stats){stats.style.display='block';stats.textContent=filtered.length+' animateur'+(filtered.length>1?'s':'')+' · '+(window._allAnimateurs||[]).length+' au total';}
   if(!filtered.length){
     el.innerHTML='<div class="empty-mini">Aucun animateur trouvé.</div>';
     return;
@@ -518,6 +553,49 @@ async function uploadPhoto(){
   }
 }
 
+let _autosaveTimer=null;
+function autosave(){
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer=setTimeout(()=>sauvegarder(),800);
+}
+function showAutosaved(){
+  const el=document.getElementById('autosave-indicator');
+  if(!el) return;
+  el.style.display='inline-flex';
+  clearTimeout(el._hide);
+  el._hide=setTimeout(()=>{el.style.display='none';},2500);
+}
+
+function handleDrop(event){
+  event.preventDefault();
+  const dz=document.getElementById('drop-zone');
+  if(dz){dz.style.background='var(--card2)';dz.style.borderColor='var(--border)';}
+  const file=event.dataTransfer.files[0];
+  if(!file) return;
+  // Injecter le fichier dans l'input et déclencher l'upload
+  const dt=new DataTransfer();dt.items.add(file);
+  const inp=document.getElementById('upload-file');
+  inp.files=dt.files;
+  uploadDoc();
+}
+
+async function changeDocType(docId, newType){
+  const jwt=await getJWT();
+  await fetch(SUPABASE_URL+'/rest/v1/animateur_documents?id=eq.'+docId,{
+    method:'PATCH',
+    headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({type:newType})
+  });
+  // Mettre à jour localement sans re-render complet
+  const doc=allDocs.find(d=>d.id===docId);
+  if(doc){
+    doc.type=newType;
+    // Mettre à jour le style du select
+    const sel=document.querySelector(`#doc-item-${docId} select`);
+    if(sel){sel.style.background=TYPE_BG[newType]||'#f3f4f6';sel.style.color=TYPE_COLOR[newType]||'#374151';}
+  }
+}
+
 async function charger(){
   const[anim,docs]=await Promise.all([
     api('animateurs?id=eq.'+animateurId+'&select=*'),
@@ -541,6 +619,10 @@ function renderProfil(){
   document.getElementById('f-nom').value=p.nom||'';
   document.getElementById('f-email').value=p.email||'';
   document.getElementById('f-tel').value=p.telephone||'';
+  document.getElementById('f-ddn').value=p.date_naissance||'';
+  document.getElementById('f-lbn').value=p.lieu_naissance||'';
+  document.getElementById('f-nss').value=p.num_secu||'';
+  document.getElementById('f-adresse').value=p.adresse||'';
   document.getElementById('f-notes').value=p.notes||'';
   document.title=(p.prenom||'')+' '+(p.nom||'')+' — La Lysardière';
   document.getElementById('hd-sub').textContent=(p.prenom||'')+' '+(p.nom||'').toUpperCase();
@@ -562,8 +644,11 @@ function renderDocs(){
   TYPE_ORDER.forEach(t=>{byType[t]=allDocs.filter(d=>d.type===t);});
   section.innerHTML=TYPE_ORDER.filter(t=>byType[t].length).map(t=>{
     const rows=byType[t].map(doc=>`
-      <div class="doc-item">
-        <span class="type-pill type-${doc.type}">${TYPE_LABELS[doc.type]||doc.type}</span>
+      <div class="doc-item" id="doc-item-${doc.id}">
+        <select onchange="changeDocType('${doc.id}',this.value)"
+          style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:${TYPE_BG[doc.type]||'#f3f4f6'};color:${TYPE_COLOR[doc.type]||'#374151'}">
+          ${Object.entries(TYPE_LABELS).map(([k,v])=>`<option value="${k}" ${k===doc.type?'selected':''}>${v}</option>`).join('')}
+        </select>
         <span class="doc-name">${doc.filename}</span>
         <span class="doc-date">${fmtDate(doc.uploaded_at)}</span>
         <button class="btn-icon" onclick="openDoc('${doc.storage_path}','${esc(doc.filename)}')">👁 Voir</button>
@@ -597,6 +682,10 @@ async function sauvegarder(){
     nom:document.getElementById('f-nom').value.trim().toUpperCase(),
     email:document.getElementById('f-email').value.trim(),
     telephone:document.getElementById('f-tel').value.trim(),
+    date_naissance:document.getElementById('f-ddn').value||null,
+    lieu_naissance:document.getElementById('f-lbn').value.trim(),
+    num_secu:document.getElementById('f-nss').value.trim(),
+    adresse:document.getElementById('f-adresse').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
     updated_at:new Date().toISOString()
   };
@@ -605,7 +694,7 @@ async function sauvegarder(){
     headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify(data)
   });
-  if(r.ok){animateur={...animateur,...data};renderProfil();toast('✅ Enregistré');}
+  if(r.ok){animateur={...animateur,...data};renderProfil();showAutosaved();}
   else toast('Erreur lors de la sauvegarde','error');
 }
 
