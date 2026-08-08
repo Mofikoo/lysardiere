@@ -424,8 +424,17 @@ async function chargerListe(){
   document.getElementById('btn-accueil').style.display='inline-flex';
   document.getElementById('btn-vierges').style.display='inline-flex';
   document.querySelector('.hd-sub').textContent='Liste animateurs';
-  const data=await api('animateurs?select=*&order=nom.asc,prenom.asc');
+  const [data, gaRows]=await Promise.all([
+    api('animateurs?select=*&order=prenom.asc,nom.asc'),
+    api('gite_animateurs?select=animateur_id,sejour_id')
+  ]);
   window._allAnimateurs=data||[];
+  // Compter séjours distincts par animateur
+  window._sejours_by_anim={};
+  (gaRows||[]).forEach(r=>{
+    if(!window._sejours_by_anim[r.animateur_id]) window._sejours_by_anim[r.animateur_id]=new Set();
+    if(r.sejour_id) window._sejours_by_anim[r.animateur_id].add(r.sejour_id);
+  });
   filtrerListe();
 }
 
