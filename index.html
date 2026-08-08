@@ -2,90 +2,222 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Lysardière — Espace privé</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Lysardière</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #F7F3EC; --card: #FFFFFF; --forest: #18534F; --mint: #ECF8F6;
-    --red: #C84B4B; --text-dark: #1A2E2C; --text-mid: #5C6B6A;
-    --text-light: #8A9695; --border: #E5E0D6;
-    --shadow-lg: 0 10px 40px rgba(24,83,79,0.15); --radius: 16px; --radius-xs: 8px;
-  }
-  * { box-sizing: border-box; }
-  body { margin:0;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-dark);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px; }
-  .container { width:100%;max-width:500px; }
-  .card { background:var(--card);border-radius:var(--radius);padding:48px 40px;box-shadow:var(--shadow-lg);text-align:center; }
-  .title { font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--forest);margin:0 0 6px 0; }
-  .subtitle { font-size:14px;color:var(--text-mid);margin-bottom:32px; }
-  .input { width:100%;font-size:15px;padding:14px 18px;border:2px solid var(--border);border-radius:var(--radius-xs);margin-bottom:12px;text-align:center;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s; }
-  .input:focus { border-color:var(--forest); }
-  .btn { width:100%;background:var(--forest);color:white;border:none;font-size:15px;font-weight:600;padding:14px;border-radius:var(--radius-xs);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.2s; }
-  .btn:hover { background:#144742; }
-  .btn:disabled { opacity:0.6;cursor:not-allowed; }
-  .error { font-size:13px;color:var(--red);margin-bottom:12px;display:none; }
-  .apps-grid { display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; justify-content:center; }
-  .app-card { flex:0 0 calc(50% - 8px); max-width:220px; }
-  .app-card { background:var(--mint);border:2px solid var(--border);border-radius:var(--radius-xs);padding:28px 16px;text-decoration:none;color:var(--text-dark);text-align:center;transition:all 0.2s;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px; }
-  .app-card:hover { border-color:var(--forest);background:white;transform:translateY(-2px);box-shadow:0 4px 12px rgba(24,83,79,0.1); }
-  .app-icon { font-size:40px; }
-  .app-name { font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--forest); }
-  .app-desc { font-size:12px;color:var(--text-mid); }
-  .logout { margin-top:24px;background:none;border:none;color:var(--text-light);font-size:12px;cursor:pointer;text-decoration:underline; }
-  .logout:hover { color:var(--red); }
-  .user-info { font-size:12px;color:var(--text-mid);margin-bottom:16px; }
-  @media (max-width:500px) { .apps-grid{grid-template-columns:1fr} .card{padding:32px 24px} }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1F1E; --forest:#18534F; --forest-mid:#226D68;
+  --gold:#C9A84C; --gold-l:#F0DFA0;
+  --cream:#F0EDE6; --white:#FFFFFF;
+  --mid:#4a6e6a; --light:#8aa8a4;
+  --red:#C84B4B;
+  --sh:0 24px 64px rgba(0,0,0,0.4);
+}
+html{height:100%}
+body{
+  min-height:100vh;background:var(--ink);color:var(--cream);
+  font-family:'DM Sans',system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(24,83,79,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 100%, rgba(201,168,76,0.12) 0%, transparent 60%);
+}
+
+/* ── LOGIN ── */
+.login-card{
+  width:100%;max-width:380px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:20px;padding:40px 36px;
+  backdrop-filter:blur(12px);
+  box-shadow:var(--sh);
+}
+.logo-mark{
+  width:52px;height:52px;border-radius:14px;
+  background:linear-gradient(135deg,var(--forest),var(--forest-mid));
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  box-shadow:0 8px 24px rgba(24,83,79,0.5);
+  border:1px solid rgba(201,168,76,0.3);
+}
+.logo-mark span{
+  font-family:'Fraunces',serif;font-style:italic;font-size:26px;
+  font-weight:900;color:var(--gold);line-height:1;
+}
+.login-title{
+  font-family:'Fraunces',serif;font-style:italic;
+  font-size:26px;font-weight:900;color:var(--cream);
+  text-align:center;letter-spacing:-0.5px;margin-bottom:4px;
+}
+.login-sub{
+  font-size:13px;color:var(--light);text-align:center;margin-bottom:28px;
+}
+.field{
+  width:100%;padding:12px 16px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:10px;font-size:14px;font-family:inherit;
+  color:var(--cream);outline:none;margin-bottom:10px;
+  transition:border-color .2s,background .2s;
+}
+.field::placeholder{color:rgba(255,255,255,0.25)}
+.field:focus{border-color:rgba(201,168,76,0.5);background:rgba(255,255,255,0.09)}
+.remember-row{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--light);margin-bottom:16px;cursor:pointer;
+}
+.remember-row input{accent-color:var(--gold);width:14px;height:14px;cursor:pointer}
+.login-btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,var(--forest),var(--forest-mid));
+  color:white;font-size:14px;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 16px rgba(24,83,79,0.4);
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(24,83,79,0.5)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.login-error{font-size:12px;color:#f87171;margin-bottom:10px;text-align:center;display:none}
+
+/* ── SELECTOR ── */
+.selector{width:100%;max-width:560px;display:none}
+.selector-top{text-align:center;margin-bottom:36px}
+.sel-logo{
+  width:60px;height:60px;border-radius:16px;
+  background:linear-gradient(135deg,var(--forest),var(--forest-mid));
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 18px;
+  box-shadow:0 8px 32px rgba(24,83,79,0.5);
+  border:1px solid rgba(201,168,76,0.3);
+}
+.sel-logo span{font-family:'Fraunces',serif;font-style:italic;font-size:30px;font-weight:900;color:var(--gold)}
+.sel-title{
+  font-family:'Fraunces',serif;font-style:italic;font-weight:900;
+  font-size:36px;color:var(--cream);letter-spacing:-1px;margin-bottom:6px;
+}
+.sel-user{font-size:12px;color:var(--light);letter-spacing:.5px}
+.apps-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;
+}
+.app-card{
+  text-decoration:none;border-radius:16px;padding:28px 20px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:0;
+  position:relative;overflow:hidden;transition:all .2s;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.app-card::before{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,0);transition:background .2s;
+}
+.app-card:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,0.4)}
+.app-card:hover::before{background:rgba(255,255,255,0.04)}
+/* Couleurs par carte */
+.card-transport{background:linear-gradient(145deg,#0f3d3a,#163b38)}
+.card-docs{background:linear-gradient(145deg,#2d1f00,#3d2a00)}
+.card-suivi{background:linear-gradient(145deg,#1a0a2e,#240f40)}
+.card-anim{background:linear-gradient(145deg,#001a1f,#002830)}
+.app-initial{
+  font-family:'Fraunces',serif;font-style:italic;font-weight:900;
+  font-size:52px;line-height:1;margin-bottom:16px;opacity:.25;
+  position:absolute;bottom:-8px;right:12px;
+  transition:opacity .2s,transform .2s;
+  pointer-events:none;
+}
+.app-card:hover .app-initial{opacity:.4;transform:scale(1.05)}
+.app-icon-wrap{
+  width:36px;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:14px;
+  background:rgba(255,255,255,0.08);
+}
+.app-name{font-family:'Fraunces',serif;font-size:17px;font-weight:700;color:var(--cream);margin-bottom:4px;position:relative;z-index:1}
+.app-desc{font-size:11px;color:rgba(255,255,255,0.4);position:relative;z-index:1;line-height:1.4}
+.app-arrow{
+  position:absolute;top:16px;right:16px;
+  font-size:14px;color:rgba(255,255,255,0.2);
+  transition:color .2s,transform .2s;
+}
+.app-card:hover .app-arrow{color:rgba(255,255,255,0.5);transform:translate(2px,-2px)}
+.logout-btn{
+  width:100%;padding:10px;background:transparent;
+  border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+  color:rgba(255,255,255,0.3);font-size:12px;font-family:inherit;
+  cursor:pointer;transition:all .2s;
+}
+.logout-btn:hover{border-color:rgba(200,75,75,0.4);color:#f87171;background:rgba(200,75,75,0.05)}
+
+@media(max-width:480px){
+  .apps-grid{grid-template-columns:1fr}
+  .sel-title{font-size:28px}
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <!-- LOGIN VIEW -->
-  <div id="login-view" class="card">
-    <div class="title">La Lysardière</div>
-    <div class="subtitle">Accès à l'espace privé</div>
-    <input type="email" id="email" class="input" placeholder="Adresse e-mail" onkeydown="if(event.key==='Enter') document.getElementById('pw').focus()" autocomplete="email">
-    <input type="password" id="pw" class="input" placeholder="Mot de passe" onkeydown="if(event.key==='Enter') checkLogin()" autocomplete="current-password">
-    <label style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-mid);margin-bottom:14px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="remember" style="width:auto;cursor:pointer">
-      <span>Rester connecté sur cet appareil</span>
-    </label>
-    <div id="error" class="error">Email ou mot de passe incorrect</div>
-    <button class="btn" id="login-btn" onclick="checkLogin()">Se connecter</button>
+
+<!-- LOGIN -->
+<div id="login-view" class="login-card">
+  <div class="logo-mark"><span>L</span></div>
+  <div class="login-title">La Lysardière</div>
+  <div class="login-sub">Espace de gestion privé</div>
+  <div id="error" class="login-error">Email ou mot de passe incorrect</div>
+  <input type="email" id="email" class="field" placeholder="Adresse e-mail"
+    onkeydown="if(event.key==='Enter') document.getElementById('pw').focus()" autocomplete="email">
+  <input type="password" id="pw" class="field" placeholder="Mot de passe"
+    onkeydown="if(event.key==='Enter') checkLogin()" autocomplete="current-password">
+  <label class="remember-row">
+    <input type="checkbox" id="remember">
+    <span>Rester connecté sur cet appareil</span>
+  </label>
+  <button class="login-btn" id="login-btn" onclick="checkLogin()">Se connecter</button>
+</div>
+
+<!-- SELECTOR -->
+<div id="selector-view" class="selector">
+  <div class="selector-top">
+    <div class="sel-logo"><span>L</span></div>
+    <div class="sel-title">La Lysardière</div>
+    <div id="user-info" class="sel-user"></div>
   </div>
 
-  <!-- APP SELECTOR VIEW -->
-  <div id="selector-view" class="card" style="display:none">
-    <div class="title">La Lysardière</div>
-    <div class="subtitle">Choisissez une application</div>
-    <div id="user-info" class="user-info"></div>
-    <div class="apps-grid">
-      <a href="transport.html" class="app-card">
-        <div class="app-icon">🚐</div>
-        <div class="app-name">Transport</div>
-        <div class="app-desc">Trajets et optimisation</div>
-      </a>
-      <a href="documents.html" class="app-card">
-        <div class="app-icon">📄</div>
-        <div class="app-name">Documents</div>
-        <div class="app-desc">Gestion documentaire</div>
-      </a>
-      <a href="suivi.html" class="app-card">
-        <div class="app-icon">🏡</div>
-        <div class="app-name">Suivi & Gîtes</div>
-        <div class="app-desc">Gîtes, animateurs, véhicules, fiches</div>
-      </a>
-      <a href="animateur.html" class="app-card">
-        <div class="app-icon">👤</div>
-        <div class="app-name">Animateurs</div>
-        <div class="app-desc">Fiches, documents, contrats</div>
-      </a>
-    </div>
-    <button class="logout" onclick="logout()">Se déconnecter</button>
+  <div class="apps-grid">
+    <a href="transport.html" class="app-card card-transport">
+      <span class="app-arrow">↗</span>
+      <div class="app-icon-wrap">🚐</div>
+      <div class="app-name">Transport</div>
+      <div class="app-desc">Trajets, convois & optimisation</div>
+      <div class="app-initial">T</div>
+    </a>
+    <a href="documents.html" class="app-card card-docs">
+      <span class="app-arrow">↗</span>
+      <div class="app-icon-wrap">📄</div>
+      <div class="app-name">Documents</div>
+      <div class="app-desc">Fiches d'inscription & dossiers</div>
+      <div class="app-initial">D</div>
+    </a>
+    <a href="suivi.html" class="app-card card-suivi">
+      <span class="app-arrow">↗</span>
+      <div class="app-icon-wrap">🏡</div>
+      <div class="app-name">Suivi & Gîtes</div>
+      <div class="app-desc">Vacanciers, véhicules & fiches</div>
+      <div class="app-initial">S</div>
+    </a>
+    <a href="animateur.html" class="app-card card-anim">
+      <span class="app-arrow">↗</span>
+      <div class="app-icon-wrap">👤</div>
+      <div class="app-name">Animateurs</div>
+      <div class="app-desc">Fiches, documents & contrats</div>
+      <div class="app-initial">A</div>
+    </a>
   </div>
+
+  <button class="logout-btn" onclick="logout()">Se déconnecter</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+
 const SUPA_URL='https://lkqzifqeniblltniabai.supabase.co';
 const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcXppZnFlbmlibGx0bmlhYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzU0NzcsImV4cCI6MjA4OTQ1MTQ3N30.AgXx5arpHjjbAkgbIC9u6tlRUhpSMW8iNP937pNpuX4';
 
@@ -161,6 +293,7 @@ window.addEventListener('beforeunload',function(){
     supa.auth.signOut();
   }
 });
+
 </script>
 </body>
 </html>

@@ -169,17 +169,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .empty-state{text-align:center;padding:40px 20px;color:var(--light);font-size:14px}
 
 /* ── ARCHIVES ── */
-.archives-section{margin-top:48px;border-top:2px solid var(--border);padding-top:28px}
-.archive-sel-card{background:linear-gradient(135deg,var(--f),var(--fm));border-radius:var(--r);padding:20px 24px;margin-bottom:20px;box-shadow:var(--sh-md)}
-.archive-sel-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
-.archive-sel{width:100%;padding:10px 14px;border:none;border-radius:9px;font-size:14px;font-family:inherit;color:var(--text);background:#fff;outline:none;font-weight:600;cursor:pointer}
-.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.archive-card{background:var(--card);border-radius:var(--rs);border:1px solid var(--border-l);overflow:hidden;box-shadow:var(--sh)}
-.archive-card-hdr{padding:11px 14px;display:flex;justify-content:space-between;align-items:center}
-.archive-card-name{font-family:'Fraunces',serif;font-size:15px;font-weight:700}
-.archive-card-date{font-size:10px;opacity:.6}
-.archive-card-body{padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mid)}
-.archive-vac{font-size:12px;padding:3px 0;color:var(--text)}
+
+
+
+
+
+
+
+
+
+
 
 /* ── MODALE IMPRESSION ── */
 .mi-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
@@ -255,19 +254,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   </div>
 
   <!-- ═══ ARCHIVES ═══ -->
-  <div class="archives-section">
-    <div class="section-hdr">
-      <div class="section-title">Archives</div>
-      <span class="section-badge" id="archives-count">—</span>
-    </div>
-    <div class="archive-sel-card">
-      <div class="archive-sel-lbl">Consulter un séjour archivé</div>
-      <select class="archive-sel" id="archive-sejour-select" onchange="chargerArchives()">
-        <option value="">— Sélectionner un séjour —</option>
-      </select>
-    </div>
-    <div class="archive-grid" id="archives-grid"></div>
-  </div>
+
 </div>
 
 <!-- ═══ MODALE IMPRESSION ═══ -->
@@ -361,18 +348,7 @@ async function init(){
   if(modalSel.options.length>1) modalSel.selectedIndex=1;
   renderGites();
   renderUnassigned();
-  // Populate archives sejour selector — actifs + archivés
-  const archSel = document.getElementById('archive-sejour-select');
-  if(sejours?.length){
-    const grp=document.createElement('optgroup');grp.label='Séjours actifs';
-    sejours.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';grp.appendChild(opt);});
-    archSel.appendChild(grp);
-  }
-  if(sejoursArchives?.length){
-    const grp=document.createElement('optgroup');grp.label='Séjours archivés';
-    sejoursArchives.forEach(s=>{const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.nom+' ('+fmtDate(s.date_debut)+' → '+fmtDate(s.date_fin)+')';grp.appendChild(opt);});
-    archSel.appendChild(grp);
-  }
+
 }
 
 // chargerJournee supprimé
@@ -1401,185 +1377,6 @@ function generateFicheConvoi(c, i, dateLabel, convois) {
   return html;
 }
 
-// ── ARCHIVES ─────────────────────────────────────────────────────
-async function chargerArchives(){
-  const sel = document.getElementById('archive-sejour-select');
-  const sejourId = sel.value;
-  const grid = document.getElementById('archives-grid');
-  const count = document.getElementById('archives-count');
-  if(!sejourId){ grid.innerHTML=''; count.textContent='—'; return; }
-  grid.innerHTML='<div style="color:var(--light);font-size:13px;padding:16px">Chargement…</div>';
-  const rows = await supa('suivi_archives?sejour_id=eq.'+sejourId+'&select=*&order=gite_id.asc');
-  if(!rows||!rows.length){ grid.innerHTML='<div style="color:var(--light);font-size:13px;padding:16px">Aucune archive pour ce séjour.</div>'; count.textContent='0'; return; }
-  count.textContent=rows.length+' gîte'+(rows.length>1?'s':'');
-  const gc={hulotte:{c:'#2e7d32',bg:'#e8f5e9',b:'#a5d6a7'},sixties:{c:'#ad1457',bg:'#fce4ec',b:'#f48fb1'},envolee:{c:'#e65100',bg:'#fff8e1',b:'#ffcc80'},floridorlot:{c:'#6a1b9a',bg:'#f3e5f5',b:'#ce93d8'},arces:{c:'#1565c0',bg:'#e3f2fd',b:'#90caf9'}};
-  const GITE_LABELS={hulotte:'Hulotte',sixties:'Sixties',envolee:'Envolée',floridorlot:'Floridorlot',arces:'Arces'};
-  grid.innerHTML = rows.map(r=>{
-    const g=gc[r.gite_id]||{c:'#666',bg:'#f5f5f5',b:'#ddd'};
-    const vacs=(r.vacanciers||[]);
-    const vehs=(r.vehicules||[]);
-    const archDate=new Date(r.archived_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div style="background:white;border-radius:12px;border:1px solid var(--border-l);overflow:hidden;box-shadow:0 2px 8px rgba(24,83,79,0.07)">
-      <div style="background:${g.bg};border-bottom:2px solid ${g.b};padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:${g.c}">${GITE_LABELS[r.gite_id]||r.gite_id}</span>
-        <span style="font-size:10px;color:${g.c};opacity:0.7">${archDate}</span>
-      </div>
-      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
-        <div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Séjour : </span>${r.sejour_nom||'—'}</div>
-        <div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Dates : </span>${r.date_debut?fmtDate(r.date_debut)+' → '+fmtDate(r.date_fin):'—'}</div>
-        ${r.animateurs?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Animateurs : </span>${r.animateurs}</div>`:''}
-        ${vehs.length?`<div style="font-size:12px"><span style="font-weight:700;color:var(--text-mid)">Véhicules : </span>${vehs.map(v=>v.label).join(', ')}</div>`:''}
-        <div style="border-top:1px solid var(--border-l);padding-top:8px">
-          <div style="font-size:10px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">Vacanciers (${vacs.length})</div>
-          ${vacs.map(v=>`<div style="font-size:12px;padding:3px 0;color:var(--text)">${v.prenom} ${(v.nom||'').toUpperCase()}${v.foyer?` <span style="color:var(--light);font-size:10px">(${v.foyer})</span>`:''}</div>`).join('')||'<div style="font-size:12px;color:var(--light)">Aucun vacancier enregistré</div>'}
-        </div>
-      </div>
-    </div></div></div>`;
-  }).join('');
-}
-
-async function retirerVacancierById(personId, giteId, sejourId){
-  if(!confirm('Retirer ce vacancier du gîte ?')) return;
-  const jwt=await getJWT();
-  let url=SUPABASE_URL+'/rest/v1/vacancier_gites?personne_id=eq.'+personId;
-  if(sejourId) url+='&sejour_id=eq.'+sejourId;
-  await fetch(url,{method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}});
-  // Mettre à jour localement
-  allVacancierGites=allVacancierGites.filter(vg=>!(vg.personne_id===personId&&(!sejourId||vg.sejour_id===sejourId)));
-  delete giteAssignments[allPersonnes.find(p=>p.id===personId)?.nom||personId];
-  renderGites();
-  renderUnassigned();
-}
-
-async function retirerVacancier(pKey){
-  if(!confirm('Retirer ce vacancier du gîte ?')) return;
-  delete giteAssignments[pKey];
-  // Supprimer en base
-  const p = getAllPersonsInJournee().find(x=>personKey(x)===pKey);
-  if(p?.id){
-    const sejourId = Object.values(suiviData).find(s=>s.sejour_id)?.sejour_id||null;
-    const jwt=await getJWT();
-    // Chercher la ligne exacte
-    await fetch(SUPABASE_URL+'/rest/v1/vacancier_gites?personne_id=eq.'+p.id,{
-      method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}
-    });
-  }
-  renderGites();
-  renderUnassigned();
-}
-
-// ── ANIMATEURS — BULLES ──────────────────────────────────────────
-function getAnimateurBubbles(giteId, sejourId){
-  if(!sejourId) return '<span style="font-size:11px;color:var(--light)">Choisissez un séjour d\'abord</span>';
-  const animsForGite = giteAnimateurs.filter(ga=>ga.gite_id===giteId&&ga.sejour_id===sejourId);
-  if(!animsForGite.length) return '<span style="font-size:11px;color:var(--light)">Aucun animateur</span>';
-  return animsForGite.map(ga=>{
-    const anim = allAnimateurs.find(a=>a.id===ga.animateur_id);
-    if(!anim) return '';
-    const nom = (anim.prenom||'')+' '+(anim.nom||'').toUpperCase();
-    return `<span onclick="window.location.href='animateur.html?id=${anim.id}'"
-      style="display:inline-flex;align-items:center;gap:5px;background:#eef7f5;border:1.5px solid var(--border-l);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--f);cursor:pointer;transition:all 0.15s"
-      onmouseover="this.style.background='var(--border-l)'" onmouseout="this.style.background='#eef7f5'">
-      👤 ${nom}
-      <button onmousedown="event.stopPropagation();removeAnimateur('${ga.id}','${giteId}','${sejourId}')"
-        style="background:none;border:none;cursor:pointer;color:var(--light);font-size:12px;padding:0;line-height:1;display:flex;align-items:center">✕</button>
-    </span>`;
-  }).join('');
-}
-
-function filterAnimSearch(giteId, query){
-  const drop = document.getElementById('anim-drop-'+giteId);
-  if(!drop) return;
-  const gS = suiviData[giteId]||{};
-  const sejourId = gS.sejour_id||null;
-  const q = (query||'').toLowerCase().trim();
-  // Exclure déjà assignés à ce gîte+séjour
-  const assigned = new Set(giteAnimateurs.filter(ga=>ga.gite_id===giteId&&ga.sejour_id===sejourId).map(ga=>ga.animateur_id));
-  const candidates = allAnimateurs.filter(a=>{
-    if(assigned.has(a.id)) return false;
-    return !q || `${a.prenom} ${a.nom}`.toLowerCase().includes(q);
-  }).slice(0,8);
-
-  // Ajouter option "Créer nouveau"
-  const createOpt = q ? `<div onmousedown="creerEtAssignerAnimateur('${giteId}','${sejourId}','${q.replace(/'/g, "\\'")}')"
-    style="padding:8px 14px;cursor:pointer;font-size:12px;color:var(--f);font-weight:700;border-top:1px solid var(--border-l);display:flex;align-items:center;gap:6px"
-    onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
-    ➕ Créer "${query}"
-  </div>` : '';
-
-  if(!candidates.length && !q){ drop.style.display='none'; return; }
-
-  drop.innerHTML = candidates.map(a=>`
-    <div onmousedown="assignerAnimateur('${giteId}','${sejourId}','${a.id}')"
-      style="padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;font-size:13px"
-      onmouseover="this.style.background='#f0faf8'" onmouseout="this.style.background='white'">
-      <strong>${a.prenom} ${(a.nom||'').toUpperCase()}</strong>
-      <span style="font-size:10px;color:var(--light)">${a.email||''}</span>
-    </div>`).join('')+createOpt;
-  drop.style.display='block';
-}
-
-function toggleAnimSearch(giteId){
-  const wrap=document.getElementById('anim-search-wrap-'+giteId);
-  if(!wrap) return;
-  const isHidden=wrap.style.display==='none';
-  wrap.style.display=isHidden?'block':'none';
-  if(isHidden){
-    const inp=document.getElementById('anim-search-'+giteId);
-    if(inp){inp.value='';inp.focus();filterAnimSearch(giteId,'');}
-  }
-}
-
-function hideAnimDrop(giteId){
-  const d=document.getElementById('anim-drop-'+giteId);
-  if(d) d.style.display='none';
-  const inp=document.getElementById('anim-search-'+giteId);
-  if(inp) inp.value='';
-}
-
-async function assignerAnimateur(giteId, sejourId, animId){
-  hideAnimDrop(giteId);
-  if(!sejourId){alert('Sélectionnez un séjour pour ce gîte d\'abord.');return;}
-  const jwt=await getJWT();
-  const r=await fetch(SUPABASE_URL+'/rest/v1/gite_animateurs',{
-    method:'POST',
-    headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},
-    body:JSON.stringify({animateur_id:animId,gite_id:giteId,sejour_id:sejourId})
-  });
-  const data=await r.json();
-  if(data&&data[0]) giteAnimateurs.push(data[0]);
-  renderGites();
-}
-
-async function creerEtAssignerAnimateur(giteId, sejourId, nom){
-  hideAnimDrop(giteId);
-  if(!sejourId){alert('Sélectionnez un séjour pour ce gîte d\'abord.');return;}
-  // Parser prénom nom
-  const parts = nom.trim().split(' ');
-  const prenom = parts[0]||'';
-  const nomF = parts.slice(1).join(' ').toUpperCase()||'';
-  const jwt=await getJWT();
-  // Créer l'animateur
-  const rAnim=await fetch(SUPABASE_URL+'/rest/v1/animateurs',{
-    method:'POST',
-    headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`,'Content-Type':'application/json','Prefer':'return=representation'},
-    body:JSON.stringify({prenom,nom:nomF,email:'',telephone:'',notes:''})
-  });
-  const animData=await rAnim.json();
-  const newAnim=animData&&animData[0];
-  if(!newAnim){alert('Erreur lors de la création.');return;}
-  allAnimateurs.push(newAnim);
-  await assignerAnimateur(giteId, sejourId, newAnim.id);
-}
-
-async function removeAnimateur(gaId, giteId, sejourId){
-  const jwt=await getJWT();
-  await fetch(SUPABASE_URL+'/rest/v1/gite_animateurs?id=eq.'+gaId,{
-    method:'DELETE',headers:{apikey:SUPABASE_ANON,Authorization:`Bearer ${jwt}`}
-  });
-  giteAnimateurs=giteAnimateurs.filter(ga=>ga.id!==gaId);
-  renderGites();
-}
 
 init();
 
